@@ -33,6 +33,22 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/ngos', ngoRoutes);
 app.use('/api/donors', donorRoutes);
 app.use('/api/auth', authRoutes);
+
+// Root route welcome/health check
+app.get('/', (req, res) => {
+  res.json({
+    message: "Divine Backend API is successfully running!",
+    status: "online",
+    endpoints: {
+      campaigns: "/api/campaigns",
+      teachers: "/api/teachers",
+      courses: "/api/courses",
+      ngos: "/api/ngos",
+      donors: "/api/donors",
+      auth: "/api/auth"
+    }
+  });
+});
 app.use('/api/students', studentRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/reviews', reviewRoutes);
