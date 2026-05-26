@@ -24,7 +24,7 @@
 							"raw": "{\n  \"email\": \"admin@astroadvyc.com\",\n  \"password\": \"password123\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/auth/login",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -55,7 +55,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/auth/logout",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/auth/logout",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -91,7 +91,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/students",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/students",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -130,7 +130,7 @@
 							"raw": "{\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"scholarshipStatus\": \"Applied\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/students",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/students",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -169,7 +169,7 @@
 							"raw": "{\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/students/:id",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/students/:id",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -211,7 +211,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/transactions",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/transactions",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -246,7 +246,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/reviews",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/reviews",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -285,7 +285,7 @@
 							"raw": "{\n  \"status\": \"Approved\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/reviews/:id",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/reviews/:id",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -327,7 +327,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/seminars",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/seminars",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -366,7 +366,7 @@
 							"raw": "{\n  \"approvalStatus\": \"Approved\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/seminars/:id",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/seminars/:id",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -408,7 +408,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/referrals",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/referrals",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -447,7 +447,7 @@
 							"raw": "{\n  \"status\": \"Completed\"\n}"
 						},
 						"url": {
-							"raw": "http://localhost:5001/api/referrals/:id",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/referrals/:id",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -489,7 +489,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:5001/api/banners",
+							"raw": "https://divinebackend-v5gl.onrender.com/api/banners",
 							"protocol": "http",
 							"host": [
 								"localhost"
