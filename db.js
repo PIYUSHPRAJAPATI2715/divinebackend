@@ -7,9 +7,20 @@ async function connectDB() {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/divinenakshatra';
   try {
     console.log(`Attempting to connect to MongoDB at ${uri}...`);
-    // Connect with a 2-second timeout to check if a local/cloud Mongo is running
+    // Connect with a 3-second timeout to check if a local/cloud Mongo is running
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
     console.log('Successfully connected to MongoDB.');
+    
+    // Auto-seed cloud database if it is empty!
+    // This ensures prototype data is populated on newly connected databases without wiping active data
+    const Admin = require('./models/Admin');
+    const adminCount = await Admin.countDocuments({});
+    if (adminCount === 0) {
+      console.log('Detected empty cloud database. Seeding collections...');
+      await seedDatabase();
+    } else {
+      console.log('Database already contains records. Skipping auto-seeding.');
+    }
   } catch (err) {
     console.log('MongoDB connection failed. Initializing In-Memory MongoDB Server...');
     
@@ -17,10 +28,9 @@ async function connectDB() {
       // Dynamic import to prevent crashes in production/Render if devDependencies are not installed
       const { MongoMemoryServer } = require('mongodb-memory-server');
       
-      const mongoVersion = process.platform === 'win32' ? '5.0.22' : '7.0.12';
       mongod = await MongoMemoryServer.create({
         binary: {
-          version: mongoVersion
+          version: '5.0.22'
         }
       });
       const memoryUri = mongod.getUri();
