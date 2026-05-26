@@ -17,9 +17,10 @@ async function connectDB() {
       // Dynamic import to prevent crashes in production/Render if devDependencies are not installed
       const { MongoMemoryServer } = require('mongodb-memory-server');
       
+      const mongoVersion = process.platform === 'win32' ? '5.0.22' : '7.0.12';
       mongod = await MongoMemoryServer.create({
         binary: {
-          version: '5.0.22'
+          version: mongoVersion
         }
       });
       const memoryUri = mongod.getUri();
