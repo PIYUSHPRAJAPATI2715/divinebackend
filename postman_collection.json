@@ -1,0 +1,519 @@
+{
+	"info": {
+		"_postman_id": "b3c5a6d7-e8f9-4b1a-2c3d-4e5f6a7b8c9d",
+		"name": "Divine Admin Ecosystem APIs",
+		"description": "Comprehensive Postman API Collection for Divine Admin Panel. Includes all Social Welfare features, Astro-Coaching features, student markings, merit scholarship parameters, financial logs with split EMI, community feedback models, dynamic banners, and referrals.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth & Logout",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@astroadvyc.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Login Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"mock-jwt-token-6a154aab663cb1237090e9c8-1716723223000\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"email\": \"admin@astroadvyc.com\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Logout API",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/auth/logout",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Logout Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"message\": \"Logged out successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Astro-Coaching Students & Marking",
+			"item": [
+				{
+					"name": "Get All Students",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/students",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"students"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9bd\",\n    \"studentId\": \"STU-001\",\n    \"name\": \"Rohit Verma\",\n    \"email\": \"rohit@example.com\",\n    \"phone\": \"9876543210\",\n    \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n    \"marks\": 85,\n    \"testStatus\": \"Passed\",\n    \"scholarshipStatus\": \"Approved\",\n    \"scholarshipAmount\": \"₹2,500\",\n    \"referredBy\": \"Anil Kapoor\",\n    \"status\": \"Active\",\n    \"createdAt\": \"2026-05-26T07:24:27.477Z\",\n    \"updatedAt\": \"2026-05-26T07:24:27.477Z\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Register Student Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"scholarshipStatus\": \"Applied\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/students",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"students"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Registered Successfully",
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"studentId\": \"STU-1859\",\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Applied\",\n  \"scholarshipAmount\": \"₹0\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9e9\",\n  \"createdAt\": \"2026-05-26T07:44:27.477Z\",\n  \"updatedAt\": \"2026-05-26T07:44:27.477Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Examination Marks / Scholarship Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/students/:id",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"students",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "REPLACE_WITH_STUDENT_OBJECT_ID"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Update Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"studentId\": \"STU-001\",\n  \"name\": \"Rohit Verma\",\n  \"email\": \"rohit@example.com\",\n  \"phone\": \"9876543210\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 85,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\",\n  \"referredBy\": \"Anil Kapoor\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9bd\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "MIS Financials & Donation Logs",
+			"item": [
+				{
+					"name": "Get MIS Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/transactions",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"transactions"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Loaded logs",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9c8\",\n    \"transactionId\": \"TXN-001\",\n    \"type\": \"Donation\",\n    \"user\": \"Anil Kapoor\",\n    \"item\": \"Help for Heart Surgery\",\n    \"amount\": 50000,\n    \"paymentPlan\": \"None\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-25T07:24:27.502Z\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9c9\",\n    \"transactionId\": \"TXN-002\",\n    \"type\": \"Course\",\n    \"user\": \"Rohit Verma\",\n    \"item\": \"Vedic Astrology Masterclass\",\n    \"amount\": 4999,\n    \"paymentPlan\": \"EMI - 50% Advance\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-24T07:24:27.502Z\"\n  }\n]"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Reviews, Ratings & Video Feedback",
+			"item": [
+				{
+					"name": "Get All Feedbacks & Testimonials",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/reviews",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"reviews"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Loaded Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d4\",\n    \"reviewId\": \"REV-001\",\n    \"userName\": \"Rohit Verma\",\n    \"userRole\": \"Student\",\n    \"type\": \"Teacher\",\n    \"targetName\": \"Dr. Ramesh Jyotish\",\n    \"rating\": 5,\n    \"comment\": \"Dr. Ramesh is an absolute genius in Vedic Astrology. His methods are extremely clear!\",\n    \"status\": \"Approved\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9d6\",\n    \"reviewId\": \"REV-003\",\n    \"userName\": \"Anonymous Donor\",\n    \"userRole\": \"Donor\",\n    \"type\": \"Campaign\",\n    \"targetName\": \"Education for 10 Girls\",\n    \"rating\": 5,\n    \"comment\": \"Very transparent process and happy to see children studying. Highly recommend supporting!\",\n    \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n    \"status\": \"Approved\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Moderate Testimonial Approval",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Approved\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/reviews/:id",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"reviews",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "REPLACE_WITH_REVIEW_OBJECT_ID"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Approved Successful",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"_id\": \"6a154aab663cb1237090e9d6\",\n  \"reviewId\": \"REV-003\",\n  \"userName\": \"Anonymous Donor\",\n  \"userRole\": \"Donor\",\n  \"type\": \"Campaign\",\n  \"targetName\": \"Education for 10 Girls\",\n  \"rating\": 5,\n  \"comment\": \"Very transparent process and happy to see children studying.\",\n  \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"status\": \"Approved\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Seminars & Workshops Approval",
+			"item": [
+				{
+					"name": "Get All Seminars",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/seminars",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"seminars"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9df\",\n    \"seminarId\": \"SEM-001\",\n    \"title\": \"Vastu & Positivity Workshop\",\n    \"instructor\": \"Neha Vastu\",\n    \"date\": \"2026-05-30\",\n    \"time\": \"11:00 AM\",\n    \"price\": 999,\n    \"approvalStatus\": \"Approved\",\n    \"paymentStatus\": \"Paid\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Toggle Admin Approval Switch",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"approvalStatus\": \"Approved\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/seminars/:id",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"seminars",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "REPLACE_WITH_SEMINAR_OBJECT_ID"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"_id\": \"6a154aab663cb1237090e9df\",\n  \"seminarId\": \"SEM-001\",\n  \"title\": \"Vastu & Positivity Workshop\",\n  \"approvalStatus\": \"Approved\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Refer & Earn Ledger",
+			"item": [
+				{
+					"name": "Get Referral Ledger",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/referrals",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"referrals"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9e2\",\n    \"referralId\": \"REF-001\",\n    \"referrerName\": \"Anil Kapoor\",\n    \"referredUserName\": \"Rohit Verma\",\n    \"rewardAmount\": 500,\n    \"status\": \"Completed\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Process Referral Payout",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Completed\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5001/api/referrals/:id",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"referrals",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "REPLACE_WITH_REFERRAL_OBJECT_ID"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"_id\": \"6a154aab663cb1237090e9e2\",\n  \"status\": \"Completed\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Dynamic Promotional Banners",
+			"item": [
+				{
+					"name": "Get All Banners",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5001/api/banners",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"banners"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d9\",\n    \"bannerId\": \"BNR-001\",\n    \"title\": \"50% Discount on Vedic Astrology Masterclass\",\n    \"imageUrl\": \"https://images.unsplash.com/...\",\n    \"linkUrl\": \"/courses\",\n    \"placement\": \"Courses\",\n    \"status\": \"Active\"\n  }\n]"
+						}
+					]
+				}
+			]
+		}
+	]
+}
