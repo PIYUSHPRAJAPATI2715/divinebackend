@@ -9,9 +9,22 @@
     {
       "name": "Donation App APIs",
       "description": "Consolidated suite of all Donation Application APIs including user authentication, campaign/cause creation, donor lists, and NGO registrations.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwt_token}}",
+            "type": "string"
+          }
+        ]
+      },
       "item": [
         {
           "name": "User Authentication",
+          "auth": {
+            "type": "noauth"
+          },
           "item": [
             {
               "name": "Signup",

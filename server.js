@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { connectDB } = require('./db');
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -27,11 +28,7 @@ const newsRoutes = require('./routes/news');
 const seminarRoutes = require('./routes/seminars');
 const referralRoutes = require('./routes/referrals');
 
-app.use('/api/campaigns', campaignRoutes);
-app.use('/api/teachers', teacherRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/ngos', ngoRoutes);
-app.use('/api/donors', donorRoutes);
+// Public Routes
 app.use('/api/auth', authRoutes);
 
 // Root route welcome/health check
@@ -40,24 +37,31 @@ app.get('/', (req, res) => {
     message: "Divine Backend API is successfully running!",
     status: "online",
     endpoints: {
-      campaigns: "/api/campaigns",
-      teachers: "/api/teachers",
-      courses: "/api/courses",
-      ngos: "/api/ngos",
-      donors: "/api/donors",
-      auth: "/api/auth"
+      auth: "/api/auth (Public)",
+      campaigns: "/api/campaigns (Secured)",
+      teachers: "/api/teachers (Secured)",
+      courses: "/api/courses (Secured)",
+      ngos: "/api/ngos (Secured)",
+      donors: "/api/donors (Secured)"
     }
   });
 });
-app.use('/api/students', studentRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/banners', bannerRoutes);
-app.use('/api/news', newsRoutes);
-app.use('/api/seminars', seminarRoutes);
-app.use('/api/referrals', referralRoutes);
+
+// Secured Routes (Require JWT Bearer Token)
+app.use('/api/campaigns', authMiddleware, campaignRoutes);
+app.use('/api/teachers', authMiddleware, teacherRoutes);
+app.use('/api/courses', authMiddleware, courseRoutes);
+app.use('/api/ngos', authMiddleware, ngoRoutes);
+app.use('/api/donors', authMiddleware, donorRoutes);
+app.use('/api/students', authMiddleware, studentRoutes);
+app.use('/api/transactions', authMiddleware, transactionRoutes);
+app.use('/api/reviews', authMiddleware, reviewRoutes);
+app.use('/api/posts', authMiddleware, postRoutes);
+app.use('/api/categories', authMiddleware, categoryRoutes);
+app.use('/api/banners', authMiddleware, bannerRoutes);
+app.use('/api/news', authMiddleware, newsRoutes);
+app.use('/api/seminars', authMiddleware, seminarRoutes);
+app.use('/api/referrals', authMiddleware, referralRoutes);
 
 // MongoDB Connection and Server Start
 connectDB()
