@@ -10,6 +10,47 @@
       "name": "Auth & Logout",
       "item": [
         {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\",\n  \"confirmPass\": \"securepassword123\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/signup",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "signup"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Signup Success",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"User registered successfully\",\n  \"token\": \"jwt-token-string\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\"\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "Login",
           "request": {
             "method": "POST",
@@ -21,7 +62,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@astroadvyc.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\"\n}"
             },
             "url": {
               "raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
@@ -46,7 +87,89 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "cookie": [],
-              "body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"mock-jwt-token-6a154aab663cb1237090e9c8-1716723223000\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"email\": \"admin@astroadvyc.com\"\n  }\n}"
+              "body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"jwt-token-string\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/forgot-password",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Forgot Password Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"OTP sent to email successfully (valid for 10 minutes)\",\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP & Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newsecurepassword123\",\n  \"confirmNewPassword\": \"newsecurepassword123\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/verify-otp",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-otp"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Verify & Reset Success",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Password reset successfully!\"\n}"
             }
           ]
         },
