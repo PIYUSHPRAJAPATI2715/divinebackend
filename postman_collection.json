@@ -7,201 +7,503 @@
   },
   "item": [
     {
-      "name": "Auth & Logout",
+      "name": "Donation App APIs",
+      "description": "Consolidated suite of all Donation Application APIs including user authentication, campaign/cause creation, donor lists, and NGO registrations.",
       "item": [
         {
-          "name": "Signup",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\",\n  \"confirmPass\": \"securepassword123\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/signup",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "signup"
-              ]
-            }
-          },
-          "response": [
+          "name": "User Authentication",
+          "item": [
             {
-              "name": "Signup Success",
-              "status": "Created",
-              "code": 201,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"message\": \"User registered successfully\",\n  \"token\": \"jwt-token-string\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\"\n  }\n}"
+              "name": "Signup",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\",\n  \"confirmPass\": \"securepassword123\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/signup",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "signup"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Forgot Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/forgot-password",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "forgot-password"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Verify OTP & Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newsecurepassword123\",\n  \"confirmNewPassword\": \"newsecurepassword123\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/verify-otp",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "verify-otp"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Logout API",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/logout",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ]
+                }
+              }
             }
           ]
         },
         {
-          "name": "Login",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login"
-              ]
-            }
-          },
-          "response": [
+          "name": "Campaigns & Causes",
+          "item": [
             {
-              "name": "Login Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"jwt-token-string\",\n  \"user\": {\n    \"id\": \"6a154aab663cb1237090e9c8\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john.doe@example.com\"\n  }\n}"
+              "name": "Get All Campaigns",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaigns"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add New Campaign",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Winter Clothes Distribution\",\n  \"user\": \"Hope NGO\",\n  \"goal\": \"₹75,000\",\n  \"raised\": \"₹25,000\",\n  \"status\": \"Live\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaigns"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Campaign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Completed\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaigns",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_CAMPAIGN_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Campaign",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaigns",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_CAMPAIGN_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
             }
           ]
         },
         {
-          "name": "Forgot Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/forgot-password",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "forgot-password"
-              ]
-            }
-          },
-          "response": [
+          "name": "Donors & Supporters",
+          "item": [
             {
-              "name": "Forgot Password Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"message\": \"OTP sent to email successfully (valid for 10 minutes)\",\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\"\n}"
+              "name": "Get All Donors",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "donors"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add New Donor",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ravi Teja\",\n  \"email\": \"ravi.t@example.com\",\n  \"totalDonated\": \"₹45,000\",\n  \"campaignsSupported\": 3\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "donors"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Donor",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Suspended\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "donors",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_DONOR_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Donor",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "donors",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_DONOR_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
             }
           ]
         },
         {
-          "name": "Verify OTP & Reset Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+          "name": "NGO Partners",
+          "item": [
+            {
+              "name": "Get All NGOs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "ngos"
+                  ]
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newsecurepassword123\",\n  \"confirmNewPassword\": \"newsecurepassword123\"\n}"
             },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/verify-otp",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "verify-otp"
-              ]
-            }
-          },
-          "response": [
             {
-              "name": "Verify & Reset Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"message\": \"Password reset successfully!\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "Logout API",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/logout",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ]
-            }
-          },
-          "response": [
+              "name": "Add New NGO",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Hope Foundation\",\n  \"registrationNumber\": \"REG-54321\",\n  \"contactPerson\": \"Neha Singh\",\n  \"email\": \"hello@hopengo.in\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "ngos"
+                  ]
+                }
+              }
+            },
             {
-              "name": "Logout Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"message\": \"Logged out successfully\"\n}"
+              "name": "Update NGO Status",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Verified\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "ngos",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_NGO_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete NGO Record",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "ngos",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_NGO_OBJECT_ID"
+                    }
+                  ]
+                }
+              }
             }
           ]
         }
