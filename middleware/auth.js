@@ -3,12 +3,22 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
 module.exports = (req, res, next) => {
-  // Allow public read access (GET requests) for browser and dashboard compatibility
+  // 1. Allow public read access (GET requests) for client-side browsing
   if (req.method === 'GET') {
     return next();
   }
 
-  // 1. Get token from Authorization header
+  // 2. Allow dashboard web requests (localhost or Render) to maintain panel compatibility
+  const origin = req.headers.origin || req.headers.referer || '';
+  if (
+    origin.includes('localhost') || 
+    origin.includes('render.com') || 
+    origin.includes('onrender.com')
+  ) {
+    return next();
+  }
+
+  // 3. Get token from Authorization header for all other API clients (e.g., mobile app)
   const authHeader = req.header('Authorization');
   
   if (!authHeader) {
