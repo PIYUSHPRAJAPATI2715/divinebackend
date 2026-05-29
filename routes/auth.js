@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -70,7 +71,7 @@ router.post('/signup', async (req, res) => {
 
 /**
  * @route   POST /api/auth/login
- * @desc    Authenticate user & get token
+ * @desc    Authenticate user/admin & get token
  * @access  Public
  */
 router.post('/login', async (req, res) => {
@@ -82,20 +83,46 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // 2. Find User
+    // 2. Check Admin Collection first
+    const admin = await Admin.findOne({ email });
+    if (admin) {
+      // In seed data, admin password is plain text
+      const isPlainMatch = admin.password === password;
+      let isHashMatch = false;
+
+      // Safe fallback check if admin password is ever hashed
+      if (!isPlainMatch && admin.password.startsWith('$2')) {
+        isHashMatch = await bcrypt.compare(password, admin.password);
+      }
+
+      if (isPlainMatch || isHashMatch) {
+        const token = jwt.sign({ id: admin._id, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+        return res.json({
+          message: 'Login successful',
+          token,
+          user: {
+            id: admin._id,
+            email: admin.email,
+            role: 'admin'
+          }
+        });
+      }
+    }
+
+    // 3. Check User Collection
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // 3. Verify Password
+    // 4. Verify Password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // 4. Generate JWT Token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    // 5. Generate JWT Token
+    const token = jwt.sign({ id: user._id, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       message: 'Login successful',
@@ -104,7 +131,8 @@ router.post('/login', async (req, res) => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email
+        email: user.email,
+        role: 'user'
       }
     });
 
