@@ -3,6 +3,11 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
 module.exports = (req, res, next) => {
+  // Allow public read access (GET requests) for browser and dashboard compatibility
+  if (req.method === 'GET') {
+    return next();
+  }
+
   // 1. Get token from Authorization header
   const authHeader = req.header('Authorization');
   
