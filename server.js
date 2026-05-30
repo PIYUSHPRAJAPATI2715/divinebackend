@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
 const { connectDB } = require('./db');
 const authMiddleware = require('./middleware/auth');
 
@@ -31,20 +32,9 @@ const referralRoutes = require('./routes/referrals');
 // Public Routes
 app.use('/api/auth', authRoutes);
 
-// Root route welcome/health check
+// Root route welcome/health check landing dashboard page
 app.get('/', (req, res) => {
-  res.json({
-    message: "Divine Backend API is successfully running!",
-    status: "online",
-    endpoints: {
-      auth: "/api/auth (Public)",
-      campaigns: "/api/campaigns (Secured)",
-      teachers: "/api/teachers (Secured)",
-      courses: "/api/courses (Secured)",
-      ngos: "/api/ngos (Secured)",
-      donors: "/api/donors (Secured)"
-    }
-  });
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
 // Secured Routes (Require JWT Bearer Token)

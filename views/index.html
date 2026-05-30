@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Divine Ecosystem - Backend Status Panel</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary: #2E7DFF;
+      --secondary: #00A86B;
+      --bg: #0B0F19;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.07);
+      --text: #F3F4F6;
+      --text-muted: #9CA3AF;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg) 70%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .container {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .logo-container {
+      background: radial-gradient(circle, rgba(46,125,255,0.2) 0%, rgba(0,0,0,0) 70%);
+      padding: 1.5rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+
+    .logo-icon {
+      font-size: 3.5rem;
+      color: var(--primary);
+      text-shadow: 0 0 20px rgba(46, 125, 255, 0.5);
+      animation: pulse 2.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); filter: brightness(1); }
+      100% { transform: scale(1.05); filter: brightness(1.2); }
+    }
+
+    header h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #FFF 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.125rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Pulse Status Indicator */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 168, 107, 0.1);
+      border: 1px solid rgba(0, 168, 107, 0.25);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      font-size: 0.875rem;
+      color: var(--secondary);
+      font-weight: 600;
+      margin-top: 1rem;
+      gap: 0.5rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--secondary);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--secondary);
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Grid Stats Section */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(46, 125, 255, 0.3);
+      box-shadow: 0 10px 25px -5px rgba(46, 125, 255, 0.15);
+    }
+
+    .stat-card i {
+      font-size: 1.75rem;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+    }
+
+    .stat-card.ngo i { color: #A78BFA; }
+    .stat-card.student i { color: #FB7185; }
+    .stat-card.teacher i { color: #38BDF8; }
+    .stat-card.donor i { color: #FBBF24; }
+
+    .stat-val {
+      font-size: 1.75rem;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Grid layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (max-width: 850px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Card Panels */
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-title {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .panel-title i {
+      color: var(--primary);
+    }
+
+    /* Endpoints list */
+    .endpoint-item {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .endpoint-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .endpoint-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .method {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .method.get { background: rgba(56, 189, 248, 0.15); color: #38BDF8; }
+    .method.post { background: rgba(52, 211, 153, 0.15); color: #34D399; }
+    .method.put { background: rgba(251, 191, 36, 0.15); color: #FBBF24; }
+    .method.delete { background: rgba(248, 113, 113, 0.15); color: #F87171; }
+
+    .path {
+      font-family: monospace;
+      font-size: 0.93rem;
+      color: var(--text);
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 100px;
+    }
+
+    .badge.secured {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      color: #F87171;
+    }
+
+    .badge.public {
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      color: #34D399;
+    }
+
+    /* Actions Panel */
+    .action-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+      color: white;
+      text-decoration: none;
+      padding: 1rem 1.5rem;
+      border-radius: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      gap: 0.75rem;
+      box-shadow: 0 4px 15px rgba(46, 125, 255, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(46, 125, 255, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: white;
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+    }
+
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.85rem;
+      margin-bottom: 0.85rem;
+      font-size: 0.9rem;
+    }
+
+    .meta-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+
+    .meta-label {
+      color: var(--text-muted);
+    }
+
+    .meta-value {
+      font-weight: 500;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <i class="fa-solid fa-shapes logo-icon"></i>
+      </div>
+      <h1>Divine Ecosystem</h1>
+      <p>Centralized backend administration network serving secure fundraising, student learning, and astrology coaching platforms.</p>
+      <div class="status-badge">
+        <span class="status-dot"></span> API Engine Online
+      </div>
+    </header>
+
+    <!-- Stats Section -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <i class="fa-solid fa-fire"></i>
+        <div class="stat-val">5</div>
+        <div class="stat-label">Campaigns</div>
+      </div>
+      <div class="stat-card teacher">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <div class="stat-val">5</div>
+        <div class="stat-label">Teachers</div>
+      </div>
+      <div class="stat-card student">
+        <i class="fa-solid fa-user-graduate"></i>
+        <div class="stat-val">4</div>
+        <div class="stat-label">Students</div>
+      </div>
+      <div class="stat-card ngo">
+        <i class="fa-solid fa-handshake-angle"></i>
+        <div class="stat-val">5</div>
+        <div class="stat-label">NGOs</div>
+      </div>
+      <div class="stat-card donor">
+        <i class="fa-solid fa-heart-pulse"></i>
+        <div class="stat-val">4</div>
+        <div class="stat-label">Donors</div>
+      </div>
+    </div>
+
+    <!-- Main Grid Section -->
+    <div class="main-grid">
+      <!-- Left Panel: Secured API endpoints explorer -->
+      <div class="panel">
+        <h2 class="panel-title"><i class="fa-solid fa-shield-halved"></i> API Core Endpoints Explorer</h2>
+        
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method get">GET</span>
+            <span class="path">/api/campaigns</span>
+          </div>
+          <span class="badge public">Public Read</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/campaigns</span>
+          </div>
+          <span class="badge secured">Bearer Token Required</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method get">GET</span>
+            <span class="path">/api/teachers/:id</span>
+          </div>
+          <span class="badge public">Public Read (Details)</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/signup</span>
+          </div>
+          <span class="badge public">Public Auth</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/login</span>
+          </div>
+          <span class="badge public">Public Auth</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method put">PUT</span>
+            <span class="path">/api/students/:id</span>
+          </div>
+          <span class="badge secured">Bearer Token Required</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method delete">DELETE</span>
+            <span class="path">/api/ngos/:id</span>
+          </div>
+          <span class="badge secured">Bearer Token Required</span>
+        </div>
+      </div>
+
+      <!-- Right Panel: Panel Info & Testing resources -->
+      <div class="action-panel">
+        <div class="panel">
+          <h2 class="panel-title"><i class="fa-solid fa-code"></i> Testing Suite</h2>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Test all registration, login, campaign creation, and student scholarship details endpoints easily using Postman.
+          </p>
+          <a href="https://raw.githubusercontent.com/PIYUSHPRAJAPATI2715/divinebackend/main/postman_collection.json" target="_blank" class="btn" style="width: 100%;">
+            <i class="fa-solid fa-circle-down"></i> Get Postman Collection
+          </a>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title"><i class="fa-solid fa-server"></i> System Specs</h2>
+          
+          <div class="meta-item">
+            <span class="meta-label">Node Environment</span>
+            <span class="meta-value" style="color: var(--secondary);">Production (Render)</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Node Version</span>
+            <span class="meta-value">24.16.0</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Database Connection</span>
+            <span class="meta-value">MongoDB Atlas</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-label">Security Shield</span>
+            <span class="meta-value">JWT Bearer (HMAC SHA256)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Developed with passion for <a href="https://github.com/PIYUSHPRAJAPATI2715" target="_blank">Piyush Prajapati</a>.</p>
+    </footer>
+  </div>
+</body>
+</html>
