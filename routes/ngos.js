@@ -12,6 +12,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single NGO detailed profile
+router.get('/:id', async (req, res) => {
+  try {
+    const ngo = await NGO.findById(req.params.id);
+    if (!ngo) return res.status(404).json({ message: 'NGO registration profile not found' });
+    res.json(ngo);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a new NGO
 router.post('/', async (req, res) => {
   try {

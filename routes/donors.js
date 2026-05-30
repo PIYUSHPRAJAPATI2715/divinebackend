@@ -12,6 +12,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single Donor detailed profile (with donation history ledger)
+router.get('/:id', async (req, res) => {
+  try {
+    const donor = await Donor.findById(req.params.id);
+    if (!donor) return res.status(404).json({ message: 'Donor profile not found' });
+    res.json(donor);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a new Donor
 router.post('/', async (req, res) => {
   try {

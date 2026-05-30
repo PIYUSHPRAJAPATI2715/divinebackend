@@ -11,6 +11,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single student detailed profile (with marks, scholarship details, and assignment logs)
+router.get('/:id', async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student profile not found' });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a new student
 router.post('/', async (req, res) => {
   try {

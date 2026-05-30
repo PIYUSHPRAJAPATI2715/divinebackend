@@ -11,6 +11,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single teacher detailed profile
+router.get('/:id', async (req, res) => {
+  try {
+    const teacher = await Teacher.findById(req.params.id);
+    if (!teacher) return res.status(404).json({ message: 'Teacher profile not found' });
+    res.json(teacher);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a new teacher
 router.post('/', async (req, res) => {
   try {

@@ -11,6 +11,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single seminar details (workshop approval & scheduling status)
+router.get('/:id', async (req, res) => {
+  try {
+    const seminar = await Seminar.findById(req.params.id);
+    if (!seminar) return res.status(404).json({ message: 'Seminar not found' });
+    res.json(seminar);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a seminar
 router.post('/', async (req, res) => {
   try {

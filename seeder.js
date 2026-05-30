@@ -15,40 +15,327 @@ const Seminar = require('./models/Seminar');
 const Referral = require('./models/Referral');
 
 const mockCampaigns = [
-  { campaignId: 'CMP-101', title: 'Help for Heart Surgery', user: 'Rahul Sharma', goal: '₹5,00,000', raised: '₹2,45,000', status: 'Pending' },
-  { campaignId: 'CMP-102', title: 'Education for 10 Girls', user: 'NGO Pratham', goal: '₹1,00,000', raised: '₹80,000', status: 'Live' },
-  { campaignId: 'CMP-103', title: 'Gaugrass Fodder Request', user: 'Krishnayan Gaushala', goal: '₹50,000', raised: '₹50,000', status: 'Completed' },
-  { campaignId: 'CMP-104', title: 'Medical emergency - Accident', user: 'Sneha Verma', goal: '₹2,00,000', raised: '₹10,000', status: 'Pending' },
-  { campaignId: 'CMP-105', title: 'Winter Clothes Distribution', user: 'Hope NGO', goal: '₹75,000', raised: '₹25,000', status: 'Live' },
+  { 
+    campaignId: 'CMP-101', 
+    title: 'Help for Heart Surgery', 
+    user: 'Rahul Sharma', 
+    category: 'Fundraising',
+    description: 'Urgent funding request for a life-saving double heart bypass surgery at Escorts Heart Institute. The family is in need of emergency funding support.',
+    goal: '₹5,00,000', 
+    raised: '₹2,45,000', 
+    oneTimeOrMonthly: 'One-Time',
+    status: 'Pending',
+    verificationDocs: ['https://s3.amazonaws.com/divine-docs/hospital_estimate_rahul.pdf', 'https://s3.amazonaws.com/divine-docs/medical_case_rahul.jpg'],
+    withdrawalRequested: false,
+    withdrawalStatus: 'None'
+  },
+  { 
+    campaignId: 'CMP-102', 
+    title: 'Education for 10 Girls', 
+    user: 'NGO Pratham', 
+    category: 'NGO Donation',
+    description: 'Sponsor dynamic elementary schooling, tuition fees, uniforms, and study books for 10 unprivileged girl students in urban slum areas of New Delhi.',
+    goal: '₹1,00,000', 
+    raised: '₹80,000', 
+    oneTimeOrMonthly: 'Monthly',
+    status: 'Live',
+    verificationDocs: ['https://s3.amazonaws.com/divine-docs/ngo_registration_pratham.pdf'],
+    withdrawalRequested: true,
+    withdrawalStatus: 'Requested'
+  },
+  { 
+    campaignId: 'CMP-103', 
+    title: 'Gaugrass Fodder Request', 
+    user: 'Krishnayan Gaushala', 
+    category: 'Gau Seva',
+    description: 'Support pure fodder (gausharan grass) distribution for over 200 abandoned indigenous cows at Haridwar gaushala.',
+    goal: '₹50,000', 
+    raised: '₹50,000', 
+    oneTimeOrMonthly: 'One-Time',
+    status: 'Completed',
+    verificationDocs: ['https://s3.amazonaws.com/divine-docs/gaushala_trust_deed.pdf'],
+    withdrawalRequested: true,
+    withdrawalStatus: 'Approved'
+  },
+  { 
+    campaignId: 'CMP-104', 
+    title: 'Medical emergency - Accident', 
+    user: 'Sneha Verma', 
+    category: 'Fundraising',
+    description: 'Road accident emergency surgery and ICU ventilation recovery support for Amit Verma at Max Healthcare.',
+    goal: '₹2,00,000', 
+    raised: '₹10,000', 
+    oneTimeOrMonthly: 'One-Time',
+    status: 'Pending',
+    verificationDocs: ['https://s3.amazonaws.com/divine-docs/accident_reports.pdf'],
+    withdrawalRequested: false,
+    withdrawalStatus: 'None'
+  },
+  { 
+    campaignId: 'CMP-105', 
+    title: 'Winter Clothes Distribution', 
+    user: 'Hope NGO', 
+    category: 'NGO Donation',
+    description: 'Help us distribute warm winter blankets, high-quality sweaters, and shoes to thousands of homeless families sleeping on Delhi streets.',
+    goal: '₹75,000', 
+    raised: '₹25,000', 
+    oneTimeOrMonthly: 'Both',
+    status: 'Live',
+    verificationDocs: ['https://s3.amazonaws.com/divine-docs/hope_ngo_profile.pdf'],
+    withdrawalRequested: false,
+    withdrawalStatus: 'None'
+  },
 ];
 
 const mockCourses = [
-  { courseId: 'CRS-201', title: 'Vedic Astrology Masterclass', instructor: 'Dr. Ramesh Jyotish', price: '₹4,999', duration: '30 Hrs', status: 'Published' },
-  { courseId: 'CRS-202', title: 'Tarot for Beginners', instructor: 'Priya Sharma', price: '₹2,499', duration: '15 Hrs', status: 'Pending' },
-  { courseId: 'CRS-203', title: 'Advanced Palmistry', instructor: 'Acharya Amit', price: '₹3,999', duration: '20 Hrs', status: 'Published' },
+  { 
+    courseId: 'CRS-201', 
+    title: 'Vedic Astrology Masterclass', 
+    instructor: 'Dr. Ramesh Jyotish', 
+    price: '₹4,999', 
+    duration: '30 Hrs', 
+    category: 'Kundli Analysis',
+    description: 'Comprehensive detailed masterclass on analyzing natal charts (Kundli), transit planetary effects, house alignment alignments, and effective gemstone remedies.',
+    liveClassSchedule: 'Mon, Wed, Fri - 7:00 PM',
+    assignmentsCount: 6,
+    modules: ['Introduction to 12 Houses', 'Planet transits and Shani Sade Sati', 'Yogas & Doshas in Kundli', 'Gemstone and Pooja Remedies'],
+    status: 'Published' 
+  },
+  { 
+    courseId: 'CRS-202', 
+    title: 'Tarot for Beginners', 
+    instructor: 'Priya Sharma', 
+    price: '₹2,499', 
+    duration: '15 Hrs', 
+    category: 'Tarot Reading',
+    description: 'Unlock the secret magic of Major and Minor Arcana cards. Learn card spreads, intuitive interpretation, and spiritual cleansing techniques.',
+    liveClassSchedule: 'Tue, Thu - 6:00 PM',
+    assignmentsCount: 3,
+    modules: ['Major Arcana Archetypes', 'The Rider-Waite-Smith Symbolisms', 'Simple Card Spreads', 'Reading Ethics & Intuition'],
+    status: 'Pending' 
+  },
+  { 
+    courseId: 'CRS-203', 
+    title: 'Advanced Palmistry', 
+    instructor: 'Acharya Amit', 
+    price: '₹3,999', 
+    duration: '20 Hrs', 
+    category: 'Palmistry',
+    description: 'Detailed analysis of main hand lines (Life, Heart, Head, Fate), planetary mounts, fingers structures, and major hand markings.',
+    liveClassSchedule: 'Sat, Sun - 11:00 AM',
+    assignmentsCount: 4,
+    modules: ['The Four Hand Types', 'Deciphering the Three Major Lines', 'Planetary Mounts Analysis', 'Reading Fate & Travel Markings'],
+    status: 'Published' 
+  },
 ];
 
 const mockTeachers = [
-  { teacherId: 'TCH-001', name: 'Dr. Ramesh Jyotish', expertise: 'Vedic Astrology', experience: '15 Yrs', status: 'Verified', rating: 4.8 },
-  { teacherId: 'TCH-002', name: 'Priya Sharma', expertise: 'Tarot Reading', experience: '5 Yrs', status: 'Pending', rating: 0 },
-  { teacherId: 'TCH-003', name: 'Acharya Amit', expertise: 'Palmistry', experience: '10 Yrs', status: 'Verified', rating: 4.9 },
-  { teacherId: 'TCH-004', name: 'Neha Vastu', expertise: 'Vastu Shastra', experience: '8 Yrs', status: 'Pending', rating: 0 },
-  { teacherId: 'TCH-005', name: 'Guru Kripa', expertise: 'Numerology', experience: '20 Yrs', status: 'Rejected', rating: 0 },
+  { 
+    teacherId: 'TCH-001', 
+    name: 'Dr. Ramesh Jyotish', 
+    email: 'ramesh.jyotish@astroadvyc.com',
+    phone: '9812345678',
+    expertise: 'Vedic Astrology', 
+    experience: '15 Yrs', 
+    about: 'Dr. Ramesh holds a PhD in Astrology and has consulted over 10,000+ individuals globally on carrier, relationships, and health.',
+    status: 'Verified', 
+    rating: 4.8,
+    kycStatus: 'Completed',
+    certificates: ['https://s3.amazonaws.com/divine-docs/vedic_astrology_phd.pdf', 'kyc_proof_ramesh.jpg'],
+    totalEarnings: 95000,
+    withdrawableAmount: 32000,
+    liveBatchesCount: 3
+  },
+  { 
+    teacherId: 'TCH-002', 
+    name: 'Priya Sharma', 
+    email: 'priya.tarot@astroadvyc.com',
+    phone: '9876543210',
+    expertise: 'Tarot Reading', 
+    experience: '5 Yrs', 
+    about: 'Intuitive tarot reader, crystal healer, and spiritual coach helping souls align with their highest path.',
+    status: 'Pending', 
+    rating: 0,
+    kycStatus: 'Pending',
+    certificates: ['https://s3.amazonaws.com/divine-docs/tarot_master_certified.pdf'],
+    totalEarnings: 0,
+    withdrawableAmount: 0,
+    liveBatchesCount: 0
+  },
+  { 
+    teacherId: 'TCH-003', 
+    name: 'Acharya Amit', 
+    email: 'acharya.amit@astroadvyc.com',
+    phone: '9988776655',
+    expertise: 'Palmistry', 
+    experience: '10 Yrs', 
+    about: 'Expert palmist and face reader, specializing in detailed life roadmap mapping and elementary energy alignment.',
+    status: 'Verified', 
+    rating: 4.9,
+    kycStatus: 'Completed',
+    certificates: ['https://s3.amazonaws.com/divine-docs/palmistry_diploma.pdf'],
+    totalEarnings: 54000,
+    withdrawableAmount: 18000,
+    liveBatchesCount: 2
+  },
+  { 
+    teacherId: 'TCH-004', 
+    name: 'Neha Vastu', 
+    email: 'neha.vastu@astroadvyc.com',
+    phone: '9122334455',
+    expertise: 'Vastu Shastra', 
+    experience: '8 Yrs', 
+    about: 'Corporate Vastu consultant specializing in office layout alignments and energy positivity.',
+    status: 'Pending', 
+    rating: 0,
+    kycStatus: 'Completed',
+    certificates: ['https://s3.amazonaws.com/divine-docs/vastu_acharya_certificate.pdf'],
+    totalEarnings: 0,
+    withdrawableAmount: 0,
+    liveBatchesCount: 0
+  },
+  { 
+    teacherId: 'TCH-005', 
+    name: 'Guru Kripa', 
+    email: 'guru.kripa@astroadvyc.com',
+    phone: '9555666777',
+    expertise: 'Numerology', 
+    experience: '20 Yrs', 
+    about: 'Ancient Numerologist focusing on name vibrations, corporate branding numbers, and lucky dates analysis.',
+    status: 'Rejected', 
+    rating: 0,
+    kycStatus: 'Failed',
+    certificates: ['https://s3.amazonaws.com/divine-docs/scam_docs.pdf'],
+    totalEarnings: 0,
+    withdrawableAmount: 0,
+    liveBatchesCount: 0
+  },
 ];
 
 const mockNGOs = [
-  { ngoId: 'NGO-001', name: 'Pratham Education Foundation', registrationNumber: 'REG-12345', contactPerson: 'Amit Kumar', email: 'contact@pratham.org', status: 'Verified' },
-  { ngoId: 'NGO-002', name: 'Krishnayan Gaushala', registrationNumber: 'REG-67890', contactPerson: 'Swami Ji', email: 'info@krishnayan.org', status: 'Verified' },
-  { ngoId: 'NGO-003', name: 'Hope Foundation', registrationNumber: 'REG-54321', contactPerson: 'Neha Singh', email: 'hello@hopengo.in', status: 'Pending' },
-  { ngoId: 'NGO-004', name: 'Green Earth', registrationNumber: 'REG-98765', contactPerson: 'Rohan Sharma', email: 'support@greenearth.org', status: 'Pending' },
-  { ngoId: 'NGO-005', name: 'Fraudulent NGO', registrationNumber: 'REG-00000', contactPerson: 'Unknown', email: 'scam@fakengo.com', status: 'Rejected' },
+  { 
+    ngoId: 'NGO-001', 
+    name: 'Pratham Education Foundation', 
+    registrationNumber: 'REG-12345', 
+    contactPerson: 'Amit Kumar', 
+    email: 'contact@pratham.org', 
+    phone: '011-2345678',
+    about: 'Pratham is one of the largest non-governmental organizations in India, focusing on high-quality education for underprivileged children.',
+    status: 'Verified',
+    verifiedCampaignsCount: 2,
+    activityProof: ['https://s3.amazonaws.com/divine-docs/kids_reading_proof.jpg', 'https://s3.amazonaws.com/divine-docs/distribution_report_2026.pdf'],
+    payoutHistory: [
+      { payoutId: 'PO-901', amount: 45000, status: 'Approved', requestedDate: new Date('2026-05-15') }
+    ]
+  },
+  { 
+    ngoId: 'NGO-002', 
+    name: 'Krishnayan Gaushala', 
+    registrationNumber: 'REG-67890', 
+    contactPerson: 'Swami Ji', 
+    email: 'info@krishnayan.org', 
+    phone: '9988998899',
+    about: 'Dedicated cow sanctuary protecting abandoned, sick, and stray street cows. Feeding fresh gausharan daily.',
+    status: 'Verified',
+    verifiedCampaignsCount: 1,
+    activityProof: ['https://s3.amazonaws.com/divine-docs/gaushala_cows_feed.jpg'],
+    payoutHistory: [
+      { payoutId: 'PO-902', amount: 50000, status: 'Approved', requestedDate: new Date('2026-05-20') }
+    ]
+  },
+  { 
+    ngoId: 'NGO-003', 
+    name: 'Hope Foundation', 
+    registrationNumber: 'REG-54321', 
+    contactPerson: 'Neha Singh', 
+    email: 'hello@hopengo.in', 
+    phone: '8877665544',
+    about: 'Providing emergency winter blankets, clothing kits, and disaster relief aid to the most vulnerable.',
+    status: 'Pending',
+    verifiedCampaignsCount: 1,
+    activityProof: [],
+    payoutHistory: []
+  },
+  { 
+    ngoId: 'NGO-004', 
+    name: 'Green Earth', 
+    registrationNumber: 'REG-98765', 
+    contactPerson: 'Rohan Sharma', 
+    email: 'support@greenearth.org', 
+    phone: '7766554433',
+    about: 'Global afforestation initiative carrying out city green belt developments and local environmental checkups.',
+    status: 'Pending',
+    verifiedCampaignsCount: 0,
+    activityProof: [],
+    payoutHistory: []
+  },
+  { 
+    ngoId: 'NGO-005', 
+    name: 'Fraudulent NGO', 
+    registrationNumber: 'REG-00000', 
+    contactPerson: 'Unknown', 
+    email: 'scam@fakengo.com', 
+    phone: '0000000000',
+    about: 'Fake registration attempting double-billing and scamming on social causes.',
+    status: 'Rejected',
+    verifiedCampaignsCount: 0,
+    activityProof: [],
+    payoutHistory: []
+  },
 ];
 
 const mockDonors = [
-  { donorId: 'DNR-901', name: 'Ravi Teja', email: 'ravi.t@example.com', totalDonated: '₹45,000', campaignsSupported: 3, status: 'Active' },
-  { donorId: 'DNR-902', name: 'Ayesha Khan', email: 'ayesha.k@example.com', totalDonated: '₹12,500', campaignsSupported: 1, status: 'Active' },
-  { donorId: 'DNR-903', name: 'Anil Kapoor', email: 'anil.k@example.com', totalDonated: '₹1,50,000', campaignsSupported: 5, status: 'Active' },
-  { donorId: 'DNR-904', name: 'Sneha Reddy', email: 'sneha.r@example.com', totalDonated: '₹5,000', campaignsSupported: 1, status: 'Suspended' },
+  { 
+    donorId: 'DNR-901', 
+    name: 'Ravi Teja', 
+    email: 'ravi.t@example.com', 
+    phone: '9888877777',
+    totalDonated: '₹45,000', 
+    campaignsSupported: 3, 
+    status: 'Active',
+    donationHistory: [
+      { campaignTitle: 'Help for Heart Surgery', amount: '₹15,000', type: 'One-Time', date: new Date('2026-05-10') },
+      { campaignTitle: 'Education for 10 Girls', amount: '₹10,000', type: 'Monthly', date: new Date('2026-05-15') },
+      { campaignTitle: 'Gaugrass Fodder Request', amount: '₹20,000', type: 'One-Time', date: new Date('2026-05-20') }
+    ]
+  },
+  { 
+    donorId: 'DNR-902', 
+    name: 'Ayesha Khan', 
+    email: 'ayesha.k@example.com', 
+    phone: '9777766666',
+    totalDonated: '₹12,500', 
+    campaignsSupported: 1, 
+    status: 'Active',
+    donationHistory: [
+      { campaignTitle: 'Winter Clothes Distribution', amount: '₹12,500', type: 'One-Time', date: new Date('2026-05-12') }
+    ]
+  },
+  { 
+    donorId: 'DNR-903', 
+    name: 'Anil Kapoor', 
+    email: 'anil.k@example.com', 
+    phone: '9666655555',
+    totalDonated: '₹1,50,000', 
+    campaignsSupported: 5, 
+    status: 'Active',
+    donationHistory: [
+      { campaignTitle: 'Help for Heart Surgery', amount: '₹50,000', type: 'One-Time', date: new Date('2026-05-18') },
+      { campaignTitle: 'Education for 10 Girls', amount: '₹40,000', type: 'Monthly', date: new Date('2026-05-22') }
+    ]
+  },
+  { 
+    donorId: 'DNR-904', 
+    name: 'Sneha Reddy', 
+    email: 'sneha.r@example.com', 
+    phone: '9555544444',
+    totalDonated: '₹5,000', 
+    campaignsSupported: 1, 
+    status: 'Suspended',
+    donationHistory: [
+      { campaignTitle: 'Medical emergency - Accident', amount: '₹5,000', type: 'One-Time', date: new Date('2026-05-14') }
+    ]
+  },
 ];
 
 const mockAdmin = [
@@ -56,10 +343,88 @@ const mockAdmin = [
 ];
 
 const mockStudents = [
-  { studentId: 'STU-001', name: 'Rohit Verma', email: 'rohit@example.com', phone: '9876543210', courseEnrolled: 'Vedic Astrology Masterclass', marks: 85, testStatus: 'Passed', scholarshipStatus: 'Approved', scholarshipAmount: '₹2,500', referredBy: 'Anil Kapoor', status: 'Active' },
-  { studentId: 'STU-002', name: 'Karan Malhotra', email: 'karan@example.com', phone: '8765432109', courseEnrolled: 'Tarot for Beginners', marks: 45, testStatus: 'Failed', scholarshipStatus: 'None', scholarshipAmount: '₹0', referredBy: '', status: 'Active' },
-  { studentId: 'STU-003', name: 'Simran Jeet', email: 'simran@example.com', phone: '7654321098', courseEnrolled: 'Advanced Palmistry', marks: 92, testStatus: 'Passed', scholarshipStatus: 'Applied', scholarshipAmount: '₹0', referredBy: 'Ravi Teja', status: 'Active' },
-  { studentId: 'STU-004', name: 'Aditi Rao', email: 'aditi@example.com', phone: '6543210987', courseEnrolled: 'Vedic Astrology Masterclass', marks: 60, testStatus: 'Passed', scholarshipStatus: 'Rejected', scholarshipAmount: '₹0', referredBy: '', status: 'Suspended' }
+  { 
+    studentId: 'STU-001', 
+    name: 'Rohit Verma', 
+    email: 'rohit@example.com', 
+    phone: '9876543210', 
+    courseEnrolled: 'Vedic Astrology Masterclass', 
+    marks: 85, 
+    testStatus: 'Passed', 
+    scholarshipStatus: 'Approved', 
+    scholarshipAmount: '₹2,500', 
+    referredBy: 'Anil Kapoor', 
+    status: 'Active',
+    attendanceRate: 95,
+    certificatesEarned: ['https://s3.amazonaws.com/divine-docs/vedic_astrology_rohit.pdf'],
+    assignmentsSubmitted: [
+      { assignmentTitle: 'Natal Chart Mapping Assignment', score: 88, submittedAt: new Date('2026-05-10') }
+    ],
+    testsCompleted: [
+      { testTitle: 'Entrance Vedic Test', score: 85, completedAt: new Date('2026-05-08') }
+    ]
+  },
+  { 
+    studentId: 'STU-002', 
+    name: 'Karan Malhotra', 
+    email: 'karan@example.com', 
+    phone: '8765432109', 
+    courseEnrolled: 'Tarot for Beginners', 
+    marks: 45, 
+    testStatus: 'Failed', 
+    scholarshipStatus: 'None', 
+    scholarshipAmount: '₹0', 
+    referredBy: '', 
+    status: 'Active',
+    attendanceRate: 70,
+    certificatesEarned: [],
+    assignmentsSubmitted: [
+      { assignmentTitle: 'Minor Arcana Meaning', score: 50, submittedAt: new Date('2026-05-12') }
+    ],
+    testsCompleted: [
+      { testTitle: 'Basic Tarot Quiz', score: 45, completedAt: new Date('2026-05-09') }
+    ]
+  },
+  { 
+    studentId: 'STU-003', 
+    name: 'Simran Jeet', 
+    email: 'simran@example.com', 
+    phone: '7654321098', 
+    courseEnrolled: 'Advanced Palmistry', 
+    marks: 92, 
+    testStatus: 'Passed', 
+    scholarshipStatus: 'Applied', 
+    scholarshipAmount: '₹0', 
+    referredBy: 'Ravi Teja', 
+    status: 'Active',
+    attendanceRate: 98,
+    certificatesEarned: [],
+    assignmentsSubmitted: [
+      { assignmentTitle: 'Deciphering Life Line Marks', score: 95, submittedAt: new Date('2026-05-14') }
+    ],
+    testsCompleted: [
+      { testTitle: 'Entrance Palmistry Quiz', score: 92, completedAt: new Date('2026-05-10') }
+    ]
+  },
+  { 
+    studentId: 'STU-004', 
+    name: 'Aditi Rao', 
+    email: 'aditi@example.com', 
+    phone: '6543210987', 
+    courseEnrolled: 'Vedic Astrology Masterclass', 
+    marks: 60, 
+    testStatus: 'Passed', 
+    scholarshipStatus: 'Rejected', 
+    scholarshipAmount: '₹0', 
+    referredBy: '', 
+    status: 'Suspended',
+    attendanceRate: 50,
+    certificatesEarned: [],
+    assignmentsSubmitted: [],
+    testsCompleted: [
+      { testTitle: 'Entrance Vedic Test', score: 60, completedAt: new Date('2026-05-05') }
+    ]
+  }
 ];
 
 // Spanned over 30 days to build comprehensive MIS revenue and donation data

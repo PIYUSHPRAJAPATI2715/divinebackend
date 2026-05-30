@@ -11,6 +11,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single course detailed syllabus & live schedules
+router.get('/:id', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json(course);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Add a new course
 router.post('/', async (req, res) => {
   try {
