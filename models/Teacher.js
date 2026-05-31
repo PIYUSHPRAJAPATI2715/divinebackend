@@ -14,7 +14,24 @@ const teacherSchema = new mongoose.Schema({
   certificates: [{ type: String }], // Array of Certificate URLs
   totalEarnings: { type: Number, default: 0 },
   withdrawableAmount: { type: Number, default: 0 },
-  liveBatchesCount: { type: Number, default: 0 }
+  liveBatchesCount: { type: Number, default: 0 },
+  kycDocs: [{ type: String }], // Aadhaar, PAN, registration proofs
+  withdrawalHistory: [
+    {
+      amount: { type: Number },
+      requestedAt: { type: Date, default: Date.now },
+      status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+      transactionId: { type: String, default: '' }
+    }
+  ],
+  batches: [
+    {
+      batchName: { type: String },
+      scheduleTime: { type: String },
+      subject: { type: String },
+      studentsCount: { type: Number, default: 0 }
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Teacher', teacherSchema);

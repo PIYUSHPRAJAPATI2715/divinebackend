@@ -27,7 +27,8 @@ const mockCampaigns = [
     status: 'Pending',
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/hospital_estimate_rahul.pdf', 'https://s3.amazonaws.com/divine-docs/medical_case_rahul.jpg'],
     withdrawalRequested: false,
-    withdrawalStatus: 'None'
+    withdrawalStatus: 'None',
+    withdrawalRequests: []
   },
   { 
     campaignId: 'CMP-102', 
@@ -35,13 +36,16 @@ const mockCampaigns = [
     user: 'NGO Pratham', 
     category: 'NGO Donation',
     description: 'Sponsor dynamic elementary schooling, tuition fees, uniforms, and study books for 10 unprivileged girl students in urban slum areas of New Delhi.',
-    goal: '₹1,00,000', 
+    goal: '₹1,0,000', 
     raised: '₹80,000', 
     oneTimeOrMonthly: 'Monthly',
     status: 'Live',
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/ngo_registration_pratham.pdf'],
     withdrawalRequested: true,
-    withdrawalStatus: 'Requested'
+    withdrawalStatus: 'Requested',
+    withdrawalRequests: [
+      { amount: 45000, requestedAt: new Date('2026-05-15'), status: 'Pending' }
+    ]
   },
   { 
     campaignId: 'CMP-103', 
@@ -55,7 +59,10 @@ const mockCampaigns = [
     status: 'Completed',
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/gaushala_trust_deed.pdf'],
     withdrawalRequested: true,
-    withdrawalStatus: 'Approved'
+    withdrawalStatus: 'Approved',
+    withdrawalRequests: [
+      { amount: 50000, requestedAt: new Date('2026-05-20'), status: 'Approved', releasedAt: new Date('2026-05-21') }
+    ]
   },
   { 
     campaignId: 'CMP-104', 
@@ -99,7 +106,8 @@ const mockCourses = [
     liveClassSchedule: 'Mon, Wed, Fri - 7:00 PM',
     assignmentsCount: 6,
     modules: ['Introduction to 12 Houses', 'Planet transits and Shani Sade Sati', 'Yogas & Doshas in Kundli', 'Gemstone and Pooja Remedies'],
-    status: 'Published' 
+    status: 'Published',
+    liveClassDetails: { agoraSessionId: 'SESSION-VEDIC-201', activeStudents: 15 }
   },
   { 
     courseId: 'CRS-202', 
@@ -112,7 +120,8 @@ const mockCourses = [
     liveClassSchedule: 'Tue, Thu - 6:00 PM',
     assignmentsCount: 3,
     modules: ['Major Arcana Archetypes', 'The Rider-Waite-Smith Symbolisms', 'Simple Card Spreads', 'Reading Ethics & Intuition'],
-    status: 'Pending' 
+    status: 'Pending',
+    liveClassDetails: { agoraSessionId: '', activeStudents: 0 }
   },
   { 
     courseId: 'CRS-203', 
@@ -125,7 +134,8 @@ const mockCourses = [
     liveClassSchedule: 'Sat, Sun - 11:00 AM',
     assignmentsCount: 4,
     modules: ['The Four Hand Types', 'Deciphering the Three Major Lines', 'Planetary Mounts Analysis', 'Reading Fate & Travel Markings'],
-    status: 'Published' 
+    status: 'Published',
+    liveClassDetails: { agoraSessionId: 'SESSION-PALM-203', activeStudents: 8 }
   },
 ];
 
@@ -144,7 +154,16 @@ const mockTeachers = [
     certificates: ['https://s3.amazonaws.com/divine-docs/vedic_astrology_phd.pdf', 'kyc_proof_ramesh.jpg'],
     totalEarnings: 95000,
     withdrawableAmount: 32000,
-    liveBatchesCount: 3
+    liveBatchesCount: 3,
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/aadhaar_ramesh.jpg', 'https://s3.amazonaws.com/divine-docs/pan_ramesh.jpg'],
+    withdrawalHistory: [
+      { amount: 15000, requestedAt: new Date('2026-05-10'), status: 'Approved', transactionId: 'TXN-WDR-8801' },
+      { amount: 8000, requestedAt: new Date('2026-05-18'), status: 'Pending', transactionId: '' }
+    ],
+    batches: [
+      { batchName: 'Vedic Foundations A', scheduleTime: 'Mon, Wed, Fri - 7:00 PM', subject: 'Vedic Astrology', studentsCount: 15 },
+      { batchName: 'Vedic Advanced B', scheduleTime: 'Sat, Sun - 9:00 AM', subject: 'Kundli Analysis', studentsCount: 12 }
+    ]
   },
   { 
     teacherId: 'TCH-002', 
@@ -160,7 +179,10 @@ const mockTeachers = [
     certificates: ['https://s3.amazonaws.com/divine-docs/tarot_master_certified.pdf'],
     totalEarnings: 0,
     withdrawableAmount: 0,
-    liveBatchesCount: 0
+    liveBatchesCount: 0,
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/aadhaar_priya.jpg'],
+    withdrawalHistory: [],
+    batches: []
   },
   { 
     teacherId: 'TCH-003', 
@@ -176,7 +198,14 @@ const mockTeachers = [
     certificates: ['https://s3.amazonaws.com/divine-docs/palmistry_diploma.pdf'],
     totalEarnings: 54000,
     withdrawableAmount: 18000,
-    liveBatchesCount: 2
+    liveBatchesCount: 2,
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/aadhaar_amit.jpg', 'https://s3.amazonaws.com/divine-docs/pan_amit.jpg'],
+    withdrawalHistory: [
+      { amount: 10000, requestedAt: new Date('2026-05-12'), status: 'Approved', transactionId: 'TXN-WDR-8802' }
+    ],
+    batches: [
+      { batchName: 'Palmistry Core A', scheduleTime: 'Sat, Sun - 11:00 AM', subject: 'Palmistry', studentsCount: 8 }
+    ]
   },
   { 
     teacherId: 'TCH-004', 
@@ -192,7 +221,10 @@ const mockTeachers = [
     certificates: ['https://s3.amazonaws.com/divine-docs/vastu_acharya_certificate.pdf'],
     totalEarnings: 0,
     withdrawableAmount: 0,
-    liveBatchesCount: 0
+    liveBatchesCount: 0,
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/aadhaar_neha.jpg'],
+    withdrawalHistory: [],
+    batches: []
   },
   { 
     teacherId: 'TCH-005', 
@@ -208,8 +240,11 @@ const mockTeachers = [
     certificates: ['https://s3.amazonaws.com/divine-docs/scam_docs.pdf'],
     totalEarnings: 0,
     withdrawableAmount: 0,
-    liveBatchesCount: 0
-  },
+    liveBatchesCount: 0,
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/fake_id.jpg'],
+    withdrawalHistory: [],
+    batches: []
+  }
 ];
 
 const mockNGOs = [
@@ -226,6 +261,10 @@ const mockNGOs = [
     activityProof: ['https://s3.amazonaws.com/divine-docs/kids_reading_proof.jpg', 'https://s3.amazonaws.com/divine-docs/distribution_report_2026.pdf'],
     payoutHistory: [
       { payoutId: 'PO-901', amount: 45000, status: 'Approved', requestedDate: new Date('2026-05-15') }
+    ],
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/ngo_pratham_reg.pdf', 'https://s3.amazonaws.com/divine-docs/ngo_pratham_tax.pdf'],
+    campaigns: [
+      { campaignId: 'CMP-102', title: 'Education for 10 Girls', goal: '₹1,00,000', raised: '₹80,000', status: 'Live' }
     ]
   },
   { 
@@ -241,6 +280,10 @@ const mockNGOs = [
     activityProof: ['https://s3.amazonaws.com/divine-docs/gaushala_cows_feed.jpg'],
     payoutHistory: [
       { payoutId: 'PO-902', amount: 50000, status: 'Approved', requestedDate: new Date('2026-05-20') }
+    ],
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/gaushala_trust_deed.pdf'],
+    campaigns: [
+      { campaignId: 'CMP-103', title: 'Gaugrass Fodder Request', goal: '₹50,000', raised: '₹50,000', status: 'Completed' }
     ]
   },
   { 
@@ -254,7 +297,11 @@ const mockNGOs = [
     status: 'Pending',
     verifiedCampaignsCount: 1,
     activityProof: [],
-    payoutHistory: []
+    payoutHistory: [],
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/hope_ngo_cert.pdf'],
+    campaigns: [
+      { campaignId: 'CMP-105', title: 'Winter Clothes Distribution', goal: '₹75,000', raised: '₹25,000', status: 'Live' }
+    ]
   },
   { 
     ngoId: 'NGO-004', 
@@ -267,7 +314,9 @@ const mockNGOs = [
     status: 'Pending',
     verifiedCampaignsCount: 0,
     activityProof: [],
-    payoutHistory: []
+    payoutHistory: [],
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/green_earth_reg.pdf'],
+    campaigns: []
   },
   { 
     ngoId: 'NGO-005', 
@@ -280,8 +329,10 @@ const mockNGOs = [
     status: 'Rejected',
     verifiedCampaignsCount: 0,
     activityProof: [],
-    payoutHistory: []
-  },
+    payoutHistory: [],
+    kycDocs: ['https://s3.amazonaws.com/divine-docs/fake_ngo_doc.pdf'],
+    campaigns: []
+  }
 ];
 
 const mockDonors = [
@@ -362,6 +413,14 @@ const mockStudents = [
     ],
     testsCompleted: [
       { testTitle: 'Entrance Vedic Test', score: 85, completedAt: new Date('2026-05-08') }
+    ],
+    subscriptionPlan: 'Premium Yearly',
+    pdfDownloads: [
+      { title: 'Vedic Houses Cheat-Sheet', downloadedAt: new Date('2026-05-11') },
+      { title: 'Shani Transit Remedies Guide', downloadedAt: new Date('2026-05-19') }
+    ],
+    batchDiscussions: [
+      { roomName: 'Vedic Foundations A Discussion', joinedAt: new Date('2026-05-01') }
     ]
   },
   { 
@@ -383,6 +442,11 @@ const mockStudents = [
     ],
     testsCompleted: [
       { testTitle: 'Basic Tarot Quiz', score: 45, completedAt: new Date('2026-05-09') }
+    ],
+    subscriptionPlan: 'Basic Monthly',
+    pdfDownloads: [],
+    batchDiscussions: [
+      { roomName: 'Tarot Beginners Circle', joinedAt: new Date('2026-05-09') }
     ]
   },
   { 
@@ -404,6 +468,13 @@ const mockStudents = [
     ],
     testsCompleted: [
       { testTitle: 'Entrance Palmistry Quiz', score: 92, completedAt: new Date('2026-05-10') }
+    ],
+    subscriptionPlan: 'Course Purchase',
+    pdfDownloads: [
+      { title: 'Main Palm Lines Handbook', downloadedAt: new Date('2026-05-15') }
+    ],
+    batchDiscussions: [
+      { roomName: 'Palmistry Core Discussion', joinedAt: new Date('2026-05-10') }
     ]
   },
   { 
@@ -423,7 +494,10 @@ const mockStudents = [
     assignmentsSubmitted: [],
     testsCompleted: [
       { testTitle: 'Entrance Vedic Test', score: 60, completedAt: new Date('2026-05-05') }
-    ]
+    ],
+    subscriptionPlan: 'None',
+    pdfDownloads: [],
+    batchDiscussions: []
   }
 ];
 

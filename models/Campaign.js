@@ -12,7 +12,15 @@ const campaignSchema = new mongoose.Schema({
   status: { type: String, enum: ['Pending', 'Live', 'Completed'], default: 'Pending' },
   verificationDocs: [{ type: String }], // URLs to documents like medical reports or registrations
   withdrawalRequested: { type: Boolean, default: false },
-  withdrawalStatus: { type: String, enum: ['None', 'Requested', 'Approved', 'Rejected'], default: 'None' }
+  withdrawalStatus: { type: String, enum: ['None', 'Requested', 'Approved', 'Rejected'], default: 'None' },
+  withdrawalRequests: [
+    {
+      amount: { type: Number },
+      requestedAt: { type: Date, default: Date.now },
+      status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+      releasedAt: { type: Date }
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Campaign', campaignSchema);

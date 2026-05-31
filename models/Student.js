@@ -27,6 +27,19 @@ const studentSchema = new mongoose.Schema({
       completedAt: { type: Date, default: Date.now },
       score: { type: Number, default: 0 }
     }
+  ],
+  subscriptionPlan: { type: String, enum: ['None', 'Course Purchase', 'Basic Monthly', 'Premium Yearly'], default: 'None' },
+  pdfDownloads: [
+    {
+      title: { type: String },
+      downloadedAt: { type: Date, default: Date.now }
+    }
+  ],
+  batchDiscussions: [
+    {
+      roomName: { type: String },
+      joinedAt: { type: Date, default: Date.now }
+    }
   ]
 }, { timestamps: true });
 

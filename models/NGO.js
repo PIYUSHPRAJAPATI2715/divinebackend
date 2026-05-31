@@ -18,6 +18,16 @@ const ngoSchema = new mongoose.Schema({
       status: { type: String, enum: ['Pending', 'Approved', 'Rejected'] },
       requestedDate: { type: Date, default: Date.now }
     }
+  ],
+  kycDocs: [{ type: String }],
+  campaigns: [
+    {
+      campaignId: { type: String },
+      title: { type: String },
+      goal: { type: String },
+      raised: { type: String },
+      status: { type: String }
+    }
   ]
 }, { timestamps: true });
 

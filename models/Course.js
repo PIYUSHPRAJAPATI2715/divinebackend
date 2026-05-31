@@ -11,7 +11,11 @@ const courseSchema = new mongoose.Schema({
   liveClassSchedule: { type: String, default: '' }, // e.g. "Mon, Wed, Fri - 8:00 PM"
   assignmentsCount: { type: Number, default: 0 },
   modules: [{ type: String }], // Array of video module titles/subjects
-  status: { type: String, enum: ['Pending', 'Published', 'Rejected'], default: 'Pending' }
+  status: { type: String, enum: ['Pending', 'Published', 'Rejected'], default: 'Pending' },
+  liveClassDetails: {
+    agoraSessionId: { type: String, default: '' },
+    activeStudents: { type: Number, default: 0 }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Course', courseSchema);
