@@ -23,7 +23,7 @@ router.post('/signup', async (req, res) => {
     const { phone } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ message: 'Phone number is required' });
+      return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
 
     // Check if user exists and profile is complete
@@ -48,6 +48,7 @@ router.post('/signup', async (req, res) => {
     console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
 
     res.json({
+      status: true,
       message: 'OTP sent successfully (Use static code 1234 to verify)',
       isUserExist,
       phone,
@@ -56,7 +57,7 @@ router.post('/signup', async (req, res) => {
 
   } catch (err) {
     console.error('Phone signup initiation error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
 
@@ -93,6 +94,7 @@ router.post('/login', async (req, res) => {
       console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
 
       return res.json({
+        status: true,
         message: 'OTP sent successfully (Use static code 1234 to verify)',
         isUserExist,
         phone,
@@ -114,9 +116,10 @@ router.post('/login', async (req, res) => {
         if (isPlainMatch || isHashMatch) {
           const token = jwt.sign({ id: admin._id, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
           return res.json({
+            status: true,
             message: 'Login successful',
             token,
-            user: {
+            data: {
               id: admin._id,
               email: admin.email,
               role: 'admin'
@@ -124,14 +127,14 @@ router.post('/login', async (req, res) => {
           });
         }
       }
-      return res.status(401).json({ message: 'Invalid admin credentials' });
+      return res.status(401).json({ status: false, message: 'Invalid admin credentials' });
     }
 
-    return res.status(400).json({ message: 'Please provide either a phone number or admin credentials' });
+    return res.status(400).json({ status: false, message: 'Please provide either a phone number or admin credentials' });
 
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
 
@@ -145,21 +148,21 @@ router.post('/verify-otp', async (req, res) => {
     const { phone, otp } = req.body;
 
     if (!phone || !otp) {
-      return res.status(400).json({ message: 'Phone number and OTP are required' });
+      return res.status(400).json({ status: false, message: 'Phone number and OTP are required' });
     }
 
     const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: 'User session not found. Please request a new OTP.' });
+      return res.status(404).json({ status: false, message: 'User session not found. Please request a new OTP.' });
     }
 
     // Verify OTP
     if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+      return res.status(400).json({ status: false, message: 'Invalid OTP' });
     }
 
     if (new Date() > user.otpExpiry) {
-      return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
+      return res.status(400).json({ status: false, message: 'OTP has expired. Please request a new OTP.' });
     }
 
     // Clear OTP details upon verification
@@ -171,10 +174,11 @@ router.post('/verify-otp', async (req, res) => {
     const token = jwt.sign({ id: user._id, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
+      status: true,
       message: 'OTP verified successfully',
       token,
       isProfileComplete: user.isProfileComplete,
-      user: {
+      data: {
         id: user._id,
         phone: user.phone,
         name: user.name || "",
@@ -186,7 +190,7 @@ router.post('/verify-otp', async (req, res) => {
 
   } catch (err) {
     console.error('OTP verification error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
 
@@ -201,20 +205,20 @@ router.post('/profile-setup', authMiddleware, async (req, res) => {
     const userId = req.user.id;
 
     if (!name) {
-      return res.status(400).json({ message: 'Name is required' });
+      return res.status(400).json({ status: false, message: 'Name is required' });
     }
 
     // Look up user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ status: false, message: 'User not found' });
     }
 
     // Optional email check to avoid duplicate emails if they enter a duplicate one
     if (email) {
       const emailInUse = await User.findOne({ email, _id: { $ne: userId } });
       if (emailInUse) {
-        return res.status(400).json({ message: 'Email address is already in use by another account' });
+        return res.status(400).json({ status: false, message: 'Email address is already in use by another account' });
       }
       user.email = email;
     }
@@ -227,8 +231,9 @@ router.post('/profile-setup', authMiddleware, async (req, res) => {
     await user.save();
 
     res.json({
+      status: true,
       message: 'Profile set up successfully',
-      user: {
+      data: {
         id: user._id,
         phone: user.phone,
         name: user.name,
@@ -241,7 +246,7 @@ router.post('/profile-setup', authMiddleware, async (req, res) => {
 
   } catch (err) {
     console.error('Profile setup error:', err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
 
@@ -251,7 +256,7 @@ router.post('/profile-setup', authMiddleware, async (req, res) => {
  * @access  Public
  */
 router.post('/logout', (req, res) => {
-  res.json({ message: 'Logged out successfully' });
+  res.json({ status: true, message: 'Logged out successfully' });
 });
 
 module.exports = router;
