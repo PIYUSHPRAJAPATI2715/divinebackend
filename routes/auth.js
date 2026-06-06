@@ -8,9 +8,9 @@ const authMiddleware = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
-// Helper to generate 4-digit numeric OTP
+// Helper to generate static OTP for development
 function generate4DigitOTP() {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  return '1234';
 }
 
 /**
@@ -30,7 +30,7 @@ router.post('/signup', async (req, res) => {
     const existingUser = await User.findOne({ phone });
     const isUserExist = !!(existingUser && existingUser.isProfileComplete);
 
-    const otp = generate4DigitOTP();
+    const otp = '1234';
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     let user = existingUser;
@@ -48,10 +48,10 @@ router.post('/signup', async (req, res) => {
     console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
 
     res.json({
-      message: 'OTP sent successfully',
+      message: 'OTP sent successfully (Use static code 1234 to verify)',
       isUserExist,
       phone,
-      otp: process.env.NODE_ENV === 'production' ? undefined : otp
+      otp: otp
     });
 
   } catch (err) {
@@ -75,7 +75,7 @@ router.post('/login', async (req, res) => {
       const existingUser = await User.findOne({ phone });
       const isUserExist = !!(existingUser && existingUser.isProfileComplete);
 
-      const otp = generate4DigitOTP();
+      const otp = '1234';
       const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       let user = existingUser;
@@ -93,10 +93,10 @@ router.post('/login', async (req, res) => {
       console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
 
       return res.json({
-        message: 'OTP sent successfully',
+        message: 'OTP sent successfully (Use static code 1234 to verify)',
         isUserExist,
         phone,
-        otp: process.env.NODE_ENV === 'production' ? undefined : otp
+        otp: otp
       });
     }
 
