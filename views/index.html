@@ -395,6 +395,38 @@
         
         <div class="endpoint-item">
           <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/signup</span>
+          </div>
+          <span class="badge public">OTP Signup Start</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/login</span>
+          </div>
+          <span class="badge public">OTP Login Start / Admin</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/verify-otp</span>
+          </div>
+          <span class="badge public">OTP Verification</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/profile-setup</span>
+          </div>
+          <span class="badge secured">Profile Setup (Bearer Token)</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
             <span class="method get">GET</span>
             <span class="path">/api/campaigns</span>
           </div>
@@ -405,38 +437,6 @@
           <div class="endpoint-left">
             <span class="method post">POST</span>
             <span class="path">/api/campaigns</span>
-          </div>
-          <span class="badge secured">Bearer Token Required</span>
-        </div>
-
-        <div class="endpoint-item">
-          <div class="endpoint-left">
-            <span class="method get">GET</span>
-            <span class="path">/api/teachers/:id</span>
-          </div>
-          <span class="badge public">Public Read (Details)</span>
-        </div>
-
-        <div class="endpoint-item">
-          <div class="endpoint-left">
-            <span class="method post">POST</span>
-            <span class="path">/api/auth/signup</span>
-          </div>
-          <span class="badge public">Public Auth</span>
-        </div>
-
-        <div class="endpoint-item">
-          <div class="endpoint-left">
-            <span class="method post">POST</span>
-            <span class="path">/api/auth/login</span>
-          </div>
-          <span class="badge public">Public Auth</span>
-        </div>
-
-        <div class="endpoint-item">
-          <div class="endpoint-left">
-            <span class="method put">PUT</span>
-            <span class="path">/api/students/:id</span>
           </div>
           <span class="badge secured">Bearer Token Required</span>
         </div>

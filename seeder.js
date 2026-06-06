@@ -13,6 +13,7 @@ const Banner = require('./models/Banner');
 const NewsMedia = require('./models/NewsMedia');
 const Seminar = require('./models/Seminar');
 const Referral = require('./models/Referral');
+const User = require('./models/User');
 
 const mockCampaigns = [
   { 
@@ -585,6 +586,7 @@ async function seedDatabase() {
   await NewsMedia.deleteMany({});
   await Seminar.deleteMany({});
   await Referral.deleteMany({});
+  await User.deleteMany({});
   
   console.log('Inserting seed data...');
   await Campaign.insertMany(mockCampaigns);
