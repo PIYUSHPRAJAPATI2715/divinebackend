@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const NGO = require('../models/NGO');
 const Banner = require('../models/Banner');
 const CampaignCategory = require('../models/CampaignCategory');
 const Campaign = require('../models/Campaign');
@@ -68,9 +69,9 @@ router.get('/', optionalAuth, async (req, res) => {
     // 4. Fetch ongoing campaigns (status = 'Live')
     const campaigns = await Campaign.find({ status: 'Live' }).sort({ createdAt: -1 });
 
-    // 5. Fetch top NGOs (verified users with role = 'ngo' from User collection)
-    const topNGOs = await User.find({ role: 'ngo', isProfileComplete: true })
-      .select('organizationName logo rating impactStats about email phone')
+    // 5. Fetch top NGOs (verified NGOs from NGO collection)
+    const topNGOs = await NGO.find({ status: 'Verified' })
+      .select('name logo rating impactStats about email phone')
       .limit(10);
 
     res.json({
@@ -103,7 +104,7 @@ router.get('/', optionalAuth, async (req, res) => {
         })),
         ngos: topNGOs.map(ngo => ({
           id: ngo._id,
-          name: ngo.organizationName,
+          name: ngo.name,
           logo: ngo.logo,
           rating: ngo.rating || 4.5,
           impactStats: ngo.impactStats || '',
