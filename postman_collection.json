@@ -7,18 +7,8 @@
   },
   "item": [
     {
-      "name": "Donation App APIs",
-      "description": "Consolidated suite of all Donation Application APIs including user authentication, campaign/cause creation, donor lists, and NGO registrations.",
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{jwt_token}}",
-            "type": "string"
-          }
-        ]
-      },
+      "name": "User & Client APIs",
+      "description": "End-user facing APIs for the mobile application. Includes passwordless login, registration, homepage listing, and public categories.",
       "item": [
         {
           "name": "User Authentication",
@@ -268,7 +258,70 @@
           ]
         },
         {
-          "name": "Homepage & Dynamic Categories",
+          "name": "Get Homepage API (Semi-Public)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "description": "Optional: Include Bearer Token to load Noah's wallet balance and personal donation history."
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/home",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "home"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "campaign-categories"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Dashboard APIs",
+      "description": "Administrative CRUD APIs for the Vite dashboard. Organized by feature module and prefixed with /api/admin/.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwt_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Campaign Categories CRUD",
+          "description": "Administrative CRUD operations for dynamic fundraising categories.",
           "item": [
             {
               "name": "Seed System Data (Admin)",
@@ -323,7 +376,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -332,6 +385,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaign-categories"
                   ]
                 }
@@ -352,7 +406,7 @@
                   "raw": "{\n  \"name\": \"Disaster Relief\",\n  \"icon\": \"shield-alert\",\n  \"description\": \"Emergency relief funds for floods, earthquakes, and disasters.\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -361,6 +415,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaign-categories"
                   ]
                 }
@@ -381,7 +436,7 @@
                   "raw": "{\n  \"name\": \"Disaster & Flood Relief\",\n  \"icon\": \"cloud-lightning\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -390,6 +445,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaign-categories",
                     ":id"
                   ],
@@ -408,7 +464,7 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -417,6 +473,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaign-categories",
                     ":id"
                   ],
@@ -440,7 +497,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaigns",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -449,6 +506,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaigns"
                   ]
                 }
@@ -469,7 +527,7 @@
                   "raw": "{\n  \"title\": \"Winter Clothes Distribution\",\n  \"user\": \"Hope NGO\",\n  \"goal\": \"₹75,000\",\n  \"raised\": \"₹25,000\",\n  \"status\": \"Live\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaigns",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -478,6 +536,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaigns"
                   ]
                 }
@@ -498,7 +557,7 @@
                   "raw": "{\n  \"status\": \"Completed\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaigns/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -507,6 +566,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaigns",
                     ":id"
                   ],
@@ -525,7 +585,7 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaigns/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaigns/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -534,6 +594,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "campaigns",
                     ":id"
                   ],
@@ -557,7 +618,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donors",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -566,6 +627,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "donors"
                   ]
                 }
@@ -586,7 +648,7 @@
                   "raw": "{\n  \"name\": \"Ravi Teja\",\n  \"email\": \"ravi.t@example.com\",\n  \"totalDonated\": \"₹45,000\",\n  \"campaignsSupported\": 3\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donors",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -595,6 +657,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "donors"
                   ]
                 }
@@ -615,7 +678,7 @@
                   "raw": "{\n  \"status\": \"Suspended\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donors/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -624,6 +687,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "donors",
                     ":id"
                   ],
@@ -642,7 +706,7 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/donors/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donors/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -651,6 +715,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "donors",
                     ":id"
                   ],
@@ -674,7 +739,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/ngos",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -683,6 +748,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "ngos"
                   ]
                 }
@@ -703,7 +769,7 @@
                   "raw": "{\n  \"name\": \"Hope Foundation\",\n  \"registrationNumber\": \"REG-54321\",\n  \"contactPerson\": \"Neha Singh\",\n  \"email\": \"hello@hopengo.in\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/ngos",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -712,6 +778,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "ngos"
                   ]
                 }
@@ -732,7 +799,7 @@
                   "raw": "{\n  \"status\": \"Verified\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/ngos/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -741,6 +808,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "ngos",
                     ":id"
                   ],
@@ -759,7 +827,7 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/ngos/:id",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/ngos/:id",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -768,6 +836,7 @@
                   ],
                   "path": [
                     "api",
+                    "admin",
                     "ngos",
                     ":id"
                   ],
@@ -781,448 +850,459 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Astro-Coaching Students & Marking",
-      "item": [
-        {
-          "name": "Get All Students",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/students",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "students"
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9bd\",\n    \"studentId\": \"STU-001\",\n    \"name\": \"Rohit Verma\",\n    \"email\": \"rohit@example.com\",\n    \"phone\": \"9876543210\",\n    \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n    \"marks\": 85,\n    \"testStatus\": \"Passed\",\n    \"scholarshipStatus\": \"Approved\",\n    \"scholarshipAmount\": \"₹2,500\",\n    \"referredBy\": \"Anil Kapoor\",\n    \"status\": \"Active\",\n    \"createdAt\": \"2026-05-26T07:24:27.477Z\",\n    \"updatedAt\": \"2026-05-26T07:24:27.477Z\"\n  }\n]"
-            }
-          ]
         },
         {
-          "name": "Register Student Profile",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"scholarshipStatus\": \"Applied\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/students",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "students"
-              ]
-            }
-          },
-          "response": [
+          "name": "Astro-Coaching Students & Marking",
+          "item": [
             {
-              "name": "Registered Successfully",
-              "status": "Created",
-              "code": 201,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"studentId\": \"STU-1859\",\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Applied\",\n  \"scholarshipAmount\": \"₹0\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9e9\",\n  \"createdAt\": \"2026-05-26T07:44:27.477Z\",\n  \"updatedAt\": \"2026-05-26T07:44:27.477Z\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "Update Examination Marks / Scholarship Status",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/students/:id",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "students",
-                ":id"
-              ],
-              "variable": [
+              "name": "Get All Students",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/students",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "students"
+                  ]
+                }
+              },
+              "response": [
                 {
-                  "key": "id",
-                  "value": "REPLACE_WITH_STUDENT_OBJECT_ID"
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9bd\",\n    \"studentId\": \"STU-001\",\n    \"name\": \"Rohit Verma\",\n    \"email\": \"rohit@example.com\",\n    \"phone\": \"9876543210\",\n    \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n    \"marks\": 85,\n    \"testStatus\": \"Passed\",\n    \"scholarshipStatus\": \"Approved\",\n    \"scholarshipAmount\": \"₹2,500\",\n    \"referredBy\": \"Anil Kapoor\",\n    \"status\": \"Active\",\n    \"createdAt\": \"2026-05-26T07:24:27.477Z\",\n    \"updatedAt\": \"2026-05-26T07:24:27.477Z\"\n  }\n]"
+                }
+              ]
+            },
+            {
+              "name": "Register Student Profile",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"scholarshipStatus\": \"Applied\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/students",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "students"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Registered Successfully",
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "{\n  \"studentId\": \"STU-1859\",\n  \"name\": \"Raman Kumar\",\n  \"email\": \"raman@example.com\",\n  \"phone\": \"9871112223\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 90,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Applied\",\n  \"scholarshipAmount\": \"₹0\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9e9\",\n  \"createdAt\": \"2026-05-26T07:44:27.477Z\",\n  \"updatedAt\": \"2026-05-26T07:44:27.477Z\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "Update Examination Marks / Scholarship Status",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/students/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "students",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_STUDENT_OBJECT_ID"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Update Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "{\n  \"studentId\": \"STU-001\",\n  \"name\": \"Rohit Verma\",\n  \"email\": \"rohit@example.com\",\n  \"phone\": \"9876543210\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 85,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\",\n  \"referredBy\": \"Anil Kapoor\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9bd\"\n}"
                 }
               ]
             }
-          },
-          "response": [
-            {
-              "name": "Update Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"studentId\": \"STU-001\",\n  \"name\": \"Rohit Verma\",\n  \"email\": \"rohit@example.com\",\n  \"phone\": \"9876543210\",\n  \"courseEnrolled\": \"Vedic Astrology Masterclass\",\n  \"marks\": 85,\n  \"testStatus\": \"Passed\",\n  \"scholarshipStatus\": \"Approved\",\n  \"scholarshipAmount\": \"50% Monthly Waiver\",\n  \"referredBy\": \"Anil Kapoor\",\n  \"status\": \"Active\",\n  \"_id\": \"6a154aab663cb1237090e9bd\"\n}"
-            }
           ]
-        }
-      ]
-    },
-    {
-      "name": "MIS Financials & Donation Logs",
-      "item": [
+        },
         {
-          "name": "Get MIS Transactions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/transactions",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "transactions"
-              ]
-            }
-          },
-          "response": [
+          "name": "MIS Financials & Donation Logs",
+          "item": [
             {
-              "name": "Loaded logs",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9c8\",\n    \"transactionId\": \"TXN-001\",\n    \"type\": \"Donation\",\n    \"user\": \"Anil Kapoor\",\n    \"item\": \"Help for Heart Surgery\",\n    \"amount\": 50000,\n    \"paymentPlan\": \"None\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-25T07:24:27.502Z\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9c9\",\n    \"transactionId\": \"TXN-002\",\n    \"type\": \"Course\",\n    \"user\": \"Rohit Verma\",\n    \"item\": \"Vedic Astrology Masterclass\",\n    \"amount\": 4999,\n    \"paymentPlan\": \"EMI - 50% Advance\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-24T07:24:27.502Z\"\n  }\n]"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Reviews, Ratings & Video Feedback",
-      "item": [
-        {
-          "name": "Get All Feedbacks & Testimonials",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/reviews",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "reviews"
+              "name": "Get MIS Transactions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/transactions",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "transactions"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Loaded logs",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9c8\",\n    \"transactionId\": \"TXN-001\",\n    \"type\": \"Donation\",\n    \"user\": \"Anil Kapoor\",\n    \"item\": \"Help for Heart Surgery\",\n    \"amount\": 50000,\n    \"paymentPlan\": \"None\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-25T07:24:27.502Z\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9c9\",\n    \"transactionId\": \"TXN-002\",\n    \"type\": \"Course\",\n    \"user\": \"Rohit Verma\",\n    \"item\": \"Vedic Astrology Masterclass\",\n    \"amount\": 4999,\n    \"paymentPlan\": \"EMI - 50% Advance\",\n    \"status\": \"Success\",\n    \"date\": \"2026-05-24T07:24:27.502Z\"\n  }\n]"
+                }
               ]
-            }
-          },
-          "response": [
-            {
-              "name": "Loaded Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d4\",\n    \"reviewId\": \"REV-001\",\n    \"userName\": \"Rohit Verma\",\n    \"userRole\": \"Student\",\n    \"type\": \"Teacher\",\n    \"targetName\": \"Dr. Ramesh Jyotish\",\n    \"rating\": 5,\n    \"comment\": \"Dr. Ramesh is an absolute genius in Vedic Astrology. His methods are extremely clear!\",\n    \"status\": \"Approved\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9d6\",\n    \"reviewId\": \"REV-003\",\n    \"userName\": \"Anonymous Donor\",\n    \"userRole\": \"Donor\",\n    \"type\": \"Campaign\",\n    \"targetName\": \"Education for 10 Girls\",\n    \"rating\": 5,\n    \"comment\": \"Very transparent process and happy to see children studying. Highly recommend supporting!\",\n    \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n    \"status\": \"Approved\"\n  }\n]"
             }
           ]
         },
         {
-          "name": "Moderate Testimonial Approval",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"Approved\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/reviews/:id",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "reviews",
-                ":id"
-              ],
-              "variable": [
+          "name": "Reviews, Ratings & Video Feedback",
+          "item": [
+            {
+              "name": "Get All Feedbacks & Testimonials",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/reviews",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "reviews"
+                  ]
+                }
+              },
+              "response": [
                 {
-                  "key": "id",
-                  "value": "REPLACE_WITH_REVIEW_OBJECT_ID"
+                  "name": "Loaded Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d4\",\n    \"reviewId\": \"REV-001\",\n    \"userName\": \"Rohit Verma\",\n    \"userRole\": \"Student\",\n    \"type\": \"Teacher\",\n    \"targetName\": \"Dr. Ramesh Jyotish\",\n    \"rating\": 5,\n    \"comment\": \"Dr. Ramesh is an absolute genius in Vedic Astrology. His methods are extremely clear!\",\n    \"status\": \"Approved\"\n  },\n  {\n    \"_id\": \"6a154aab663cb1237090e9d6\",\n    \"reviewId\": \"REV-003\",\n    \"userName\": \"Anonymous Donor\",\n    \"userRole\": \"Donor\",\n    \"type\": \"Campaign\",\n    \"targetName\": \"Education for 10 Girls\",\n    \"rating\": 5,\n    \"comment\": \"Very transparent process and happy to see children studying. Highly recommend supporting!\",\n    \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n    \"status\": \"Approved\"\n  }\n]"
                 }
               ]
-            }
-          },
-          "response": [
+            },
             {
-              "name": "Approved Successful",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"_id\": \"6a154aab663cb1237090e9d6\",\n  \"reviewId\": \"REV-003\",\n  \"userName\": \"Anonymous Donor\",\n  \"userRole\": \"Donor\",\n  \"type\": \"Campaign\",\n  \"targetName\": \"Education for 10 Girls\",\n  \"rating\": 5,\n  \"comment\": \"Very transparent process and happy to see children studying.\",\n  \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"status\": \"Approved\"\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Seminars & Workshops Approval",
-      "item": [
-        {
-          "name": "Get All Seminars",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/seminars",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "seminars"
+              "name": "Moderate Testimonial Approval",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Approved\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/reviews/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "reviews",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_REVIEW_OBJECT_ID"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Approved Successful",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "{\n  \"_id\": \"6a154aab663cb1237090e9d6\",\n  \"reviewId\": \"REV-003\",\n  \"userName\": \"Anonymous Donor\",\n  \"userRole\": \"Donor\",\n  \"type\": \"Campaign\",\n  \"targetName\": \"Education for 10 Girls\",\n  \"rating\": 5,\n  \"comment\": \"Very transparent process and happy to see children studying.\",\n  \"videoUrl\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"status\": \"Approved\"\n}"
+                }
               ]
-            }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9df\",\n    \"seminarId\": \"SEM-001\",\n    \"title\": \"Vastu & Positivity Workshop\",\n    \"instructor\": \"Neha Vastu\",\n    \"date\": \"2026-05-30\",\n    \"time\": \"11:00 AM\",\n    \"price\": 999,\n    \"approvalStatus\": \"Approved\",\n    \"paymentStatus\": \"Paid\"\n  }\n]"
             }
           ]
         },
         {
-          "name": "Toggle Admin Approval Switch",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"approvalStatus\": \"Approved\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/seminars/:id",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "seminars",
-                ":id"
-              ],
-              "variable": [
+          "name": "Seminars & Workshops Approval",
+          "item": [
+            {
+              "name": "Get All Seminars",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/seminars",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "seminars"
+                  ]
+                }
+              },
+              "response": [
                 {
-                  "key": "id",
-                  "value": "REPLACE_WITH_SEMINAR_OBJECT_ID"
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9df\",\n    \"seminarId\": \"SEM-001\",\n    \"title\": \"Vastu & Positivity Workshop\",\n    \"instructor\": \"Neha Vastu\",\n    \"date\": \"2026-05-30\",\n    \"time\": \"11:00 AM\",\n    \"price\": 999,\n    \"approvalStatus\": \"Approved\",\n    \"paymentStatus\": \"Paid\"\n  }\n]"
                 }
               ]
-            }
-          },
-          "response": [
+            },
             {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"_id\": \"6a154aab663cb1237090e9df\",\n  \"seminarId\": \"SEM-001\",\n  \"title\": \"Vastu & Positivity Workshop\",\n  \"approvalStatus\": \"Approved\"\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Refer & Earn Ledger",
-      "item": [
-        {
-          "name": "Get Referral Ledger",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/referrals",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "referrals"
+              "name": "Toggle Admin Approval Switch",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approvalStatus\": \"Approved\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/seminars/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "seminars",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_SEMINAR_OBJECT_ID"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "{\n  \"_id\": \"6a154aab663cb1237090e9df\",\n  \"seminarId\": \"SEM-001\",\n  \"title\": \"Vastu & Positivity Workshop\",\n  \"approvalStatus\": \"Approved\"\n}"
+                }
               ]
-            }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9e2\",\n    \"referralId\": \"REF-001\",\n    \"referrerName\": \"Anil Kapoor\",\n    \"referredUserName\": \"Rohit Verma\",\n    \"rewardAmount\": 500,\n    \"status\": \"Completed\"\n  }\n]"
             }
           ]
         },
         {
-          "name": "Process Referral Payout",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"Completed\"\n}"
-            },
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/referrals/:id",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "referrals",
-                ":id"
-              ],
-              "variable": [
+          "name": "Refer & Earn Ledger",
+          "item": [
+            {
+              "name": "Get Referral Ledger",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/referrals",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "referrals"
+                  ]
+                }
+              },
+              "response": [
                 {
-                  "key": "id",
-                  "value": "REPLACE_WITH_REFERRAL_OBJECT_ID"
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9e2\",\n    \"referralId\": \"REF-001\",\n    \"referrerName\": \"Anil Kapoor\",\n    \"referredUserName\": \"Rohit Verma\",\n    \"rewardAmount\": 500,\n    \"status\": \"Completed\"\n  }\n]"
+                }
+              ]
+            },
+            {
+              "name": "Process Referral Payout",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Completed\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/referrals/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "referrals",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_REFERRAL_OBJECT_ID"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "{\n  \"_id\": \"6a154aab663cb1237090e9e2\",\n  \"status\": \"Completed\"\n}"
                 }
               ]
             }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"_id\": \"6a154aab663cb1237090e9e2\",\n  \"status\": \"Completed\"\n}"
-            }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Dynamic Promotional Banners",
-      "item": [
+        },
         {
-          "name": "Get All Banners",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/banners",
-              "protocol": "https",
-              "host": [
-                "divinebackend-v5gl",
-                "onrender",
-                "com"
-              ],
-              "path": [
-                "api",
-                "banners"
-              ]
-            }
-          },
-          "response": [
+          "name": "Dynamic Promotional Banners",
+          "item": [
             {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d9\",\n    \"bannerId\": \"BNR-001\",\n    \"title\": \"50% Discount on Vedic Astrology Masterclass\",\n    \"imageUrl\": \"https://images.unsplash.com/...\",\n    \"linkUrl\": \"/courses\",\n    \"placement\": \"Courses\",\n    \"status\": \"Active\"\n  }\n]"
+              "name": "Get All Banners",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/admin/banners",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "banners"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "Success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"_id\": \"6a154aab663cb1237090e9d9\",\n    \"bannerId\": \"BNR-001\",\n    \"title\": \"50% Discount on Vedic Astrology Masterclass\",\n    \"imageUrl\": \"https://images.unsplash.com/...\",\n    \"linkUrl\": \"/courses\",\n    \"placement\": \"Courses\",\n    \"status\": \"Active\"\n  }\n]"
+                }
+              ]
             }
           ]
         }
