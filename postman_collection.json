@@ -268,6 +268,149 @@
           ]
         },
         {
+          "name": "Homepage & Dynamic Categories",
+          "item": [
+            {
+              "name": "Get Homepage API (Semi-Public)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}",
+                    "description": "Optional: Include Bearer Token to load Noah's wallet balance and personal donation history."
+                  }
+                ],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/home",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "home"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Campaign Categories",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaign-categories"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add Campaign Category (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Disaster Relief\",\n  \"icon\": \"shield-alert\",\n  \"description\": \"Emergency relief funds for floods, earthquakes, and disasters.\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaign-categories"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Campaign Category (Admin)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Disaster & Flood Relief\",\n  \"icon\": \"cloud-lightning\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaign-categories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_CATEGORY_MONGO_ID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Campaign Category (Admin)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/campaign-categories/:id",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "campaign-categories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLACE_WITH_CATEGORY_MONGO_ID"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "Campaigns & Causes",
           "item": [
             {
