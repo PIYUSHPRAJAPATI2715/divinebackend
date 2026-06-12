@@ -27,9 +27,8 @@ const optionalAuth = async (req, res, next) => {
 router.get('/', optionalAuth, async (req, res) => {
   try {
     let userProfile = null;
-    let donationHistory = [];
 
-    // 1. If user is authenticated, retrieve user and their transaction history
+    // 1. If user is authenticated, retrieve user
     if (req.user && req.user.id) {
       const dbUser = await User.findById(req.user.id);
       if (dbUser) {
@@ -40,23 +39,6 @@ router.get('/', optionalAuth, async (req, res) => {
           role: dbUser.role,
           walletBalance: dbUser.walletBalance || 0
         };
-
-        // Fetch user's recent transactions (specifically Donations)
-        const recentTx = await Transaction.find({
-          type: 'Donation',
-          user: dbUser.name || dbUser.phone
-        })
-        .sort({ date: -1 })
-        .limit(10);
-
-        donationHistory = recentTx.map(tx => ({
-          transactionId: tx.transactionId,
-          item: tx.item,
-          amount: tx.amount,
-          status: tx.status,
-          date: tx.date,
-          createdAt: tx.createdAt
-        }));
       }
     }
 
@@ -73,6 +55,25 @@ router.get('/', optionalAuth, async (req, res) => {
     const topNGOs = await NGO.find({ status: 'Verified' })
       .select('name logo rating impactStats about email phone')
       .limit(10);
+
+    // 6. Fetch recent successful donations on the platform (limited to 5)
+    const recentTx = await Transaction.find({
+      type: 'Donation',
+      status: 'Success'
+    })
+    .sort({ date: -1 })
+    .limit(5);
+
+    const donationHistory = recentTx.map(tx => ({
+      transactionId: tx.transactionId,
+      user: tx.user,
+      donor: tx.user,
+      item: tx.item,
+      amount: tx.amount,
+      status: tx.status,
+      date: tx.date,
+      createdAt: tx.createdAt
+    }));
 
     res.json({
       status: true,
@@ -111,7 +112,7 @@ router.get('/', optionalAuth, async (req, res) => {
           description: ngo.about || ''
         })),
         donationHistory,
-        appVersion: 'v1.0.1_ngo_fix'
+        appVersion: 'v1.0.2_donor_history_fix'
       }
     });
 
