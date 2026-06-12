@@ -19,6 +19,8 @@ const courseRoutes = require('./routes/courses');
 const ngoRoutes = require('./routes/ngos');
 const donorRoutes = require('./routes/donors');
 const authRoutes = require('./routes/auth');
+const homeRoutes = require('./routes/home');
+const campaignCategoryRoutes = require('./routes/campaignCategories');
 const studentRoutes = require('./routes/students');
 const transactionRoutes = require('./routes/transactions');
 const reviewRoutes = require('./routes/reviews');
@@ -31,6 +33,8 @@ const referralRoutes = require('./routes/referrals');
 
 // Public Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/home', homeRoutes);
+app.use('/api/campaign-categories', campaignCategoryRoutes);
 
 // Root route welcome/health check landing dashboard page
 app.get('/', (req, res) => {

@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  walletBalance: {
+    type: Number,
+    default: 100
+  },
 
   // Donor-specific fields (e.g. Donate & Fundraise)
   name: {
@@ -39,6 +43,18 @@ const userSchema = new mongoose.Schema({
 
   // NGO/Organization specific fields
   organizationName: {
+    type: String,
+    default: ""
+  },
+  logo: {
+    type: String,
+    default: null
+  },
+  rating: {
+    type: Number,
+    default: 4.5
+  },
+  impactStats: {
     type: String,
     default: ""
   },

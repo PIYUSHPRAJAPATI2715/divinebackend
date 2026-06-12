@@ -14,19 +14,41 @@ const NewsMedia = require('./models/NewsMedia');
 const Seminar = require('./models/Seminar');
 const Referral = require('./models/Referral');
 const User = require('./models/User');
+const CampaignCategory = require('./models/CampaignCategory');
 
 const mockCampaigns = [
   { 
-    campaignId: 'CMP-101', 
-    title: 'Help for Heart Surgery', 
-    user: 'Rahul Sharma', 
-    category: 'Fundraising',
-    description: 'Urgent funding request for a life-saving double heart bypass surgery at Escorts Heart Institute. The family is in need of emergency funding support.',
-    goal: '₹5,00,000', 
-    raised: '₹2,45,000', 
+    campaignId: 'CMP-RURAL', 
+    title: 'Rural education Initiative', 
+    user: 'Save the Children', 
+    category: 'Books',
+    description: 'Providing school supplies, uniform kits, and study books for 50 unprivileged children in rural villages.',
+    goal: '75,000', 
+    raised: '54,000', 
     oneTimeOrMonthly: 'One-Time',
-    status: 'Pending',
-    verificationDocs: ['https://s3.amazonaws.com/divine-docs/hospital_estimate_rahul.pdf', 'https://s3.amazonaws.com/divine-docs/medical_case_rahul.jpg'],
+    status: 'Live',
+    imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600',
+    donorsCount: 1300,
+    daysLeft: 12,
+    verificationDocs: [],
+    withdrawalRequested: false,
+    withdrawalStatus: 'None',
+    withdrawalRequests: []
+  },
+  { 
+    campaignId: 'CMP-TEMPLE', 
+    title: 'Ancient Temple Carving Restorations', 
+    user: 'Vedic Heritage Trust', 
+    category: 'Temple',
+    description: 'Renovate and restore ancient stone carvings and structures of historic heritage temples in South India.',
+    goal: '2,50,000', 
+    raised: '1,25,000', 
+    oneTimeOrMonthly: 'One-Time',
+    status: 'Live',
+    imageUrl: 'https://images.unsplash.com/photo-1600100397990-a4a8ec90966a?auto=format&fit=crop&q=80&w=600',
+    donorsCount: 850,
+    daysLeft: 25,
+    verificationDocs: [],
     withdrawalRequested: false,
     withdrawalStatus: 'None',
     withdrawalRequests: []
@@ -34,13 +56,16 @@ const mockCampaigns = [
   { 
     campaignId: 'CMP-102', 
     title: 'Education for 10 Girls', 
-    user: 'NGO Pratham', 
-    category: 'NGO Donation',
+    user: 'Save the Children', 
+    category: 'Books',
     description: 'Sponsor dynamic elementary schooling, tuition fees, uniforms, and study books for 10 unprivileged girl students in urban slum areas of New Delhi.',
-    goal: '₹1,0,000', 
-    raised: '₹80,000', 
+    goal: '1,00,000', 
+    raised: '80,000', 
     oneTimeOrMonthly: 'Monthly',
     status: 'Live',
+    imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=600',
+    donorsCount: 450,
+    daysLeft: 18,
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/ngo_registration_pratham.pdf'],
     withdrawalRequested: true,
     withdrawalStatus: 'Requested',
@@ -51,13 +76,16 @@ const mockCampaigns = [
   { 
     campaignId: 'CMP-103', 
     title: 'Gaugrass Fodder Request', 
-    user: 'Krishnayan Gaushala', 
+    user: 'Gau Seva Trust', 
     category: 'Gau Seva',
     description: 'Support pure fodder (gausharan grass) distribution for over 200 abandoned indigenous cows at Haridwar gaushala.',
-    goal: '₹50,000', 
-    raised: '₹50,000', 
+    goal: '50,000', 
+    raised: '50,000', 
     oneTimeOrMonthly: 'One-Time',
     status: 'Completed',
+    imageUrl: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80&w=600',
+    donorsCount: 200,
+    daysLeft: 0,
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/gaushala_trust_deed.pdf'],
     withdrawalRequested: true,
     withdrawalStatus: 'Approved',
@@ -66,29 +94,18 @@ const mockCampaigns = [
     ]
   },
   { 
-    campaignId: 'CMP-104', 
-    title: 'Medical emergency - Accident', 
-    user: 'Sneha Verma', 
-    category: 'Fundraising',
-    description: 'Road accident emergency surgery and ICU ventilation recovery support for Amit Verma at Max Healthcare.',
-    goal: '₹2,00,000', 
-    raised: '₹10,000', 
-    oneTimeOrMonthly: 'One-Time',
-    status: 'Pending',
-    verificationDocs: ['https://s3.amazonaws.com/divine-docs/accident_reports.pdf'],
-    withdrawalRequested: false,
-    withdrawalStatus: 'None'
-  },
-  { 
     campaignId: 'CMP-105', 
     title: 'Winter Clothes Distribution', 
-    user: 'Hope NGO', 
-    category: 'NGO Donation',
+    user: 'Hope Foundation', 
+    category: 'Food',
     description: 'Help us distribute warm winter blankets, high-quality sweaters, and shoes to thousands of homeless families sleeping on Delhi streets.',
-    goal: '₹75,000', 
-    raised: '₹25,000', 
+    goal: '75,000', 
+    raised: '25,000', 
     oneTimeOrMonthly: 'Both',
     status: 'Live',
+    imageUrl: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=600',
+    donorsCount: 120,
+    daysLeft: 8,
     verificationDocs: ['https://s3.amazonaws.com/divine-docs/hope_ngo_profile.pdf'],
     withdrawalRequested: false,
     withdrawalStatus: 'None'
@@ -510,7 +527,61 @@ const daysAgo = (num) => {
   return d;
 };
 
+const mockCampaignCategories = [
+  { categoryId: 'CAT-TEMP', name: 'Temple', icon: 'church', description: 'Ancient Temple restoration and religious offerings support.' },
+  { categoryId: 'CAT-BOOK', name: 'Books', icon: 'book-open', description: 'Sponsor education, stationery, and schooling programs.' },
+  { categoryId: 'CAT-FOOD', name: 'Food', icon: 'utensils', description: 'Provide hot meals and dry ration packs to needy families.' },
+  { categoryId: 'CAT-COW', name: 'Gau Seva', icon: 'heart', description: 'Cow protection sanctuaries and green grass fodder support.' }
+];
+
+const mockUsers = [
+  {
+    phone: '+91 9999999999',
+    role: 'donor',
+    name: 'Noah',
+    email: 'noah@example.com',
+    gender: 'Male',
+    walletBalance: 100,
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 8888811111',
+    role: 'ngo',
+    organizationName: 'Save the Children',
+    logo: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=150',
+    rating: 4.8,
+    impactStats: '4.8M Global Impact',
+    about: 'Dedicated to helping children around the world get access to education and safety.',
+    email: 'save@children.org',
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 8888822222',
+    role: 'ngo',
+    organizationName: 'Green Earth Foundation',
+    logo: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=150',
+    rating: 4.8,
+    impactStats: '12.4M Trees Planted',
+    about: 'Carrying out local tree plantation and green environment preservation drives.',
+    email: 'contact@greenearth.org',
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 8888833333',
+    role: 'ngo',
+    organizationName: 'Gau Seva Trust',
+    logo: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80&w=150',
+    rating: 4.9,
+    impactStats: '2.5K Cows Rescued',
+    about: 'Providing shelter and medical aid to abandoned, sick street cows.',
+    email: 'seva@gaushala.org',
+    isProfileComplete: true
+  }
+];
+
 const mockTransactions = [
+  { transactionId: 'TXN-H1', type: 'Donation', user: 'Noah', item: 'Gau Seva Trust', amount: 70, paymentPlan: 'None', status: 'Success', date: new Date(Date.now() - 12 * 60 * 1000) },
+  { transactionId: 'TXN-H2', type: 'Donation', user: 'Noah', item: 'Save the Children', amount: 150, paymentPlan: 'None', status: 'Success', date: daysAgo(1) },
   { transactionId: 'TXN-001', type: 'Donation', user: 'Anil Kapoor', item: 'Help for Heart Surgery', amount: 50000, paymentPlan: 'None', status: 'Success', date: daysAgo(1) },
   { transactionId: 'TXN-002', type: 'Course', user: 'Rohit Verma', item: 'Vedic Astrology Masterclass', amount: 4999, paymentPlan: 'EMI - 50% Advance', status: 'Success', date: daysAgo(2) },
   { transactionId: 'TXN-003', type: 'Seminar', user: 'Shalini Sen', item: 'Vastu & Positivity Workshop', amount: 999, paymentPlan: 'Full Payment', status: 'Success', date: daysAgo(3) },
@@ -548,8 +619,8 @@ const mockCategories = [
 ];
 
 const mockBanners = [
-  { bannerId: 'BNR-001', title: '50% Discount on Vedic Astrology Masterclass', imageUrl: 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&q=80&w=1200', linkUrl: '/courses', placement: 'Courses', status: 'Active' },
-  { bannerId: 'BNR-002', title: 'Support Sharda Girls School Education Campaign', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=1200', linkUrl: '/campaigns', placement: 'Campaigns', status: 'Active' },
+  { bannerId: 'BNR-001', title: 'Every Contribution Creates an Impact', imageUrl: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=1200', linkUrl: '/campaigns', placement: 'Home', status: 'Active' },
+  { bannerId: 'BNR-002', title: 'Support Sharda Girls School Education Campaign', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=1200', linkUrl: '/campaigns', placement: 'Home', status: 'Active' },
   { bannerId: 'BNR-003', title: 'Join our free Vastu Seminar this Saturday!', imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=1200', linkUrl: '/seminars', placement: 'Home', status: 'Active' }
 ];
 
@@ -587,6 +658,7 @@ async function seedDatabase() {
   await Seminar.deleteMany({});
   await Referral.deleteMany({});
   await User.deleteMany({});
+  await CampaignCategory.deleteMany({});
   
   console.log('Inserting seed data...');
   await Campaign.insertMany(mockCampaigns);
@@ -604,6 +676,8 @@ async function seedDatabase() {
   await NewsMedia.insertMany(mockNewsMedia);
   await Seminar.insertMany(mockSeminars);
   await Referral.insertMany(mockReferrals);
+  await User.insertMany(mockUsers);
+  await CampaignCategory.insertMany(mockCampaignCategories);
   
   console.log('Database seeded successfully with all Divine features!');
 }

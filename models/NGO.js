@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const ngoSchema = new mongoose.Schema({
   ngoId: { type: String, required: true, unique: true },
   name: { type: String, required: true },
+  logo: { type: String, default: null },
+  rating: { type: Number, default: 4.5 },
+  impactStats: { type: String, default: "" },
   registrationNumber: { type: String, required: true },
   contactPerson: { type: String, required: true },
   email: { type: String, required: true },

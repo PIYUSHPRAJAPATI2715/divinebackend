@@ -4,7 +4,10 @@ const campaignSchema = new mongoose.Schema({
   campaignId: { type: String, required: true, unique: true },
   title: { type: String, required: true },
   user: { type: String, required: true }, // Creator name / NGO name
-  category: { type: String, enum: ['Fundraising', 'NGO Donation', 'Gau Seva'], default: 'Fundraising' },
+  category: { type: String, default: 'General' },
+  imageUrl: { type: String, default: null },
+  donorsCount: { type: Number, default: 0 },
+  daysLeft: { type: Number, default: 30 },
   description: { type: String, default: '' },
   goal: { type: String, required: true }, // e.g. "₹5,00,000"
   raised: { type: String, required: true }, // e.g. "₹2,45,000"
