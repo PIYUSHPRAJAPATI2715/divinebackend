@@ -330,8 +330,17 @@ const registerHandler = async (req, res) => {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
 
-    // Optional email check to avoid duplicate emails
-    const { email } = req.body;
+    // Extract email and optional role from registration body
+    const { email, role } = req.body;
+
+    if (role) {
+      if (['donor', 'ngo'].includes(role)) {
+        user.role = role;
+      } else {
+        return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor" or "ngo".' });
+      }
+    }
+
     if (email) {
       const emailInUse = await User.findOne({ email, _id: { $ne: userId } });
       if (emailInUse) {
