@@ -323,6 +323,9 @@ router.post('/verify-otp', async (req, res) => {
  */
 const registerHandler = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ status: false, message: 'Unauthorized access. Valid token is required.' });
+    }
     const userId = req.user.id;
     const user = await User.findById(userId);
 
