@@ -11,6 +11,23 @@ async function connectDB() {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
     console.log('Successfully connected to MongoDB.');
     
+    // Auto-sync indexes to fix existing non-sparse unique indexes (e.g. email_1 on Atlas)
+    const User = require('./models/User');
+    try {
+      await User.syncIndexes();
+      console.log('Successfully synced database schema indexes.');
+    } catch (err) {
+      console.log('Failed to sync indexes directly, attempting manual cleanup of email_1 index...', err.message);
+      try {
+        await User.collection.dropIndex('email_1');
+        console.log('Successfully dropped old email_1 index.');
+        await User.syncIndexes();
+        console.log('Re-synced database schema indexes successfully.');
+      } catch (dropErr) {
+        console.log('Error rebuilding indexes:', dropErr.message);
+      }
+    }
+    
     // Auto-seed cloud database if it is empty!
     // This ensures prototype data is populated on newly connected databases without wiping active data
     const Admin = require('./models/Admin');
