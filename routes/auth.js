@@ -8,17 +8,12 @@ const authMiddleware = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
-// Helper to generate static OTP for development
-function generate4DigitOTP() {
-  return '1234';
-}
-
 /**
- * @route   POST /api/auth/signup
- * @desc    Initiate signup by phone, check if exists, send OTP
+ * @route   POST /api/auth/check-role
+ * @desc    Get the registered role of a phone number
  * @access  Public
  */
-router.post('/signup', async (req, res) => {
+router.post('/check-role', async (req, res) => {
   try {
     const { phone } = req.body;
 
@@ -26,79 +21,168 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
 
-    // Check if user exists and profile is complete
-    const existingUser = await User.findOne({ phone });
-    const isUserExist = !!(existingUser && existingUser.isProfileComplete);
-
-    const otp = '1234';
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    let user = existingUser;
+    const user = await User.findOne({ phone });
     if (!user) {
-      user = new User({
-        phone,
-        isProfileComplete: false
+      return res.json({
+        status: true,
+        isUserExist: false,
+        role: null
       });
     }
 
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    await user.save();
+    res.json({
+      status: true,
+      isUserExist: user.isProfileComplete,
+      role: user.role
+    });
 
-    console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
+  } catch (err) {
+    console.error('Check role error:', err);
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/signup
+ * @desc    Initiate signup by phone & role, check if exists, send OTP
+ * @access  Public
+ */
+router.post('/signup', async (req, res) => {
+  try {
+    const { phone, role } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ status: false, message: 'Phone number is required' });
+    }
+
+    const targetRole = role || 'donor';
+
+    // Check if user exists
+    const existingUser = await User.findOne({ phone });
+    
+    if (existingUser) {
+      // Role conflict check:
+      if (existingUser.role !== targetRole) {
+        if (existingUser.isProfileComplete) {
+          const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
+          return res.status(400).json({
+            status: false,
+            message: `This phone number is already registered under the role "${roleLabel}". Please select the correct role to login.`
+          });
+        } else {
+          // If profile is not complete, let them change/correct the role
+          existingUser.role = targetRole;
+        }
+      }
+
+      existingUser.otp = '1234';
+      existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+      await existingUser.save();
+
+      console.log(`[AUTH] OTP sent to ${phone}: 1234`);
+
+      return res.json({
+        status: true,
+        message: 'OTP sent successfully (Use static code 1234 to verify)',
+        isUserExist: existingUser.isProfileComplete,
+        phone,
+        role: existingUser.role,
+        otp: '1234'
+      });
+    }
+
+    // New user
+    const newUser = new User({
+      phone,
+      role: targetRole,
+      isProfileComplete: false,
+      otp: '1234',
+      otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    await newUser.save();
+
+    console.log(`[AUTH] OTP sent to ${phone}: 1234`);
 
     res.json({
       status: true,
       message: 'OTP sent successfully (Use static code 1234 to verify)',
-      isUserExist,
+      isUserExist: false,
       phone,
-      otp: otp
+      role: targetRole,
+      otp: '1234'
     });
 
   } catch (err) {
-    console.error('Phone signup initiation error:', err);
+    console.error('Signup initiation error:', err);
     res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
 
 /**
  * @route   POST /api/auth/login
- * @desc    Authenticate admin by email/pass OR initiate user login by phone checking if exists
+ * @desc    Authenticate admin by email/pass OR initiate user login by phone & role
  * @access  Public
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, phone } = req.body;
+    const { email, password, phone, role } = req.body;
 
     // 1. If phone is provided, run user phone-OTP flow
     if (phone) {
-      // Check if user exists and profile is complete
+      const targetRole = role || 'donor';
       const existingUser = await User.findOne({ phone });
-      const isUserExist = !!(existingUser && existingUser.isProfileComplete);
 
-      const otp = '1234';
-      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      if (existingUser) {
+        // Role conflict check:
+        if (existingUser.role !== targetRole) {
+          if (existingUser.isProfileComplete) {
+            const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
+            return res.status(400).json({
+              status: false,
+              message: `This phone number is already registered under the role "${roleLabel}". Please select the correct role to login.`
+            });
+          } else {
+            // Update role if profile is incomplete
+            existingUser.role = targetRole;
+          }
+        }
 
-      let user = existingUser;
-      if (!user) {
-        user = new User({
+        existingUser.otp = '1234';
+        existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        await existingUser.save();
+
+        console.log(`[AUTH] OTP sent to ${phone}: 1234`);
+
+        return res.json({
+          status: true,
+          message: 'OTP sent successfully (Use static code 1234 to verify)',
+          isUserExist: existingUser.isProfileComplete,
           phone,
-          isProfileComplete: false
+          role: existingUser.role,
+          otp: '1234'
         });
       }
 
-      user.otp = otp;
-      user.otpExpiry = otpExpiry;
-      await user.save();
+      // If logging in but doesn't exist, treat it as a signup start
+      const newUser = new User({
+        phone,
+        role: targetRole,
+        isProfileComplete: false,
+        otp: '1234',
+        otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
+      });
+      await newUser.save();
 
-      console.log(`[AUTH] OTP sent to ${phone}: ${otp}`);
+      console.log(`[AUTH] OTP sent to ${phone}: 1234`);
 
       return res.json({
         status: true,
         message: 'OTP sent successfully (Use static code 1234 to verify)',
-        isUserExist,
+        isUserExist: false,
         phone,
-        otp: otp
+        role: targetRole,
+        otp: '1234'
       });
     }
 
@@ -134,6 +218,52 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ status: false, message: 'Internal Server Error' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/resend-otp
+ * @desc    Resend OTP to a phone number
+ * @access  Public
+ */
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { phone, role } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ status: false, message: 'Phone number is required' });
+    }
+
+    const query = { phone };
+    if (role) {
+      query.role = role;
+    }
+
+    const user = await User.findOne(query);
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: 'User session not found. Please initiate signup/login first.'
+      });
+    }
+
+    user.otp = '1234';
+    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await user.save();
+
+    console.log(`[AUTH] OTP resent to ${phone}: 1234`);
+
+    res.json({
+      status: true,
+      message: 'OTP resent successfully (Use static code 1234 to verify)',
+      phone: user.phone,
+      role: user.role,
+      otp: '1234'
+    });
+
+  } catch (err) {
+    console.error('Resend OTP error:', err);
     res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
 });
@@ -178,14 +308,7 @@ router.post('/verify-otp', async (req, res) => {
       message: 'OTP verified successfully',
       token,
       isProfileComplete: user.isProfileComplete,
-      data: {
-        id: user._id,
-        phone: user.phone,
-        name: user.name || "",
-        email: user.email || "",
-        gender: user.gender || "",
-        profilePhoto: user.profilePhoto || ""
-      }
+      data: user
     });
 
   } catch (err) {
@@ -195,26 +318,21 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 /**
- * @route   POST /api/auth/profile-setup
- * @desc    Submit user profile details (name, email, gender, profile photo) to finalize registration
+ * @route   POST /api/auth/register
+ * @desc    Register / finalize profile setup with conditional fields depending on user role
  * @access  Private
  */
-router.post('/profile-setup', authMiddleware, async (req, res) => {
+const registerHandler = async (req, res) => {
   try {
-    const { name, email, gender, profilePhoto } = req.body;
     const userId = req.user.id;
-
-    if (!name) {
-      return res.status(400).json({ status: false, message: 'Name is required' });
-    }
-
-    // Look up user
     const user = await User.findById(userId);
+
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
 
-    // Optional email check to avoid duplicate emails if they enter a duplicate one
+    // Optional email check to avoid duplicate emails
+    const { email } = req.body;
     if (email) {
       const emailInUse = await User.findOne({ email, _id: { $ne: userId } });
       if (emailInUse) {
@@ -223,32 +341,129 @@ router.post('/profile-setup', authMiddleware, async (req, res) => {
       user.email = email;
     }
 
-    user.name = name;
-    user.gender = gender || null;
-    user.profilePhoto = profilePhoto || null;
-    user.isProfileComplete = true;
+    // Role-based fields validation and assignment
+    if (user.role === 'ngo') {
+      const {
+        organizationName,
+        registeredAddress,
+        addressCertificate,
+        authorizedPerson,
+        designation,
+        gender,
+        profilePhoto,
+        
+        // Documents
+        panNumber,
+        panImage,
+        tanNumber,
+        tanImage,
+        gstNumber,
+        gstDocument,
+        registration12A,
+        certificate12A,
+        registration80G,
+        certificate80G,
+        
+        // Extra Docs
+        hasDarpan,
+        darpanNumber,
+        darpanCertificate,
+        hasCSR1,
+        csr1Number,
+        csr1Certificate,
+        hasFCRA,
+        fcraNumber,
+        fcraCertificate,
+        hasOtherRegistration,
+        otherRegistrationName,
+        otherRegistrationCertificate,
+        
+        // Bank details
+        bankAccountHolder,
+        bankName,
+        bankBranch,
+        bankAccountNumber,
+        bankIFSC
+      } = req.body;
 
+      if (!organizationName || !registeredAddress || !authorizedPerson || !designation) {
+        return res.status(400).json({
+          status: false,
+          message: 'Organization Name, Registered Address, Authorized Person name, and Designation are required for NGO registration.'
+        });
+      }
+
+      user.organizationName = organizationName;
+      user.registeredAddress = registeredAddress;
+      user.addressCertificate = addressCertificate || null;
+      user.authorizedPerson = authorizedPerson;
+      user.designation = designation;
+      user.gender = gender || null;
+      user.profilePhoto = profilePhoto || null;
+
+      // Docs
+      user.panNumber = panNumber || "";
+      user.panImage = panImage || null;
+      user.tanNumber = tanNumber || "";
+      user.tanImage = tanImage || null;
+      user.gstNumber = gstNumber || "";
+      user.gstDocument = gstDocument || null;
+      user.registration12A = registration12A || "";
+      user.certificate12A = certificate12A || null;
+      user.registration80G = registration80G || "";
+      user.certificate80G = certificate80G || null;
+
+      // Extra verification
+      user.hasDarpan = !!hasDarpan;
+      user.darpanNumber = darpanNumber || "";
+      user.darpanCertificate = darpanCertificate || null;
+      user.hasCSR1 = !!hasCSR1;
+      user.csr1Number = csr1Number || "";
+      user.csr1Certificate = csr1Certificate || null;
+      user.hasFCRA = !!hasFCRA;
+      user.fcraNumber = fcraNumber || "";
+      user.fcraCertificate = fcraCertificate || null;
+      user.hasOtherRegistration = !!hasOtherRegistration;
+      user.otherRegistrationName = otherRegistrationName || "";
+      user.otherRegistrationCertificate = otherRegistrationCertificate || null;
+
+      // Bank
+      user.bankAccountHolder = bankAccountHolder || "";
+      user.bankName = bankName || "";
+      user.bankBranch = bankBranch || "";
+      user.bankAccountNumber = bankAccountNumber || "";
+      user.bankIFSC = bankIFSC || "";
+
+    } else {
+      // Role is 'donor' (Donate & Fundraise)
+      const { name, gender, profilePhoto } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ status: false, message: 'Name is required for Donor registration.' });
+      }
+
+      user.name = name;
+      user.gender = gender || null;
+      user.profilePhoto = profilePhoto || null;
+    }
+
+    user.isProfileComplete = true;
     await user.save();
 
     res.json({
       status: true,
-      message: 'Profile set up successfully',
-      data: {
-        id: user._id,
-        phone: user.phone,
-        name: user.name,
-        email: user.email || "",
-        gender: user.gender || "",
-        profilePhoto: user.profilePhoto || "",
-        isProfileComplete: user.isProfileComplete
-      }
+      message: 'Registration completed successfully',
+      data: user
     });
 
   } catch (err) {
-    console.error('Profile setup error:', err);
+    console.error('Registration error:', err);
     res.status(500).json({ status: false, message: 'Internal Server Error' });
   }
-});
+};
+
+router.post('/register', authMiddleware, registerHandler);
+router.post('/profile-setup', authMiddleware, registerHandler); // maintain profile-setup alias for compatibility
 
 /**
  * @route   POST /api/auth/logout

@@ -27,7 +27,7 @@
           },
           "item": [
             {
-              "name": "Signup (Send OTP)",
+              "name": "Check Role",
               "request": {
                 "method": "POST",
                 "header": [
@@ -39,6 +39,36 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"phone\": \"+91 9876543210\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/check-role",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "check-role"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Signup (Send OTP)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/signup",
@@ -68,7 +98,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+91 9876543210\"\n}"
+                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
@@ -82,6 +112,36 @@
                     "api",
                     "auth",
                     "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Resend OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/resend-otp",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "resend-otp"
                   ]
                 }
               }
@@ -117,7 +177,7 @@
               }
             },
             {
-              "name": "Profile Setup",
+              "name": "Register (Donor - Donate & Fundraise)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -135,7 +195,7 @@
                   "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"gender\": \"Female\",\n  \"profilePhoto\": \"https://randomuser.me/api/portraits/women/44.jpg\"\n}"
                 },
                 "url": {
-                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/profile-setup",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
                   "protocol": "https",
                   "host": [
                     "divinebackend-v5gl",
@@ -145,7 +205,41 @@
                   "path": [
                     "api",
                     "auth",
-                    "profile-setup"
+                    "register"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Register (NGO / Organization)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"organizationName\": \"Divine Help Foundation\",\n  \"registeredAddress\": \"74 Lotus Temple Rd, New Delhi\",\n  \"addressCertificate\": \"https://s3.amazonaws.com/divine-docs/addr_cert.pdf\",\n  \"authorizedPerson\": \"Piyush Prajapati\",\n  \"designation\": \"Founder\",\n  \"gender\": \"Male\",\n  \"email\": \"contact@divinehelp.org\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"panImage\": \"https://s3.amazonaws.com/divine-docs/pan.png\",\n  \"bankAccountHolder\": \"Divine Help NGO Account\",\n  \"bankName\": \"ICICI Bank\",\n  \"bankAccountNumber\": \"100200300400\",\n  \"bankIFSC\": \"ICIC0000123\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register"
                   ]
                 }
               }

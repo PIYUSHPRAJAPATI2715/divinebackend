@@ -396,9 +396,17 @@
         <div class="endpoint-item">
           <div class="endpoint-left">
             <span class="method post">POST</span>
+            <span class="path">/api/auth/check-role</span>
+          </div>
+          <span class="badge public">Check Phone Role</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
             <span class="path">/api/auth/signup</span>
           </div>
-          <span class="badge public">OTP Signup Start</span>
+          <span class="badge public">OTP Signup (Phone & Role)</span>
         </div>
 
         <div class="endpoint-item">
@@ -406,7 +414,15 @@
             <span class="method post">POST</span>
             <span class="path">/api/auth/login</span>
           </div>
-          <span class="badge public">OTP Login Start / Admin</span>
+          <span class="badge public">OTP Login (Phone & Role) / Admin</span>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method post">POST</span>
+            <span class="path">/api/auth/resend-otp</span>
+          </div>
+          <span class="badge public">Resend OTP</span>
         </div>
 
         <div class="endpoint-item">
@@ -420,9 +436,9 @@
         <div class="endpoint-item">
           <div class="endpoint-left">
             <span class="method post">POST</span>
-            <span class="path">/api/auth/profile-setup</span>
+            <span class="path">/api/auth/register</span>
           </div>
-          <span class="badge secured">Profile Setup (Bearer Token)</span>
+          <span class="badge secured">Register Profile (Donor vs NGO)</span>
         </div>
 
         <div class="endpoint-item">
