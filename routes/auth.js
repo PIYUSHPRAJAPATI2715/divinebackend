@@ -38,7 +38,7 @@ router.post('/check-role', async (req, res) => {
 
   } catch (err) {
     console.error('Check role error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    res.status(400).json({ status: false, message: err.message || 'Check role failed' });
   }
 });
 
@@ -114,7 +114,7 @@ router.post('/signup', async (req, res) => {
 
   } catch (err) {
     console.error('Signup initiation error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    res.status(400).json({ status: false, message: err.message || 'Signup initiation failed' });
   }
 });
 
@@ -217,7 +217,7 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    res.status(400).json({ status: false, message: err.message || 'Login failed' });
   }
 });
 
@@ -263,7 +263,7 @@ router.post('/resend-otp', async (req, res) => {
 
   } catch (err) {
     console.error('Resend OTP error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    res.status(400).json({ status: false, message: err.message || 'Resend OTP failed' });
   }
 });
 
@@ -312,7 +312,7 @@ router.post('/verify-otp', async (req, res) => {
 
   } catch (err) {
     console.error('OTP verification error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    res.status(400).json({ status: false, message: err.message || 'OTP verification failed' });
   }
 });
 
@@ -466,7 +466,21 @@ const registerHandler = async (req, res) => {
 
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ status: false, message: 'Internal Server Error' });
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0] || 'field';
+      return res.status(400).json({
+        status: false,
+        message: `This ${field} is already registered with another account.`
+      });
+    }
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message).join(', ');
+      return res.status(400).json({
+        status: false,
+        message: messages
+      });
+    }
+    res.status(400).json({ status: false, message: err.message || 'Registration failed' });
   }
 };
 
