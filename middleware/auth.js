@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
 module.exports = (req, res, next) => {
+  console.log(`[AUTH] Path: ${req.originalUrl || req.path} | Method: ${req.method} | Authorization: ${req.header('Authorization') ? 'Present' : 'Missing'} | Origin: ${req.header('Origin') || req.header('Referer') || 'None'}`);
+
   // 1. Allow public read access (GET requests) for client-side browsing
   if (req.method === 'GET') {
     return next();
