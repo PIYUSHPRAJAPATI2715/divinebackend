@@ -4,9 +4,30 @@ const { seedDatabase } = require('./seeder');
 let mongod = null;
 
 async function connectDB() {
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/divinenakshatra';
+  let uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/divinenakshatra';
+  
   try {
-    console.log(`Attempting to connect to MongoDB at ${uri}...`);
+    if (uri.startsWith('mongodb')) {
+      // Temporarily replace protocol to parse via standard URL constructor
+      const urlObj = new URL(uri.replace('mongodb+srv://', 'http://').replace('mongodb://', 'http://'));
+      if (!urlObj.pathname || urlObj.pathname === '/') {
+        const qIndex = uri.indexOf('?');
+        let prefix = qIndex !== -1 ? uri.slice(0, qIndex) : uri;
+        const suffix = qIndex !== -1 ? uri.slice(qIndex) : '';
+        if (prefix.endsWith('/')) {
+          prefix = prefix + 'divinenakshatra';
+        } else {
+          prefix = prefix + '/divinenakshatra';
+        }
+        uri = prefix + suffix;
+      }
+    }
+  } catch (parseErr) {
+    console.log('Database URI parsing check skipped:', parseErr.message);
+  }
+
+  try {
+    console.log(`Attempting to connect to MongoDB...`);
     // Connect with a 3-second timeout to check if a local/cloud Mongo is running
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
     console.log('Successfully connected to MongoDB.');

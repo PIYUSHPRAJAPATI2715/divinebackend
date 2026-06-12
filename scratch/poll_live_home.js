@@ -29,27 +29,32 @@ function fetchHome() {
 }
 
 async function run() {
-  const maxAttempts = 15;
-  console.log(`Polling live home page API... (up to ${maxAttempts} attempts)`);
+  const targetVersion = 'v1.0.2_donor_history_fix';
+  const maxAttempts = 20;
+  console.log(`Polling live home page API for version "${targetVersion}"...`);
   for (let i = 1; i <= maxAttempts; i++) {
     console.log(`Attempt ${i}/${maxAttempts} at ${new Date().toISOString()}`);
     const res = await fetchHome();
     if (res && res.data) {
-      if (res.data.appVersion) {
-        console.log(`SUCCESS! Detected deployed version: "${res.data.appVersion}"`);
-        console.log(`NGOs returned: ${res.data.ngos.length}`);
-        res.data.ngos.forEach(n => console.log(`  - ${n.name}`));
+      const currentVersion = res.data.appVersion || 'legacy';
+      if (currentVersion === targetVersion) {
+        console.log(`\nSUCCESS! Detected deployed version: "${currentVersion}"`);
+        console.log(`NGOs count: ${res.data.ngos.length}`);
+        console.log(`Recent Donations (donationHistory) count: ${res.data.donationHistory.length}`);
+        res.data.donationHistory.forEach((item, idx) => {
+          console.log(`  ${idx + 1}. Donor: ${item.user || item.donor}, NGO/Campaign: ${item.item}, Amount: ₹${item.amount}, Status: ${item.status}`);
+        });
         return;
       } else {
-        console.log(`Still running old version. NGOs returned: ${res.data.ngos ? res.data.ngos.length : 'N/A'}`);
+        console.log(`Still running version "${currentVersion}".`);
       }
     } else {
       console.log('API request failed or returned invalid JSON.');
     }
-    // Sleep 15 seconds before next attempt
+    // Sleep 15 seconds
     await new Promise(r => setTimeout(r, 15000));
   }
-  console.log('Polling finished without detecting deployment.');
+  console.log('Polling finished without detecting target version.');
 }
 
 run().catch(console.error);
