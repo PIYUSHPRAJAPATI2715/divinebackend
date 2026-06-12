@@ -271,6 +271,27 @@
           "name": "Homepage & Dynamic Categories",
           "item": [
             {
+              "name": "Seed System Data (Admin)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/system/seed",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "system",
+                    "seed"
+                  ]
+                }
+              }
+            },
+            {
               "name": "Get Homepage API (Semi-Public)",
               "request": {
                 "method": "GET",

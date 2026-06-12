@@ -36,6 +36,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/campaign-categories', campaignCategoryRoutes);
 
+// System Seeding Route
+const { seedDatabase } = require('./seeder');
+app.post('/api/system/seed', async (req, res) => {
+  try {
+    await seedDatabase();
+    res.json({ status: true, message: 'Database successfully seeded with dynamic homepage elements!' });
+  } catch (err) {
+    res.status(500).json({ status: false, message: 'Seeding failed: ' + err.message });
+  }
+});
+
 // Root route welcome/health check landing dashboard page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
