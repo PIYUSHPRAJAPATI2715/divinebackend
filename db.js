@@ -14,6 +14,14 @@ async function connectDB() {
     // Auto-sync indexes to fix existing non-sparse unique indexes (e.g. email_1 on Atlas)
     const User = require('./models/User');
     try {
+      // 1. Cleanup any null or empty string emails by unsetting them
+      const cleanResult = await User.updateMany(
+        { $or: [ { email: null }, { email: "" } ] },
+        { $unset: { email: "" } }
+      );
+      console.log(`Cleaned up email fields (unset null/empty values) for users.`);
+      
+      // 2. Sync database schema indexes
       await User.syncIndexes();
       console.log('Successfully synced database schema indexes.');
     } catch (err) {
@@ -21,6 +29,11 @@ async function connectDB() {
       try {
         await User.collection.dropIndex('email_1');
         console.log('Successfully dropped old email_1 index.');
+        // Unset email fields again just in case before re-syncing
+        await User.updateMany(
+          { $or: [ { email: null }, { email: "" } ] },
+          { $unset: { email: "" } }
+        );
         await User.syncIndexes();
         console.log('Re-synced database schema indexes successfully.');
       } catch (dropErr) {
