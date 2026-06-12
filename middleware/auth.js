@@ -5,8 +5,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 module.exports = (req, res, next) => {
   console.log(`[AUTH] Path: ${req.originalUrl || req.path} | Method: ${req.method} | Authorization: ${req.header('Authorization') ? 'Present' : 'Missing'} | Origin: ${req.header('Origin') || req.header('Referer') || 'None'}`);
 
-  // 1. Allow public read access (GET requests) for client-side browsing
-  if (req.method === 'GET') {
+  // 1. Allow public read access (GET requests) for client-side browsing, but protect admin, ngo, and teacher portal endpoints
+  const isPortalRoute = 
+    (req.originalUrl && (
+      req.originalUrl.startsWith('/api/ngo') || 
+      req.originalUrl.startsWith('/api/teacher') || 
+      req.originalUrl.startsWith('/api/admin')
+    )) || (req.path && (
+      req.path.startsWith('/api/ngo') || 
+      req.path.startsWith('/api/teacher') || 
+      req.path.startsWith('/api/admin') ||
+      req.path.startsWith('/ngo') ||
+      req.path.startsWith('/teacher') ||
+      req.path.startsWith('/admin')
+    ));
+
+  if (req.method === 'GET' && !isPortalRoute) {
     return next();
   }
 
