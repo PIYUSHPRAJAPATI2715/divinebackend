@@ -112,7 +112,7 @@ router.get('/', optionalAuth, async (req, res) => {
           description: ngo.about || ''
         })),
         donationHistory,
-        appVersion: 'v1.0.2_donor_history_fix'
+        appVersion: 'v1.0.3_partner_portals'
       }
     });
 
