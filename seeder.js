@@ -576,6 +576,38 @@ const mockUsers = [
     about: 'Providing shelter and medical aid to abandoned, sick street cows.',
     email: 'seva@gaushala.org',
     isProfileComplete: true
+  },
+  {
+    phone: '+91 9812345678',
+    role: 'teacher',
+    name: 'Dr. Ramesh Jyotish',
+    email: 'ramesh.jyotish@astroadvyc.com',
+    gender: 'Male',
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 9876543210',
+    role: 'teacher',
+    name: 'Priya Sharma',
+    email: 'priya.tarot@astroadvyc.com',
+    gender: 'Female',
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 9988776655',
+    role: 'teacher',
+    name: 'Acharya Amit',
+    email: 'acharya.amit@astroadvyc.com',
+    gender: 'Male',
+    isProfileComplete: true
+  },
+  {
+    phone: '+91 9122334455',
+    role: 'teacher',
+    name: 'Neha Vastu',
+    email: 'neha.vastu@astroadvyc.com',
+    gender: 'Female',
+    isProfileComplete: true
   }
 ];
 

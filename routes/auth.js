@@ -445,6 +445,21 @@ const registerHandler = async (req, res) => {
       user.bankAccountNumber = bankAccountNumber || "";
       user.bankIFSC = bankIFSC || "";
 
+    } else if (user.role === 'teacher') {
+      // Role is 'teacher' (Astro Coach)
+      const { name, expertise, experience, about, gender, profilePhoto } = req.body;
+
+      if (!name || !expertise || !experience) {
+        return res.status(400).json({ 
+          status: false, 
+          message: 'Name, Expertise, and Experience are required for Teacher registration.' 
+        });
+      }
+
+      user.name = name;
+      user.gender = gender || null;
+      user.profilePhoto = profilePhoto || null;
+      
     } else {
       // Role is 'donor' (Donate & Fundraise)
       const { name, gender, profilePhoto } = req.body;

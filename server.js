@@ -36,6 +36,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/campaign-categories', campaignCategoryRoutes);
 
+// Partner Portal Routes (Protected by JWT Auth)
+const ngoPortalRoutes = require('./routes/ngo');
+const teacherPortalRoutes = require('./routes/teacher');
+app.use('/api/ngo', authMiddleware, ngoPortalRoutes);
+app.use('/api/teacher', authMiddleware, teacherPortalRoutes);
+
 // System Seeding Route
 const { seedDatabase } = require('./seeder');
 app.post('/api/system/seed', async (req, res) => {
