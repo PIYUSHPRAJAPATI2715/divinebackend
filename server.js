@@ -52,7 +52,24 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// Secured Routes (Require JWT Bearer Token)
+// Admin Routes (Prefixed with /api/admin)
+app.use('/api/admin/campaigns', authMiddleware, campaignRoutes);
+app.use('/api/admin/teachers', authMiddleware, teacherRoutes);
+app.use('/api/admin/courses', authMiddleware, courseRoutes);
+app.use('/api/admin/ngos', authMiddleware, ngoRoutes);
+app.use('/api/admin/donors', authMiddleware, donorRoutes);
+app.use('/api/admin/students', authMiddleware, studentRoutes);
+app.use('/api/admin/transactions', authMiddleware, transactionRoutes);
+app.use('/api/admin/reviews', authMiddleware, reviewRoutes);
+app.use('/api/admin/posts', authMiddleware, postRoutes);
+app.use('/api/admin/categories', authMiddleware, categoryRoutes);
+app.use('/api/admin/banners', authMiddleware, bannerRoutes);
+app.use('/api/admin/news', authMiddleware, newsRoutes);
+app.use('/api/admin/seminars', authMiddleware, seminarRoutes);
+app.use('/api/admin/referrals', authMiddleware, referralRoutes);
+app.use('/api/admin/campaign-categories', authMiddleware, campaignCategoryRoutes);
+
+// Secured Legacy Routes (Without /api/admin prefix, for compatibility)
 app.use('/api/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/teachers', authMiddleware, teacherRoutes);
 app.use('/api/courses', authMiddleware, courseRoutes);
