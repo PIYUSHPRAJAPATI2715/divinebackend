@@ -55,14 +55,12 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
 
-    const targetRole = role || 'donor';
-
     // Check if user exists
     const existingUser = await User.findOne({ phone });
     
     if (existingUser) {
-      // Role conflict check:
-      if (existingUser.role !== targetRole) {
+      // If client explicitly passed a role and it conflicts:
+      if (role && existingUser.role !== role) {
         if (existingUser.isProfileComplete) {
           const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
           return res.status(400).json({
@@ -71,7 +69,7 @@ router.post('/signup', async (req, res) => {
           });
         } else {
           // If profile is not complete, let them change/correct the role
-          existingUser.role = targetRole;
+          existingUser.role = role;
         }
       }
 
@@ -91,7 +89,8 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // New user
+    // New user signup
+    const targetRole = role || 'donor';
     const newUser = new User({
       phone,
       role: targetRole,
@@ -121,7 +120,7 @@ router.post('/signup', async (req, res) => {
 
 /**
  * @route   POST /api/auth/login
- * @desc    Authenticate admin by email/pass OR initiate user login by phone & role
+ * @desc    Authenticate admin by email/pass OR initiate user login by phone checking if exists
  * @access  Public
  */
 router.post('/login', async (req, res) => {
@@ -130,12 +129,11 @@ router.post('/login', async (req, res) => {
 
     // 1. If phone is provided, run user phone-OTP flow
     if (phone) {
-      const targetRole = role || 'donor';
       const existingUser = await User.findOne({ phone });
 
       if (existingUser) {
-        // Role conflict check:
-        if (existingUser.role !== targetRole) {
+        // If client explicitly passed a role and it conflicts:
+        if (role && existingUser.role !== role) {
           if (existingUser.isProfileComplete) {
             const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
             return res.status(400).json({
@@ -144,7 +142,7 @@ router.post('/login', async (req, res) => {
             });
           } else {
             // Update role if profile is incomplete
-            existingUser.role = targetRole;
+            existingUser.role = role;
           }
         }
 
@@ -165,6 +163,7 @@ router.post('/login', async (req, res) => {
       }
 
       // If logging in but doesn't exist, treat it as a signup start
+      const targetRole = role || 'donor';
       const newUser = new User({
         phone,
         role: targetRole,
