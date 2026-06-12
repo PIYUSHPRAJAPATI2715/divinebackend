@@ -110,7 +110,8 @@ router.get('/', optionalAuth, async (req, res) => {
           impactStats: ngo.impactStats || '',
           description: ngo.about || ''
         })),
-        donationHistory
+        donationHistory,
+        appVersion: 'v1.0.1_ngo_fix'
       }
     });
 
