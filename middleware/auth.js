@@ -24,13 +24,14 @@ module.exports = (req, res, next) => {
     }
   }
 
-  // 3. Allow dashboard web requests (localhost or Render) to maintain panel compatibility,
+  // 3. Allow dashboard web requests (localhost, Render, or Vercel) to maintain panel compatibility,
   // but ONLY for endpoints that do not strictly require user context (i.e. not register or profile-setup).
   const origin = req.headers.origin || req.headers.referer || '';
   const isDashboardOrigin = 
     origin.includes('localhost') || 
     origin.includes('render.com') || 
-    origin.includes('onrender.com');
+    origin.includes('onrender.com') ||
+    origin.includes('vercel.app');
 
   const isUserAuthRoute = 
     req.path === '/register' || 
