@@ -502,6 +502,125 @@ const registerHandler = async (req, res) => {
   }
 };
 
+
+// Import other models for wallet/donation operations
+const Campaign = require('../models/Campaign');
+const Transaction = require('../models/Transaction');
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get currently logged-in user profile
+ * @access  Private
+ */
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
+    res.json({ status: true, data: user });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+/**
+ * @route   POST /api/auth/wallet/topup
+ * @desc    Add money to donor wallet
+ * @access  Private
+ */
+router.post('/wallet/topup', authMiddleware, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      return res.status(400).json({ status: false, message: 'Invalid top-up amount' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
+
+    user.walletBalance = (user.walletBalance || 0) + Number(amount);
+    await user.save();
+
+    // Log the transaction
+    const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
+    const newTx = new Transaction({
+      transactionId,
+      user: user.name || user.phone,
+      amount: `₹${amount.toLocaleString()}`,
+      status: 'Success',
+      date: new Date(),
+      item: 'Wallet Top-up'
+    });
+    await newTx.save();
+
+    res.json({ status: true, message: 'Wallet topped up successfully', data: user });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+/**
+ * @route   POST /api/auth/wallet/donate
+ * @desc    Donate to a campaign using wallet balance
+ * @access  Private
+ */
+router.post('/wallet/donate', authMiddleware, async (req, res) => {
+  try {
+    const { campaignId, amount } = req.body;
+    if (!campaignId || !amount || isNaN(amount) || Number(amount) <= 0) {
+      return res.status(400).json({ status: false, message: 'Campaign ID and positive amount are required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
+
+    if ((user.walletBalance || 0) < Number(amount)) {
+      return res.status(400).json({ status: false, message: 'Insufficient wallet balance. Please top up.' });
+    }
+
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Fundraising campaign not found' });
+    }
+
+    // Deduct from user wallet
+    user.walletBalance -= Number(amount);
+    await user.save();
+
+    // Add to campaign raised amount
+    const currentRaised = Number(campaign.raised.replace(/[^0-9]/g, '')) || 0;
+    const newRaised = currentRaised + Number(amount);
+    campaign.raised = `₹${newRaised.toLocaleString()}`;
+    await campaign.save();
+
+    // Log the transaction
+    const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
+    const newTx = new Transaction({
+      transactionId,
+      user: user.name || user.phone,
+      amount: `₹${amount.toLocaleString()}`,
+      status: 'Success',
+      date: new Date(),
+      item: campaign.title
+    });
+    await newTx.save();
+
+    res.json({ 
+      status: true, 
+      message: `Successfully donated ₹${amount} to "${campaign.title}"`,
+      data: user,
+      campaign
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
 router.post('/register', authMiddleware, registerHandler);
 router.post('/profile-setup', authMiddleware, registerHandler); // maintain profile-setup alias for compatibility
 
@@ -515,3 +634,4 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
+
