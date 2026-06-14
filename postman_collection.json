@@ -58,7 +58,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
+                  "raw": "{\n  \"phone\": \"+91 9876543210\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/signup",
@@ -88,7 +88,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
+                  "raw": "{\n  \"phone\": \"+91 9876543210\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/login",
@@ -118,7 +118,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+91 9876543210\",\n  \"role\": \"donor\"\n}"
+                  "raw": "{\n  \"phone\": \"+91 9876543210\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/resend-otp",
@@ -182,7 +182,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"gender\": \"Female\",\n  \"profilePhoto\": \"https://randomuser.me/api/portraits/women/44.jpg\"\n}"
+                  "raw": "{\n  \"role\": \"donor\",\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"gender\": \"Female\",\n  \"profilePhoto\": \"https://randomuser.me/api/portraits/women/44.jpg\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
@@ -216,7 +216,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"organizationName\": \"Divine Help Foundation\",\n  \"registeredAddress\": \"74 Lotus Temple Rd, New Delhi\",\n  \"addressCertificate\": \"https://s3.amazonaws.com/divine-docs/addr_cert.pdf\",\n  \"authorizedPerson\": \"Piyush Prajapati\",\n  \"designation\": \"Founder\",\n  \"gender\": \"Male\",\n  \"email\": \"contact@divinehelp.org\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"panImage\": \"https://s3.amazonaws.com/divine-docs/pan.png\",\n  \"bankAccountHolder\": \"Divine Help NGO Account\",\n  \"bankName\": \"ICICI Bank\",\n  \"bankAccountNumber\": \"100200300400\",\n  \"bankIFSC\": \"ICIC0000123\"\n}"
+                  "raw": "{\n  \"role\": \"ngo\",\n  \"organizationName\": \"Divine Help Foundation\",\n  \"registeredAddress\": \"74 Lotus Temple Rd, New Delhi\",\n  \"addressCertificate\": \"https://s3.amazonaws.com/divine-docs/addr_cert.pdf\",\n  \"authorizedPerson\": \"Piyush Prajapati\",\n  \"designation\": \"Founder\",\n  \"gender\": \"Male\",\n  \"email\": \"contact@divinehelp.org\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"panImage\": \"https://s3.amazonaws.com/divine-docs/pan.png\",\n  \"bankAccountHolder\": \"Divine Help NGO Account\",\n  \"bankName\": \"ICICI Bank\",\n  \"bankAccountNumber\": \"100200300400\",\n  \"bankIFSC\": \"ICIC0000123\"\n}"
                 },
                 "url": {
                   "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",

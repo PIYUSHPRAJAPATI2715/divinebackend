@@ -49,7 +49,7 @@ router.post('/check-role', async (req, res) => {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { phone, role } = req.body;
+    const { phone } = req.body;
 
     if (!phone) {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
@@ -59,20 +59,6 @@ router.post('/signup', async (req, res) => {
     const existingUser = await User.findOne({ phone });
     
     if (existingUser) {
-      // If client explicitly passed a role and it conflicts:
-      if (role && existingUser.role !== role) {
-        if (existingUser.isProfileComplete) {
-          const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
-          return res.status(400).json({
-            status: false,
-            message: `This phone number is already registered under the role "${roleLabel}". Please select the correct role to login.`
-          });
-        } else {
-          // If profile is not complete, let them change/correct the role
-          existingUser.role = role;
-        }
-      }
-
       existingUser.otp = '1234';
       existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
       await existingUser.save();
@@ -90,10 +76,9 @@ router.post('/signup', async (req, res) => {
     }
 
     // New user signup
-    const targetRole = role || 'donor';
     const newUser = new User({
       phone,
-      role: targetRole,
+      role: 'donor',
       isProfileComplete: false,
       otp: '1234',
       otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
@@ -108,7 +93,7 @@ router.post('/signup', async (req, res) => {
       message: 'OTP sent successfully (Use static code 1234 to verify)',
       isUserExist: false,
       phone,
-      role: targetRole,
+      role: 'donor',
       otp: '1234'
     });
 
@@ -125,27 +110,13 @@ router.post('/signup', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, phone, role } = req.body;
+    const { email, password, phone } = req.body;
 
     // 1. If phone is provided, run user phone-OTP flow
     if (phone) {
       const existingUser = await User.findOne({ phone });
 
       if (existingUser) {
-        // If client explicitly passed a role and it conflicts:
-        if (role && existingUser.role !== role) {
-          if (existingUser.isProfileComplete) {
-            const roleLabel = existingUser.role === 'ngo' ? 'NGO / Organization' : 'Donate & Fundraise';
-            return res.status(400).json({
-              status: false,
-              message: `This phone number is already registered under the role "${roleLabel}". Please select the correct role to login.`
-            });
-          } else {
-            // Update role if profile is incomplete
-            existingUser.role = role;
-          }
-        }
-
         existingUser.otp = '1234';
         existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
         await existingUser.save();
@@ -163,10 +134,9 @@ router.post('/login', async (req, res) => {
       }
 
       // If logging in but doesn't exist, treat it as a signup start
-      const targetRole = role || 'donor';
       const newUser = new User({
         phone,
-        role: targetRole,
+        role: 'donor',
         isProfileComplete: false,
         otp: '1234',
         otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
@@ -180,7 +150,7 @@ router.post('/login', async (req, res) => {
         message: 'OTP sent successfully (Use static code 1234 to verify)',
         isUserExist: false,
         phone,
-        role: targetRole,
+        role: 'donor',
         otp: '1234'
       });
     }
@@ -228,18 +198,13 @@ router.post('/login', async (req, res) => {
  */
 router.post('/resend-otp', async (req, res) => {
   try {
-    const { phone, role } = req.body;
+    const { phone } = req.body;
 
     if (!phone) {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
 
-    const query = { phone };
-    if (role) {
-      query.role = role;
-    }
-
-    const user = await User.findOne(query);
+    const user = await User.findOne({ phone });
     if (!user) {
       return res.status(404).json({
         status: false,
