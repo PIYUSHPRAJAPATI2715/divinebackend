@@ -298,8 +298,8 @@ const registerHandler = async (req, res) => {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
 
-    // Extract email and optional role from registration body
-    const { email, role } = req.body;
+    // Extract email, optional role and phone from registration body
+    const { email, role, phone } = req.body;
 
     if (role) {
       if (['donor', 'ngo', 'teacher'].includes(role)) {
@@ -315,6 +315,14 @@ const registerHandler = async (req, res) => {
         return res.status(400).json({ status: false, message: 'Email address is already in use by another account' });
       }
       user.email = email;
+    }
+
+    if (phone) {
+      const phoneInUse = await User.findOne({ phone, _id: { $ne: userId } });
+      if (phoneInUse) {
+        return res.status(400).json({ status: false, message: 'Phone number is already in use by another account' });
+      }
+      user.phone = phone;
     }
 
     // Role-based fields validation and assignment
