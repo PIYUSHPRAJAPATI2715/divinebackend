@@ -337,10 +337,10 @@ const registerHandler = async (req, res) => {
     const { email, role } = req.body;
 
     if (role) {
-      if (['donor', 'ngo'].includes(role)) {
+      if (['donor', 'ngo', 'teacher'].includes(role)) {
         user.role = role;
       } else {
-        return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor" or "ngo".' });
+        return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor", "ngo", or "teacher".' });
       }
     }
 
