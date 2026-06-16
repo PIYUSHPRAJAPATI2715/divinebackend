@@ -23,6 +23,14 @@ const ngoSchema = new mongoose.Schema({
     }
   ],
   kycDocs: [{ type: String }],
+  activityGallery: [
+    {
+      title: { type: String, required: true },
+      description: { type: String },
+      imageUrl: { type: String, required: true },
+      uploadedAt: { type: Date, default: Date.now }
+    }
+  ],
   campaigns: [
     {
       campaignId: { type: String },

@@ -190,4 +190,30 @@ router.put('/profile', async (req, res) => {
   }
 });
 
+// 5c. Add NGO Relief Activity Proof (Gallery upload)
+router.post('/gallery', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const { title, description, imageUrl } = req.body;
+
+    if (!title || !imageUrl) {
+      return res.status(400).json({ message: 'Title and image URL are required' });
+    }
+
+    const newProof = {
+      title,
+      description: description || '',
+      imageUrl,
+      uploadedAt: new Date()
+    };
+
+    ngo.activityGallery.push(newProof);
+    await ngo.save();
+
+    res.status(201).json(ngo.activityGallery[ngo.activityGallery.length - 1]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
