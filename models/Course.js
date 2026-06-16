@@ -15,7 +15,16 @@ const courseSchema = new mongoose.Schema({
   liveClassDetails: {
     agoraSessionId: { type: String, default: '' },
     activeStudents: { type: Number, default: 0 }
-  }
+  },
+  recordedVideos: [
+    {
+      title: { type: String, required: true },
+      description: { type: String },
+      videoUrl: { type: String },
+      duration: { type: String },
+      uploadedAt: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Course', courseSchema);
