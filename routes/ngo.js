@@ -3,6 +3,7 @@ const router = express.Router();
 const NGO = require('../models/NGO');
 const Campaign = require('../models/Campaign');
 const CampaignCategory = require('../models/CampaignCategory');
+const User = require('../models/User');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -141,6 +142,49 @@ router.post('/payouts', async (req, res) => {
     await ngo.save();
     
     res.status(201).json({ status: true, payout: newPayout });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 5b. Update NGO Profile (including linked User details/bank accounts)
+router.put('/profile', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const { 
+      name, 
+      registrationNumber, 
+      contactPerson, 
+      about,
+      email,
+      gender,
+      bankAccountHolder,
+      bankName,
+      bankBranch,
+      bankAccountNumber,
+      bankIFSC
+    } = req.body;
+
+    if (name) ngo.name = name;
+    if (registrationNumber) ngo.registrationNumber = registrationNumber;
+    if (contactPerson) ngo.contactPerson = contactPerson;
+    if (about !== undefined) ngo.about = about;
+    if (email) ngo.email = email;
+    await ngo.save();
+
+    // Sync user details
+    const user = await User.findById(req.user.id);
+    if (user) {
+      if (gender) user.gender = gender;
+      if (bankAccountHolder) user.bankAccountHolder = bankAccountHolder;
+      if (bankName) user.bankName = bankName;
+      if (bankBranch) user.bankBranch = bankBranch;
+      if (bankAccountNumber) user.bankAccountNumber = bankAccountNumber;
+      if (bankIFSC) user.bankIFSC = bankIFSC;
+      await user.save();
+    }
+
+    res.json({ status: true, ngo, user });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
