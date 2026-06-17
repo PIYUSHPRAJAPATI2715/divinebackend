@@ -20,6 +20,10 @@ router.get('/social', async (req, res) => {
       .populate('followingUsers', 'name phone profilePhoto')
       .populate('followers', 'name phone profilePhoto');
       
+    if (!me) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
+      
     res.json({
       status: true,
       data: {
@@ -39,6 +43,9 @@ router.get('/social', async (req, res) => {
 router.post('/follow/ngo/:id', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const ngoId = req.params.id;
     const ngo = await NGO.findById(ngoId);
     if (!ngo) {
@@ -67,6 +74,9 @@ router.post('/follow/ngo/:id', async (req, res) => {
 router.post('/follow/user/:id', async (req, res) => {
   try {
     const me = await User.findById(req.user._id);
+    if (!me) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const targetId = req.params.id;
     
     if (me._id.toString() === targetId) {

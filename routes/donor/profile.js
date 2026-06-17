@@ -18,6 +18,10 @@ router.get('/profile', async (req, res) => {
       .populate('followingUsers', 'name phone profilePhoto')
       .populate('followers', 'name phone profilePhoto');
     
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
+    
     if (!user.referralCode) {
       user.referralCode = generateReferralCode(user.name);
       await user.save();

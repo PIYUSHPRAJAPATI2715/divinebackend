@@ -7,6 +7,9 @@ const Transaction = require('../../models/Transaction');
 router.get('/wallet', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const transactions = await Transaction.find({
       $or: [
         { user: user.name },
@@ -31,6 +34,9 @@ router.get('/wallet', async (req, res) => {
 router.get('/transactions', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const transactions = await Transaction.find({
       $or: [
         { user: user.name },
@@ -49,6 +55,9 @@ router.get('/transactions', async (req, res) => {
 router.get('/donation-history', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const donations = await Transaction.find({
       $or: [
         { user: user.name },

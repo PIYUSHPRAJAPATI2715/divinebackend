@@ -70,6 +70,9 @@ router.post('/notifications/read', async (req, res) => {
 router.get('/recent-searches', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const history = user.searchHistory && user.searchHistory.length > 0
       ? user.searchHistory
       : ['Medical help', 'Child education', 'Astrology courses', 'NGO Support'];
@@ -86,6 +89,9 @@ router.post('/recent-searches', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Search term is required' });
     }
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     if (!user.searchHistory) user.searchHistory = [];
     user.searchHistory = user.searchHistory.filter(t => t.toLowerCase() !== term.trim().toLowerCase());
     user.searchHistory.unshift(term.trim());
@@ -138,6 +144,9 @@ router.post('/coupons/claim', async (req, res) => {
   try {
     const { code } = req.body;
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const coupon = await Coupon.findOne({ code, isActive: true });
     if (!coupon) {
       return res.status(404).json({ status: false, message: 'Invalid or expired coupon code' });
@@ -174,6 +183,9 @@ router.post('/coupons/claim', async (req, res) => {
 router.get('/reviews', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const reviews = await Review.find({ userName: user.name || user.phone }).sort({ createdAt: -1 });
     res.json({ status: true, data: reviews });
   } catch (err) {
@@ -188,6 +200,9 @@ router.post('/reviews', async (req, res) => {
       return res.status(400).json({ status: false, message: 'All review fields are required' });
     }
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const newReview = new Review({
       reviewId: `REV-${Date.now().toString().slice(-4)}`,
       userName: user.name || 'Divine Donor',
@@ -209,6 +224,9 @@ router.post('/reviews', async (req, res) => {
 router.get('/referrals', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const referrals = await Referral.find({ referrerName: user.name || user.phone }).sort({ createdAt: -1 });
     const totalEarnings = referrals
       .filter(r => r.status === 'Completed')
@@ -244,6 +262,9 @@ router.post('/help-support', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Subject and Message are required' });
     }
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ status: false, message: 'User not found' });
+    }
     const ticket = new SupportTicket({
       ticketId: `TCK-${Date.now().toString().slice(-4)}`,
       user: user._id,

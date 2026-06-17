@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
   console.log(`[AUTH] Path: ${req.originalUrl || req.path} | Method: ${req.method} | Authorization: ${req.header('Authorization') ? 'Present' : 'Missing'} | Origin: ${req.header('Origin') || req.header('Referer') || 'None'}`);
 
   // 1. Allow public read access (GET requests) for client-side browsing, but protect admin, ngo, and teacher portal endpoints
@@ -39,6 +39,14 @@ module.exports = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
+      
+      // Enforce DB lookup to prevent null reference errors for deleted/re-seeded users
+      const User = require('../models/User');
+      const userExists = await User.findById(decoded._id);
+      if (!userExists) {
+        return res.status(401).json({ status: false, message: 'User account no longer exists in database. Please register/login again.' });
+      }
+
       req.user = decoded;
       return next();
     } catch (err) {
@@ -61,7 +69,7 @@ module.exports = (req, res, next) => {
     req.originalUrl.includes('/register') || 
     req.originalUrl.includes('/profile-setup');
 
-  if (isDashboardOrigin && !isUserAuthRoute) {
+  if (isDashboardOrigin && !isUserAuthRoute && !isPortalRoute) {
     return next();
   }
 

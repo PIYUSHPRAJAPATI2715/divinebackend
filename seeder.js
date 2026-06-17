@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Campaign = require('./models/Campaign');
 const Teacher = require('./models/Teacher');
 const Course = require('./models/Course');
@@ -15,6 +16,12 @@ const Seminar = require('./models/Seminar');
 const Referral = require('./models/Referral');
 const User = require('./models/User');
 const CampaignCategory = require('./models/CampaignCategory');
+const Coupon = require('./models/Coupon');
+const Notification = require('./models/Notification');
+const SupportTicket = require('./models/SupportTicket');
+const Content = require('./models/Content');
+
+const noahId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7a');
 
 const mockCampaigns = [
   { 
@@ -536,6 +543,7 @@ const mockCampaignCategories = [
 
 const mockUsers = [
   {
+    _id: noahId,
     phone: '+91 9999999999',
     role: 'donor',
     name: 'Noah',
@@ -633,7 +641,8 @@ const mockReviews = [
   { reviewId: 'REV-002', userName: 'Karan Malhotra', userRole: 'Student', type: 'Course', targetName: 'Tarot for Beginners', rating: 4, comment: 'Excellent course, though I wish there were more interactive live sessions.', status: 'Approved' },
   { reviewId: 'REV-003', userName: 'Anonymous Donor', userRole: 'Donor', type: 'Campaign', targetName: 'Education for 10 Girls', rating: 5, comment: 'Very transparent process and happy to see children studying. Highly recommend supporting!', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', status: 'Approved' },
   { reviewId: 'REV-004', userName: 'Kriti Sen', userRole: 'User', type: 'General', targetName: 'Astroadvyc Platform', rating: 5, comment: 'Amazing user interface and great selection of spiritual coaching.', videoUrl: 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4', status: 'Pending' },
-  { reviewId: 'REV-005', userName: 'Spammer User', userRole: 'User', type: 'Teacher', targetName: 'Acharya Amit', rating: 1, comment: 'This is fake and terrible advertisement. Buy my cryptocurrency coin now!', status: 'Pending' }
+  { reviewId: 'REV-005', userName: 'Spammer User', userRole: 'User', type: 'Teacher', targetName: 'Acharya Amit', rating: 1, comment: 'This is fake and terrible advertisement. Buy my cryptocurrency coin now!', status: 'Pending' },
+  { reviewId: 'REV-H1', userName: 'Noah', userRole: 'Donor', type: 'Campaign', targetName: 'Save the Children', rating: 5, comment: 'Incredible work by the team. Very happy with the impact reports shared!', status: 'Approved' }
 ];
 
 const mockPosts = [
@@ -669,7 +678,99 @@ const mockSeminars = [
 
 const mockReferrals = [
   { referralId: 'REF-001', referrerName: 'Anil Kapoor', referredUserName: 'Rohit Verma', rewardAmount: 500, status: 'Completed' },
-  { referralId: 'REF-002', referrerName: 'Ravi Teja', referredUserName: 'Simran Jeet', rewardAmount: 500, status: 'Pending' }
+  { referralId: 'REF-002', referrerName: 'Ravi Teja', referredUserName: 'Simran Jeet', rewardAmount: 500, status: 'Pending' },
+  { referralId: 'REF-H1', referrerName: 'Noah', referredUserName: 'Rahul Sharma', rewardAmount: 100, status: 'Completed' },
+  { referralId: 'REF-H2', referrerName: 'Noah', referredUserName: 'Amit Kumar', rewardAmount: 100, status: 'Pending' }
+];
+
+const mockCoupons = [
+  {
+    code: 'WELCOME100',
+    description: 'Get ₹100 cashback bonus inside your wallet on your first transaction.',
+    discountType: 'Flat',
+    value: 100,
+    expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    isActive: true
+  },
+  {
+    code: 'FESTIVE50',
+    description: 'Claim 50% discount booster on ASTRO courses.',
+    discountType: 'Percentage',
+    value: 50,
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    isActive: true
+  },
+  {
+    code: 'CHARITY20',
+    description: 'Unlock 20% discount coupon on spiritual courses catalog.',
+    discountType: 'Percentage',
+    value: 20,
+    expiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    isActive: true
+  }
+];
+
+const mockNotifications = [
+  {
+    user: noahId,
+    title: 'Welcome to Divine Astrological Portal!',
+    message: 'Thank you for registering. You can browse NGOs, start fundraising campaigns, or book a spiritual service.',
+    isRead: false
+  },
+  {
+    user: noahId,
+    title: 'Wallet Activated',
+    message: 'Your dynamic charity wallet is activated. Check reward coupons tab to claim ₹100 cashback bonus.',
+    isRead: false
+  },
+  {
+    user: noahId,
+    title: 'Profile Completed',
+    message: 'Your profile has been verified. Welcome to our donor community!',
+    isRead: true
+  }
+];
+
+const mockSupportTickets = [
+  {
+    ticketId: 'TCK-1001',
+    user: noahId,
+    userName: 'Noah',
+    userPhone: '9999999999',
+    subject: 'Wallet top-up failed',
+    message: 'My wallet top-up failed but the amount was deducted from my bank account. Please check.',
+    status: 'Resolved',
+    reply: 'Your payment was successfully settled and credited to your wallet balance. Please check your transaction history.',
+    repliedAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+  },
+  {
+    ticketId: 'TCK-1002',
+    user: noahId,
+    userName: 'Noah',
+    userPhone: '9999999999',
+    subject: 'Tax exemption certificate',
+    message: 'Where can I download the 80G tax exemption receipt for my donation to Save the Children?',
+    status: 'Open',
+    reply: ''
+  }
+];
+
+const mockContent = [
+  {
+    key: 'privacy',
+    title: 'Privacy Policy',
+    content: `### 1. Information Collection\nWe collect details you provide directly like phone number, email, and name. Transactions made via your wallet are safely ledgered.\n\n### 2. Sponsoring Protection\nAll donations made on Divine Nakshatra go through verified 12A/80G NGOs to prevent misuse.\n\n### 3. Account Safety\nYou can deactivate or delete your account at any time. Doing so disables your wallet and hides your profile.`
+  },
+  {
+    key: 'terms',
+    title: 'Terms & Conditions',
+    content: `### 1. Sponsoring Ledger\nBy topup or donating, you agree that transactions are settlements made on verified social campaigns.\n\n### 2. Astrological Courses\nTeachers are independent partners. Review course details, schedules, and curriculum before booking.\n\n### 3. Code of Conduct\nAbuse, falsified campaign setups, and offensive review comments will result in instant account suspension.`
+  },
+  {
+    key: 'about',
+    title: 'About Us',
+    content: `### Sponsoring Astrological and Social Changes\nDivine Nakshatra blends ancient Vedic wisdom with modern social impact. We connect verified astrologers with students, and donors with local NGOs.\n\n### Our Mission\nTo foster an ecosystem of learning, charity, and transparency, powered by dynamic real-time reporting ledgers.`
+  }
 ];
 
 async function seedDatabase() {
@@ -691,6 +792,10 @@ async function seedDatabase() {
   await Referral.deleteMany({});
   await User.deleteMany({});
   await CampaignCategory.deleteMany({});
+  await Coupon.deleteMany({});
+  await Notification.deleteMany({});
+  await SupportTicket.deleteMany({});
+  await Content.deleteMany({});
   
   console.log('Inserting seed data...');
   await Campaign.insertMany(mockCampaigns);
@@ -710,6 +815,10 @@ async function seedDatabase() {
   await Referral.insertMany(mockReferrals);
   await User.insertMany(mockUsers);
   await CampaignCategory.insertMany(mockCampaignCategories);
+  await Coupon.insertMany(mockCoupons);
+  await Notification.insertMany(mockNotifications);
+  await SupportTicket.insertMany(mockSupportTickets);
+  await Content.insertMany(mockContent);
   
   console.log('Database seeded successfully with all Divine features!');
 }
