@@ -29,7 +29,7 @@ function fetchHome() {
 }
 
 async function run() {
-  const targetVersion = 'v1.0.2_donor_history_fix';
+  const targetVersion = 'v1.0.5_onboarding_role_fix';
   const maxAttempts = 20;
   console.log(`Polling live home page API for version "${targetVersion}"...`);
   for (let i = 1; i <= maxAttempts; i++) {

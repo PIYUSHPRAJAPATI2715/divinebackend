@@ -1,0 +1,611 @@
+{
+  "info": {
+    "_postman_id": "c1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "name": "Donor Portal 22 Dynamic APIs",
+    "description": "Standalone Postman Collection for the 22 Donor Portal features and corresponding admin managers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Notification APIs",
+      "item": [
+        {
+          "name": "Get Notifications Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/notifications",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/notifications/read",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "notifications", "read"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Recent Searches APIs",
+      "item": [
+        {
+          "name": "Get Search History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/recent-searches",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "recent-searches"]
+            }
+          }
+        },
+        {
+          "name": "Add Search Term",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"term\": \"Child Medical Aid\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/recent-searches",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "recent-searches"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3, 7, 13. Campaigns & Raising",
+      "item": [
+        {
+          "name": "Get Active Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns/:id",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "campaigns", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_CAMPAIGN_ID" }]
+            }
+          }
+        },
+        {
+          "name": "Raise New Campaign Form",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rural Education Fundraiser Drive\",\n  \"category\": \"Education Aid\",\n  \"goal\": 75000,\n  \"description\": \"Provide stationery packages and uniforms to local government school students.\",\n  \"oneTimeOrMonthly\": \"One-Time\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "campaigns"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4, 5. NGO Directory",
+      "item": [
+        {
+          "name": "Get Verified NGOs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/ngos",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "ngos"]
+            }
+          }
+        },
+        {
+          "name": "Get NGO Profile Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/ngos/:id",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "ngos", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_NGO_ID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6, 14. Social Feed & Followers",
+      "item": [
+        {
+          "name": "Get Social Networks & Leaders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/social",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "social"]
+            }
+          }
+        },
+        {
+          "name": "Follow/Unfollow NGO",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/ngo/:id",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "follow", "ngo", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_NGO_ID" }]
+            }
+          }
+        },
+        {
+          "name": "Follow/Unfollow User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/user/:id",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "follow", "user", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_USER_ID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8, 9, 12. Wallet & Transactions",
+      "item": [
+        {
+          "name": "Get Wallet Ledger Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/wallet",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "wallet"]
+            }
+          }
+        },
+        {
+          "name": "Top-up Wallet (Simulated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 3000\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/wallet/topup",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "auth", "wallet", "topup"]
+            }
+          }
+        },
+        {
+          "name": "Donate Wallet Sponsorship",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"REPLACE_WITH_CAMPAIGN_ID\",\n  \"amount\": 1500\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/wallet/donate",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "auth", "wallet", "donate"]
+            }
+          }
+        },
+        {
+          "name": "Get Donation History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/donation-history",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "donation-history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10, 11, 19. Profile Settings",
+      "item": [
+        {
+          "name": "Get Profile Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/profile",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile Details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alex Mercer\",\n  \"email\": \"alex@astroadvyc.com\",\n  \"gender\": \"Male\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/profile",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate / Delete Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deletePermanently\": false\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/deactivate",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "deactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15, 16, 17. Reviews, Referrals & Vouchers",
+      "item": [
+        {
+          "name": "Get Vouchers List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/coupons",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "coupons"]
+            }
+          }
+        },
+        {
+          "name": "Claim Promo Code Voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME100\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/coupons/claim",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "coupons", "claim"]
+            }
+          }
+        },
+        {
+          "name": "Get Referrals Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/referrals",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "referrals"]
+            }
+          }
+        },
+        {
+          "name": "Get My Reviews Written",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/reviews",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "reviews"]
+            }
+          }
+        },
+        {
+          "name": "Submit New Feedback Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Campaign\",\n  \"targetName\": \"Community Free Meal Kitchen\",\n  \"rating\": 5,\n  \"comment\": \"Amazing transparency and verified relief operations! Highly satisfied.\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/reviews",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "reviews"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "18, 20, 21, 22. Support & dynamic legal policies",
+      "item": [
+        {
+          "name": "Get My Support Tickets List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/help-support",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "help-support"]
+            }
+          }
+        },
+        {
+          "name": "Raise Support Desk Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"EMI Donation failure\",\n  \"message\": \"My recurring monthly contribution failed to deduct from wallet. Please review.\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/help-support",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "help-support"]
+            }
+          }
+        },
+        {
+          "name": "Get Legal Policy Content",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/content/:type",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "donor", "content", ":type"],
+              "variable": [{ "key": "type", "value": "privacy" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "23. Admin Management Panel",
+      "item": [
+        {
+          "name": "Get Tickets (Admin view)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donor/tickets",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "admin", "donor", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "Reply & Resolve Ticket (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Resolved. Balance adjusted.\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donor/tickets/:id/reply",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "admin", "donor", "tickets", ":id", "reply"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_TICKET_ID" }]
+            }
+          }
+        },
+        {
+          "name": "Create Promo Coupon (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CHARITY50\",\n  \"description\": \"Flat \u20b950 wallet cashback on any donation drive.\",\n  \"discountType\": \"Flat\",\n  \"value\": 50,\n  \"expiryDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donor/coupons",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "admin", "donor", "coupons"]
+            }
+          }
+        },
+        {
+          "name": "Adjust Wallet Balance (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"REPLACE_WITH_USER_ID\",\n  \"amount\": 1000,\n  \"action\": \"credit\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donor/wallet/adjust",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "admin", "donor", "wallet", "adjust"]
+            }
+          }
+        },
+        {
+          "name": "Update Policy Page (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"privacy\",\n  \"title\": \"Privacy Rules\",\n  \"content\": \"### Dynamic Terms\\nAll database details are encrypted.\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/donor/content",
+              "protocol": "https",
+              "host": ["divinebackend-v5gl", "onrender", "com"],
+              "path": ["api", "admin", "donor", "content"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

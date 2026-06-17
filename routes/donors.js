@@ -1,1 +1,1 @@
-module.exports = require('./admin/donors');
+module.exports = require('./donor');

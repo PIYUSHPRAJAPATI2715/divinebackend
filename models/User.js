@@ -201,7 +201,15 @@ const userSchema = new mongoose.Schema({
   isProfileComplete: {
     type: Boolean,
     default: false
-  }
+  },
+  // Social, referral, and rewards fields
+  followingNgos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followingUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  referralCode: { type: String, default: '' },
+  referredBy: { type: String, default: '' },
+  searchHistory: [{ type: String }],
+  couponsClaimed: [{ type: String }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

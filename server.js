@@ -17,7 +17,7 @@ const campaignRoutes = require('./routes/campaigns');
 const teacherRoutes = require('./routes/teachers');
 const courseRoutes = require('./routes/courses');
 const ngoRoutes = require('./routes/ngos');
-const donorRoutes = require('./routes/donors');
+const adminDonorRoutes = require('./routes/admin/donors');
 const authRoutes = require('./routes/auth');
 const homeRoutes = require('./routes/home');
 const campaignCategoryRoutes = require('./routes/campaignCategories');
@@ -39,8 +39,14 @@ app.use('/api/campaign-categories', campaignCategoryRoutes);
 // Partner Portal Routes (Protected by JWT Auth)
 const ngoPortalRoutes = require('./routes/ngo');
 const teacherPortalRoutes = require('./routes/teacher');
+const donorPortalRoutes = require('./routes/donor');
+const adminDonorPortalRoutes = require('./routes/admin/donor');
+
 app.use('/api/ngo', authMiddleware, ngoPortalRoutes);
 app.use('/api/teacher', authMiddleware, teacherPortalRoutes);
+app.use('/api/donor', authMiddleware, donorPortalRoutes);
+app.use('/api/admin/donor-help', authMiddleware, adminDonorPortalRoutes);
+app.use('/api/admin/donor', authMiddleware, adminDonorPortalRoutes);
 
 // System Seeding Route
 const { seedDatabase } = require('./seeder');
@@ -63,7 +69,7 @@ app.use('/api/admin/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/admin/teachers', authMiddleware, teacherRoutes);
 app.use('/api/admin/courses', authMiddleware, courseRoutes);
 app.use('/api/admin/ngos', authMiddleware, ngoRoutes);
-app.use('/api/admin/donors', authMiddleware, donorRoutes);
+app.use('/api/admin/donors', authMiddleware, adminDonorRoutes);
 app.use('/api/admin/students', authMiddleware, studentRoutes);
 app.use('/api/admin/transactions', authMiddleware, transactionRoutes);
 app.use('/api/admin/reviews', authMiddleware, reviewRoutes);
@@ -80,7 +86,7 @@ app.use('/api/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/teachers', authMiddleware, teacherRoutes);
 app.use('/api/courses', authMiddleware, courseRoutes);
 app.use('/api/ngos', authMiddleware, ngoRoutes);
-app.use('/api/donors', authMiddleware, donorRoutes);
+app.use('/api/donors', authMiddleware, donorPortalRoutes);
 app.use('/api/students', authMiddleware, studentRoutes);
 app.use('/api/transactions', authMiddleware, transactionRoutes);
 app.use('/api/reviews', authMiddleware, reviewRoutes);
