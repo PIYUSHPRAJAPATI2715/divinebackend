@@ -1,1 +1,1 @@
-module.exports = require('./donors');
+module.exports = require('./donor/index');
