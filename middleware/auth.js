@@ -40,14 +40,21 @@ module.exports = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       
+      // Normalize both id and _id so routes checking either key work seamlessly
+      const userId = decoded.id || decoded._id;
+      
       // Enforce DB lookup to prevent null reference errors for deleted/re-seeded users
       const User = require('../models/User');
-      const userExists = await User.findById(decoded._id);
+      const userExists = await User.findById(userId);
       if (!userExists) {
         return res.status(401).json({ status: false, message: 'User account no longer exists in database. Please register/login again.' });
       }
 
-      req.user = decoded;
+      req.user = {
+        ...decoded,
+        id: userId,
+        _id: userId
+      };
       return next();
     } catch (err) {
       return res.status(401).json({ status: false, message: 'Invalid or expired token.' });
