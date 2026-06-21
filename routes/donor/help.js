@@ -282,35 +282,44 @@ router.post('/help-support', async (req, res) => {
 });
 
 // Content
-router.get('/content/:type', async (req, res) => {
+router.get('/content/:slug', async (req, res) => {
   try {
-    const { type } = req.params;
-    let title = '';
-    let defaultContent = '';
+    const { slug } = req.params;
+    let page = await Content.findOne({ $or: [{ key: slug }, { slug: slug }] });
 
-    if (type === 'privacy') {
-      title = 'Privacy Policy';
-      defaultContent = `### 1. Information Collection\nWe collect details you provide directly like phone number, email, and name. Transactions made via your wallet are safely ledgered.\n\n### 2. Sponsoring Protection\nAll donations made on Divine Nakshatra go through verified 12A/80G NGOs to prevent misuse.\n\n### 3. Account Safety\nYou can deactivate or delete your account at any time. Doing so disables your wallet and hides your profile.`;
-    } else if (type === 'terms') {
-      title = 'Terms & Conditions';
-      defaultContent = `### 1. Sponsoring Ledger\nBy topup or donating, you agree that transactions are settlements made on verified social campaigns.\n\n### 2. Astrological Courses\nTeachers are independent partners. Review course details, schedules, and curriculum before booking.\n\n### 3. Code of Conduct\nAbuse, falsified campaign setups, and offensive review comments will result in instant account suspension.`;
-    } else if (type === 'about') {
-      title = 'About Us';
-      defaultContent = `### Sponsoring Astrological and Social Changes\nDivine Nakshatra blends ancient Vedic wisdom with modern social impact. We connect verified astrologers with students, and donors with local NGOs.\n\n### Our Mission\nTo foster an ecosystem of learning, charity, and transparency, powered by dynamic real-time reporting ledgers.`;
-    } else {
-      return res.status(404).json({ status: false, message: 'Section content not found' });
-    }
-
-    let page = await Content.findOne({ key: type });
     if (!page) {
-      page = new Content({ key: type, title, content: defaultContent });
-      await page.save();
+      let title = '';
+      let defaultContent = '';
+      let key = '';
+
+      if (slug === 'privacy' || slug === 'privacy-policy') {
+        key = 'privacy';
+        title = 'Privacy Policy';
+        defaultContent = `### 1. Information Collection\nWe collect details you provide directly like phone number, email, and name. Transactions made via your wallet are safely ledgered.\n\n### 2. Sponsoring Protection\nAll donations made on Divine Nakshatra go through verified 12A/80G NGOs to prevent misuse.\n\n### 3. Account Safety\nYou can deactivate or delete your account at any time. Doing so disables your wallet and hides your profile.`;
+      } else if (slug === 'terms' || slug === 'terms-conditions' || slug === 'terms-and-conditions') {
+        key = 'terms';
+        title = 'Terms & Conditions';
+        defaultContent = `### 1. Sponsoring Ledger\nBy topup or donating, you agree that transactions are settlements made on verified social campaigns.\n\n### 2. Astrological Courses\nTeachers are independent partners. Review course details, schedules, and curriculum before booking.\n\n### 3. Code of Conduct\nAbuse, falsified campaign setups, and offensive review comments will result in instant account suspension.`;
+      } else if (slug === 'about' || slug === 'about-us') {
+        key = 'about';
+        title = 'About Us';
+        defaultContent = `### Sponsoring Astrological and Social Changes\nDivine Nakshatra blends ancient Vedic wisdom with modern social impact. We connect verified astrologers with students, and donors with local NGOs.\n\n### Our Mission\nTo foster an ecosystem of learning, charity, and transparency, powered by dynamic real-time reporting ledgers.`;
+      }
+
+      if (key) {
+        page = new Content({ key, slug, title, content: defaultContent });
+        await page.save();
+      } else {
+        return res.status(404).json({ status: false, message: 'Section content not found' });
+      }
     }
 
     res.json({
       status: true,
       title: page.title,
-      content: page.content
+      content: page.content,
+      slug: page.slug,
+      key: page.key
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });

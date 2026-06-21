@@ -14,6 +14,16 @@ const campaignSchema = new mongoose.Schema({
   oneTimeOrMonthly: { type: String, enum: ['One-Time', 'Monthly', 'Both'], default: 'One-Time' },
   status: { type: String, enum: ['Pending', 'Live', 'Completed'], default: 'Pending' },
   verificationDocs: [{ type: String }], // URLs to documents like medical reports or registrations
+  endDate: { type: Date, default: null },
+  images: [{ type: String }],
+  video: { type: String, default: null },
+  documents: [{ type: String }],
+  bankDetails: {
+    holderName: { type: String, default: '' },
+    accountNumber: { type: String, default: '' },
+    bankName: { type: String, default: '' },
+    ifscCode: { type: String, default: '' }
+  },
   withdrawalRequested: { type: Boolean, default: false },
   withdrawalStatus: { type: String, enum: ['None', 'Requested', 'Approved', 'Rejected'], default: 'None' },
   withdrawalRequests: [

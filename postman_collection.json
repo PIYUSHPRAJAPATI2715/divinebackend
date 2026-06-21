@@ -1605,7 +1605,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Community Village Food Kitchen Campaign\",\n  \"category\": \"Community Welfare\",\n  \"goal\": 80000,\n  \"description\": \"Help us set up a daily free kitchen in rural areas. Serves warm meals.\"\n}"
+              "raw": "{\n  \"title\": \"Community Village Food Kitchen Campaign\",\n  \"category\": \"Community Welfare\",\n  \"goal\": 80000,\n  \"description\": \"Help us set up a daily free kitchen in rural areas. Serves warm meals.\",\n  \"endDate\": \"2026-12-31T23:59:59.000Z\",\n  \"images\": [\n    \"https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600\"\n  ],\n  \"video\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"documents\": [\n    \"https://s3.amazonaws.com/divine-docs/ngo_registration_pratham.pdf\"\n  ],\n  \"bankDetails\": {\n    \"holderName\": \"Save the Children\",\n    \"accountNumber\": \"123456789012\",\n    \"bankName\": \"State Bank of India\",\n    \"ifscCode\": \"SBIN0001234\"\n  }\n}"
             },
             "url": {
               "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns",

@@ -162,7 +162,9 @@ router.put('/profile', async (req, res) => {
       bankName,
       bankBranch,
       bankAccountNumber,
-      bankIFSC
+      bankIFSC,
+      years,
+      ourMission
     } = req.body;
 
     if (name) ngo.name = name;
@@ -170,6 +172,8 @@ router.put('/profile', async (req, res) => {
     if (contactPerson) ngo.contactPerson = contactPerson;
     if (about !== undefined) ngo.about = about;
     if (email) ngo.email = email;
+    if (years !== undefined) ngo.years = years;
+    if (ourMission !== undefined) ngo.ourMission = ourMission;
     await ngo.save();
 
     // Sync user details

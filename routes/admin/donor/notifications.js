@@ -18,7 +18,7 @@ router.get('/notifications', async (req, res) => {
 // Broadcast/Push notification to user
 router.post('/notifications', async (req, res) => {
   try {
-    const { userId, title, message } = req.body;
+    const { userId, title, message, imageUrl } = req.body;
     if (!title || !message) {
       return res.status(400).json({ status: false, message: 'Title and message are required' });
     }
@@ -29,7 +29,7 @@ router.post('/notifications', async (req, res) => {
       if (!user) {
         return res.status(404).json({ status: false, message: 'Target user not found' });
       }
-      const newNotification = new Notification({ user: userId, title, message });
+      const newNotification = new Notification({ user: userId, title, message, imageUrl: imageUrl || null });
       await newNotification.save();
     } else {
       // Broadcast to all donors
@@ -37,7 +37,8 @@ router.post('/notifications', async (req, res) => {
       const bulkNotifications = donors.map(d => ({
         user: d._id,
         title,
-        message
+        message,
+        imageUrl: imageUrl || null
       }));
       await Notification.insertMany(bulkNotifications);
     }

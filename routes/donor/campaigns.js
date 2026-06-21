@@ -29,7 +29,7 @@ router.get('/campaigns/:id', async (req, res) => {
 // Raise campaign
 router.post('/campaigns', async (req, res) => {
   try {
-    const { title, category, description, goal, imageUrl, oneTimeOrMonthly } = req.body;
+    const { title, category, description, goal, imageUrl, oneTimeOrMonthly, endDate, images, video, documents, bankDetails } = req.body;
     if (!title || !goal) {
       return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
     }
@@ -45,7 +45,12 @@ router.post('/campaigns', async (req, res) => {
       raised: '₹0',
       oneTimeOrMonthly: oneTimeOrMonthly || 'One-Time',
       status: 'Live',
-      donorsCount: 0
+      donorsCount: 0,
+      endDate: endDate || null,
+      images: images || [],
+      video: video || null,
+      documents: documents || [],
+      bankDetails: bankDetails || null
     });
     
     await newCampaign.save();

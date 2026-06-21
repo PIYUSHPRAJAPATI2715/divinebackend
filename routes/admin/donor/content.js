@@ -15,18 +15,21 @@ router.get('/content', async (req, res) => {
 // Update/Upsert legal policy content dynamically
 router.post('/content', async (req, res) => {
   try {
-    const { key, title, content } = req.body;
-    if (!key || !title || !content) {
-      return res.status(400).json({ status: false, message: 'key, title, and content are required' });
+    const { key, slug, title, content } = req.body;
+    const identifier = key || slug;
+    if (!identifier || !title || !content) {
+      return res.status(400).json({ status: false, message: 'key or slug, title, and content are required' });
     }
 
-    let page = await Content.findOne({ key });
+    let page = await Content.findOne({ $or: [{ key: identifier }, { slug: identifier }] });
     if (page) {
       page.title = title;
       page.content = content;
+      if (slug) page.slug = slug;
+      if (key) page.key = key;
       await page.save();
     } else {
-      page = new Content({ key, title, content });
+      page = new Content({ key: key || identifier, slug: slug || identifier, title, content });
       await page.save();
     }
 

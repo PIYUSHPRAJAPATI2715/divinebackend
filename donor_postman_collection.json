@@ -125,7 +125,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Rural Education Fundraiser Drive\",\n  \"category\": \"Education Aid\",\n  \"goal\": 75000,\n  \"description\": \"Provide stationery packages and uniforms to local government school students.\",\n  \"oneTimeOrMonthly\": \"One-Time\"\n}"
+              "raw": "{\n  \"title\": \"Rural Education Fundraiser Drive\",\n  \"category\": \"Education Aid\",\n  \"goal\": 75000,\n  \"description\": \"Provide stationery packages and uniforms to local government school students.\",\n  \"oneTimeOrMonthly\": \"One-Time\",\n  \"endDate\": \"2026-12-31T23:59:59.000Z\",\n  \"images\": [\n    \"https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600\"\n  ],\n  \"video\": \"https://www.w3schools.com/html/mov_bbb.mp4\",\n  \"documents\": [\n    \"https://s3.amazonaws.com/divine-docs/ngo_registration_pratham.pdf\"\n  ],\n  \"bankDetails\": {\n    \"holderName\": \"Save the Children\",\n    \"accountNumber\": \"123456789012\",\n    \"bankName\": \"State Bank of India\",\n    \"ifscCode\": \"SBIN0001234\"\n  }\n}"
             },
             "url": {
               "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns",
@@ -489,18 +489,18 @@
           }
         },
         {
-          "name": "Get Legal Policy Content",
+          "name": "Get Legal Policy Content by Slug",
           "request": {
             "method": "GET",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/content/:type",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/content/:slug",
               "protocol": "https",
               "host": ["divinebackend-v5gl", "onrender", "com"],
-              "path": ["api", "donor", "content", ":type"],
-              "variable": [{ "key": "type", "value": "privacy" }]
+              "path": ["api", "donor", "content", ":slug"],
+              "variable": [{ "key": "slug", "value": "privacy-policy" }]
             }
           }
         }

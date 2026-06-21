@@ -715,18 +715,21 @@ const mockNotifications = [
     user: noahId,
     title: 'Welcome to Divine Astrological Portal!',
     message: 'Thank you for registering. You can browse NGOs, start fundraising campaigns, or book a spiritual service.',
+    imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=150',
     isRead: false
   },
   {
     user: noahId,
     title: 'Wallet Activated',
     message: 'Your dynamic charity wallet is activated. Check reward coupons tab to claim ₹100 cashback bonus.',
+    imageUrl: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&q=80&w=150',
     isRead: false
   },
   {
     user: noahId,
     title: 'Profile Completed',
     message: 'Your profile has been verified. Welcome to our donor community!',
+    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=150',
     isRead: true
   }
 ];
@@ -758,16 +761,19 @@ const mockSupportTickets = [
 const mockContent = [
   {
     key: 'privacy',
+    slug: 'privacy-policy',
     title: 'Privacy Policy',
     content: `### 1. Information Collection\nWe collect details you provide directly like phone number, email, and name. Transactions made via your wallet are safely ledgered.\n\n### 2. Sponsoring Protection\nAll donations made on Divine Nakshatra go through verified 12A/80G NGOs to prevent misuse.\n\n### 3. Account Safety\nYou can deactivate or delete your account at any time. Doing so disables your wallet and hides your profile.`
   },
   {
     key: 'terms',
+    slug: 'terms-conditions',
     title: 'Terms & Conditions',
     content: `### 1. Sponsoring Ledger\nBy topup or donating, you agree that transactions are settlements made on verified social campaigns.\n\n### 2. Astrological Courses\nTeachers are independent partners. Review course details, schedules, and curriculum before booking.\n\n### 3. Code of Conduct\nAbuse, falsified campaign setups, and offensive review comments will result in instant account suspension.`
   },
   {
     key: 'about',
+    slug: 'about-us',
     title: 'About Us',
     content: `### Sponsoring Astrological and Social Changes\nDivine Nakshatra blends ancient Vedic wisdom with modern social impact. We connect verified astrologers with students, and donors with local NGOs.\n\n### Our Mission\nTo foster an ecosystem of learning, charity, and transparency, powered by dynamic real-time reporting ledgers.`
   }
