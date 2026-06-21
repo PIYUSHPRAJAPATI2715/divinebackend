@@ -285,6 +285,11 @@ router.post('/help-support', async (req, res) => {
 router.get('/content/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
+    
+    if (slug === ':slug') {
+      return res.status(400).json({ status: false, message: 'Please specify a valid slug parameter (e.g. privacy-policy, terms-conditions, or about-us) in Postman Path Variables.' });
+    }
+
     let page = await Content.findOne({ $or: [{ key: slug }, { slug: slug }] });
 
     if (!page) {
