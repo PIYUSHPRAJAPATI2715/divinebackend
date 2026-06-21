@@ -312,8 +312,15 @@ router.get('/content/:slug', async (req, res) => {
       }
 
       if (key) {
-        page = new Content({ key, slug, title, content: defaultContent });
-        await page.save();
+        let existing = await Content.findOne({ key });
+        if (existing) {
+          existing.slug = slug;
+          await existing.save();
+          page = existing;
+        } else {
+          page = new Content({ key, slug, title, content: defaultContent });
+          await page.save();
+        }
       } else {
         return res.status(404).json({ status: false, message: 'Section content not found' });
       }
