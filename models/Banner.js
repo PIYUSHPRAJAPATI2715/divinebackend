@@ -5,7 +5,7 @@ const bannerSchema = new mongoose.Schema({
   title: { type: String, required: true },
   imageUrl: { type: String, required: true },
   linkUrl: { type: String, default: '' },
-  placement: { type: String, enum: ['Home', 'Campaigns', 'Courses'], default: 'Home' },
+  placement: { type: String, enum: ['Home', 'Campaigns', 'Courses', 'DaanTop', 'DaanBottom'], default: 'Home' },
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' }
 }, { timestamps: true });
 

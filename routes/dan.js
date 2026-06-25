@@ -98,7 +98,18 @@ router.use(extractUser);
 router.get('/categories', async (req, res) => {
   try {
     const categories = await DanCategory.find({ status: 'Active' }).populate('ngoId', 'name logo');
-    res.json({ status: true, data: categories });
+    const Banner = require('../models/Banner');
+    const topBanners = await Banner.find({ placement: 'DaanTop', status: 'Active' });
+    const bottomBanners = await Banner.find({ placement: 'DaanBottom', status: 'Active' });
+    
+    res.json({ 
+      status: true, 
+      banners: {
+        top: topBanners,
+        bottom: bottomBanners
+      },
+      data: categories 
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }

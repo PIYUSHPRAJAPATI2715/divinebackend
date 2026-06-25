@@ -674,7 +674,9 @@ const mockCategories = [
 const mockBanners = [
   { bannerId: 'BNR-001', title: 'Every Contribution Creates an Impact', imageUrl: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=1200', linkUrl: '/campaigns', placement: 'Home', status: 'Active' },
   { bannerId: 'BNR-002', title: 'Support Sharda Girls School Education Campaign', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=1200', linkUrl: '/campaigns', placement: 'Home', status: 'Active' },
-  { bannerId: 'BNR-003', title: 'Join our free Vastu Seminar this Saturday!', imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=1200', linkUrl: '/seminars', placement: 'Home', status: 'Active' }
+  { bannerId: 'BNR-003', title: 'Join our free Vastu Seminar this Saturday!', imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=1200', linkUrl: '/seminars', placement: 'Home', status: 'Active' },
+  { bannerId: 'BNR-DAN-TOP', title: 'Feed & Sponsor Vedic Saints & Needy Families', imageUrl: 'https://images.unsplash.com/photo-1544427928-c49cddeb8b92?auto=format&fit=crop&q=80&w=1200', linkUrl: '', placement: 'DaanTop', status: 'Active' },
+  { bannerId: 'BNR-DAN-BOTTOM', title: 'Every Act of Giving Creates a Ripple of Hope', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=1200', linkUrl: '', placement: 'DaanBottom', status: 'Active' }
 ];
 
 const mockNewsMedia = [
