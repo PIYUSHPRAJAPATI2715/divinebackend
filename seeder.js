@@ -422,8 +422,10 @@ const mockDonors = [
   },
 ];
 
+const adminId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c79');
+
 const mockAdmin = [
-  { email: 'admin@astroadvyc.com', password: 'password123' }
+  { _id: adminId, email: 'admin@astroadvyc.com', password: 'password123' }
 ];
 
 const mockStudents = [
