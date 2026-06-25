@@ -43,9 +43,10 @@ router.post('/wallet/adjust', async (req, res) => {
     // Create transaction ledger entry
     const tx = new Transaction({
       transactionId: `TXN-${Date.now().toString().slice(-4)}`,
+      type: 'Donation',
       user: user.name || user.phone,
-      amount: `₹${value.toLocaleString()}`,
-      status: 'Approved',
+      amount: Number(value),
+      status: 'Success',
       item: `Admin Balance adjustment (${action === 'credit' ? 'Credited' : 'Debited'})`
     });
     await tx.save();

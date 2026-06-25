@@ -92,6 +92,7 @@ router.get('/', optionalAuth, async (req, res) => {
           description: c.description
         })),
         campaigns: campaigns.map(c => ({
+          _id: c._id,
           campaignId: c.campaignId,
           title: c.title,
           user: c.user,

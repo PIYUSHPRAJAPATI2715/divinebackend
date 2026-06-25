@@ -521,8 +521,9 @@ router.post('/wallet/topup', authMiddleware, async (req, res) => {
     const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
     const newTx = new Transaction({
       transactionId,
+      type: 'Donation',
       user: user.name || user.phone,
-      amount: `₹${amount.toLocaleString()}`,
+      amount: Number(amount),
       status: 'Success',
       date: new Date(),
       item: 'Wallet Top-up'
@@ -575,8 +576,9 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
     const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
     const newTx = new Transaction({
       transactionId,
+      type: 'Donation',
       user: user.name || user.phone,
-      amount: `₹${amount.toLocaleString()}`,
+      amount: Number(amount),
       status: 'Success',
       date: new Date(),
       item: campaign.title

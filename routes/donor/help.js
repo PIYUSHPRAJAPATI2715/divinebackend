@@ -13,7 +13,32 @@ const Content = require('../../models/Content');
 // NGO lists
 router.get('/ngos', async (req, res) => {
   try {
-    const ngos = await NGO.find({ status: 'Verified' }).sort({ createdAt: -1 });
+    const { search } = req.query;
+    let query = { status: 'Verified' };
+    
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      const regex = new RegExp(trimmedSearch, 'i');
+      query.$or = [
+        { name: regex },
+        { contactPerson: regex },
+        { about: regex }
+      ];
+      
+      // Save to user's search history
+      if (req.user && req.user._id) {
+        const user = await User.findById(req.user._id);
+        if (user) {
+          if (!user.searchHistory) user.searchHistory = [];
+          user.searchHistory = user.searchHistory.filter(t => t.toLowerCase() !== trimmedSearch.toLowerCase());
+          user.searchHistory.unshift(trimmedSearch);
+          if (user.searchHistory.length > 10) user.searchHistory.pop();
+          await user.save();
+        }
+      }
+    }
+
+    const ngos = await NGO.find(query).sort({ createdAt: -1 });
     res.json({ status: true, data: ngos });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -134,7 +159,16 @@ router.get('/coupons', async (req, res) => {
       await c3.save();
       coupons = [c1, c2, c3];
     }
-    res.json({ status: true, data: coupons });
+    const user = await User.findById(req.user._id);
+    const claimedCodes = user ? user.couponsClaimed || [] : [];
+    const mappedCoupons = coupons.map(c => {
+      const obj = c.toObject ? c.toObject() : c;
+      if (claimedCodes.includes(obj.code)) {
+        obj.isActive = false;
+      }
+      return obj;
+    });
+    res.json({ status: true, data: mappedCoupons });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -159,9 +193,10 @@ router.post('/coupons/claim', async (req, res) => {
       user.walletBalance = (user.walletBalance || 0) + coupon.value;
       const tx = new Transaction({
         transactionId: `TXN-${Date.now().toString().slice(-4)}`,
+        type: 'Donation',
         user: user.name || user.phone,
-        amount: `₹${coupon.value.toLocaleString()}`,
-        status: 'Approved',
+        amount: Number(coupon.value),
+        status: 'Success',
         item: `Coupon Cashback: ${code}`
       });
       await tx.save();

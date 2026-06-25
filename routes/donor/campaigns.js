@@ -2,11 +2,37 @@ const express = require('express');
 const router = express.Router();
 const Campaign = require('../../models/Campaign');
 const Notification = require('../../models/Notification');
+const User = require('../../models/User');
 
 // Get active campaigns
 router.get('/campaigns', async (req, res) => {
   try {
-    const campaigns = await Campaign.find({ status: 'Live' }).sort({ createdAt: -1 });
+    const { search } = req.query;
+    let query = { status: 'Live' };
+    
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      const regex = new RegExp(trimmedSearch, 'i');
+      query.$or = [
+        { title: regex },
+        { category: regex },
+        { description: regex }
+      ];
+      
+      // Save to user's search history
+      if (req.user && req.user._id) {
+        const user = await User.findById(req.user._id);
+        if (user) {
+          if (!user.searchHistory) user.searchHistory = [];
+          user.searchHistory = user.searchHistory.filter(t => t.toLowerCase() !== trimmedSearch.toLowerCase());
+          user.searchHistory.unshift(trimmedSearch);
+          if (user.searchHistory.length > 10) user.searchHistory.pop();
+          await user.save();
+        }
+      }
+    }
+
+    const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
     res.json({ status: true, data: campaigns });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
