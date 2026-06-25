@@ -20,8 +20,14 @@ const Coupon = require('./models/Coupon');
 const Notification = require('./models/Notification');
 const SupportTicket = require('./models/SupportTicket');
 const Content = require('./models/Content');
+const DanCategory = require('./models/DanCategory');
+const DanSubcategory = require('./models/DanSubcategory');
+const DanItem = require('./models/DanItem');
+const DanDonation = require('./models/DanDonation');
 
 const noahId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7a');
+const prathamId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7b');
+const krishnayanId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7c');
 
 const mockCampaigns = [
   { 
@@ -274,12 +280,13 @@ const mockTeachers = [
 
 const mockNGOs = [
   { 
+    _id: prathamId,
     ngoId: 'NGO-001', 
     name: 'Pratham Education Foundation', 
     registrationNumber: 'REG-12345', 
     contactPerson: 'Amit Kumar', 
-    email: 'contact@pratham.org', 
-    phone: '011-2345678',
+    email: 'save@children.org', 
+    phone: '+91 8888811111',
     about: 'Pratham is one of the largest non-governmental organizations in India, focusing on high-quality education for underprivileged children.',
     status: 'Verified',
     verifiedCampaignsCount: 2,
@@ -293,12 +300,13 @@ const mockNGOs = [
     ]
   },
   { 
+    _id: krishnayanId,
     ngoId: 'NGO-002', 
     name: 'Krishnayan Gaushala', 
     registrationNumber: 'REG-67890', 
     contactPerson: 'Swami Ji', 
-    email: 'info@krishnayan.org', 
-    phone: '9988998899',
+    email: 'seva@gaushala.org', 
+    phone: '+91 8888833333', 
     about: 'Dedicated cow sanctuary protecting abandoned, sick, and stray street cows. Feeding fresh gausharan daily.',
     status: 'Verified',
     verifiedCampaignsCount: 1,
@@ -779,8 +787,49 @@ const mockContent = [
   }
 ];
 
+const catFoodId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7d');
+const catClothesId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7e');
+const catGauId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7f');
+const catNgoId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c80');
+const catBooksId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c81');
+const catTempleId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c82');
+
+const subSaintsId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c83');
+const subDryRationId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c84');
+const subNeedyChildrenId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c85');
+
+const itemRation30Id = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c86');
+const itemFeedSaintsId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c87');
+const itemRation60Id = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c88');
+
+const mockDanCategories = [
+  { _id: catFoodId, categoryId: 'CAT-FOOD', name: 'Food', description: 'Food for the needy', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
+  { _id: catClothesId, categoryId: 'CAT-CLOTHES', name: 'Clothes', description: 'Clothes donation', imageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
+  { _id: catGauId, categoryId: 'CAT-GAU', name: 'Gau Dan', description: 'Donation for cows', imageUrl: 'https://images.unsplash.com/photo-1570051008600-b34bac49e7f1?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
+  { _id: catNgoId, categoryId: 'CAT-NGO', name: 'NGO Welfare', description: 'Support NGOs', imageUrl: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
+  { _id: catBooksId, categoryId: 'CAT-BOOKS', name: 'Books', description: 'Education support', imageUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
+  { _id: catTempleId, categoryId: 'CAT-TEMPLE', name: 'Temple', description: 'Temple donation', imageUrl: 'https://images.unsplash.com/photo-1600100397990-a4a8ec90966a?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' }
+];
+
+const mockDanSubcategories = [
+  { _id: subSaintsId, subcategoryId: 'SUB-SAINTS', categoryId: catFoodId, name: 'Saints & Brahmins Seva', description: 'Sponsor those who dedicate their lives to dharma and spiritual guidance.', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  { _id: subDryRationId, subcategoryId: 'SUB-DRY-RATION', categoryId: catFoodId, name: 'Dry Ration', description: 'Ration kits containing rice, dal, wheat flour, oil, and spices.', status: 'Active', creatorType: 'Admin' },
+  { _id: subNeedyChildrenId, subcategoryId: 'SUB-CHILDREN', categoryId: catFoodId, name: 'Support Needy Children', description: 'Support education and meals for street children.', status: 'Active', creatorType: 'NGO', ngoId: prathamId }
+];
+
+const mockDanItems = [
+  { _id: itemRation30Id, itemId: 'ITM-RATION-30', subcategoryId: subSaintsId, name: 'Ration Kit For Needy Family - 30days', description: 'Provide basic dry ration supply for a family of 4 to survive 30 days.', price: 300, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  { _id: itemFeedSaintsId, itemId: 'ITM-FEED-SAINTS', subcategoryId: subSaintsId, name: 'Feed Brahmins And Saints', description: 'Sponsor hot, nutritious cooked meals for Vedic scholars and saints.', price: 150, unit: '1 Saint Meal', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  { _id: itemRation60Id, itemId: 'ITM-RATION-60', subcategoryId: subSaintsId, name: 'Ration Kit For Needy Family - 60days', description: 'Provide basic dry ration supply for a family of 4 to survive 60 days.', price: 600, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId }
+];
+
 async function seedDatabase() {
   console.log('Clearing old data from DB...');
+  await DanCategory.deleteMany({});
+  await DanSubcategory.deleteMany({});
+  await DanItem.deleteMany({});
+  await DanDonation.deleteMany({});
+
   await Campaign.deleteMany({});
   await Teacher.deleteMany({});
   await Course.deleteMany({});
@@ -825,6 +874,10 @@ async function seedDatabase() {
   await Notification.insertMany(mockNotifications);
   await SupportTicket.insertMany(mockSupportTickets);
   await Content.insertMany(mockContent);
+  
+  await DanCategory.insertMany(mockDanCategories);
+  await DanSubcategory.insertMany(mockDanSubcategories);
+  await DanItem.insertMany(mockDanItems);
   
   console.log('Database seeded successfully with all Divine features!');
 }

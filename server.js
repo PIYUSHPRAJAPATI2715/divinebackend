@@ -35,6 +35,7 @@ const referralRoutes = require('./routes/referrals');
 app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/campaign-categories', campaignCategoryRoutes);
+app.use('/api/dan', require('./routes/dan'));
 
 // Partner Portal Routes (Protected by JWT Auth)
 const ngoPortalRoutes = require('./routes/ngo');
