@@ -62,12 +62,15 @@ async function connectDB() {
       }
     }
     
-    // Auto-seed cloud database if it is empty!
+    // Auto-seed cloud database if it is empty or missing Daan categories!
     // This ensures prototype data is populated on newly connected databases without wiping active data
     const Admin = require('./models/Admin');
+    const DanCategory = require('./models/DanCategory');
     const adminCount = await Admin.countDocuments({});
-    if (adminCount === 0) {
-      console.log('Detected empty cloud database. Seeding collections...');
+    const danCatCount = await DanCategory.countDocuments({});
+    
+    if (adminCount === 0 || danCatCount === 0) {
+      console.log('Detected empty cloud database or missing Daan data. Seeding collections...');
       await seedDatabase();
     } else {
       console.log('Database already contains records. Skipping auto-seeding.');
