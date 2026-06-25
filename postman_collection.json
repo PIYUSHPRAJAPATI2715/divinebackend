@@ -320,6 +320,140 @@
       },
       "item": [
         {
+          "name": "Dan Panel (Admin)",
+          "description": "Administrative menus to add Dan Types (Categories), Subcategories, and Items.",
+          "item": [
+            {
+              "name": "1. Create Category (Add Dan Type)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Food\",\n  \"description\": \"Food for the needy, saints, and children.\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1488521787991-ed7bbaae773c\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/dan/categories",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "dan",
+                    "categories"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "2. Create Subcategory",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categoryId\": \"REPLACE_WITH_CATEGORY_OBJECT_ID\",\n  \"name\": \"Saints & Brahmins Seva\",\n  \"description\": \"Provide freshly cooked hot meals and ration kits.\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1570051008600-b34bac49e7f1\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/dan/subcategories",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "dan",
+                    "subcategories"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "3. Create Item",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subcategoryId\": \"REPLACE_WITH_SUBCATEGORY_OBJECT_ID\",\n  \"name\": \"Ration Kit For Needy Family - 30days\",\n  \"description\": \"Ration kit containing flour, rice, pulses, oil, spices, and tea.\",\n  \"price\": 300,\n  \"unit\": \"1 Kit\"\n}"
+                },
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/dan/items",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "dan",
+                    "items"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List All Donations (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/dan/donations",
+                  "protocol": "https",
+                  "host": [
+                    "divinebackend-v5gl",
+                    "onrender",
+                    "com"
+                  ],
+                  "path": [
+                    "api",
+                    "dan",
+                    "donations"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "Campaign Categories CRUD",
           "description": "Administrative CRUD operations for dynamic fundraising categories.",
           "item": [
@@ -2350,8 +2484,8 @@
       ]
     },
     {
-      "name": "Dan Flow APIs",
-      "description": "Dan Categories, Subcategories, Items, Checkout Donation, and Admin/NGO Panel listings.",
+      "name": "Dan Flow (Donor Client)",
+      "description": "Donor facing client-side APIs for browsing categories, subcategories, items, managing cart, and submitting checkouts.",
       "item": [
         {
           "name": "List Dan Categories",
@@ -2463,7 +2597,7 @@
           }
         },
         {
-          "name": "List Donations (Admin/NGO)",
+          "name": "Get Saved Cart",
           "request": {
             "method": "GET",
             "header": [
@@ -2473,7 +2607,7 @@
               }
             ],
             "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/donations",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/cart",
               "protocol": "https",
               "host": [
                 "divinebackend-v5gl",
@@ -2483,13 +2617,13 @@
               "path": [
                 "api",
                 "dan",
-                "donations"
+                "cart"
               ]
             }
           }
         },
         {
-          "name": "Create Category (Admin/NGO)",
+          "name": "Save/Update Cart Items",
           "request": {
             "method": "POST",
             "header": [
@@ -2504,10 +2638,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Festival Special\",\n  \"description\": \"Special donations for major Indian festivals.\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1600100397990-a4a8ec90966a\"\n}"
+              "raw": "{\n  \"items\": [\n    {\n      \"itemId\": \"REPLACE_WITH_ITEM_OBJECT_ID\",\n      \"quantity\": 3\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/categories",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/cart",
               "protocol": "https",
               "host": [
                 "divinebackend-v5gl",
@@ -2517,13 +2651,74 @@
               "path": [
                 "api",
                 "dan",
-                "categories"
+                "cart"
               ]
             }
           }
         },
         {
-          "name": "Create Subcategory (Admin/NGO)",
+          "name": "Update Cart Event Details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frequency\": \"Monthly\",\n  \"eventType\": \"Birthday\",\n  \"eventName\": \"My Monthly Seva\",\n  \"eventDate\": \"2026-07-01\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/cart/event",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "dan",
+                "cart",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/cart",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "dan",
+                "cart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Checkout / Donate Saved Cart",
           "request": {
             "method": "POST",
             "header": [
@@ -2538,10 +2733,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"categoryId\": \"REPLACE_WITH_CATEGORY_OBJECT_ID\",\n  \"name\": \"Diwali Seva\",\n  \"description\": \"Distribute sweets and diyas to needy families.\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1600100397990-a4a8ec90966a\"\n}"
+              "raw": "{\n  \"paymentMethod\": \"Wallet\"\n}"
             },
             "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/subcategories",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/cart/checkout",
               "protocol": "https",
               "host": [
                 "divinebackend-v5gl",
@@ -2551,15 +2746,48 @@
               "path": [
                 "api",
                 "dan",
-                "subcategories"
+                "cart",
+                "checkout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "NGO Dashboard APIs",
+      "description": "NGO Panel operations including campaigns management, payout history, bank accounts update, and NGO-specific Dan items/donations flow.",
+      "item": [
+        {
+          "name": "NGO Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/ngo/profile",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ngo",
+                "profile"
               ]
             }
           }
         },
         {
-          "name": "Create Item (Admin/NGO)",
+          "name": "Update NGO Profile",
           "request": {
-            "method": "POST",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -2572,10 +2800,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"subcategoryId\": \"REPLACE_WITH_SUBCATEGORY_OBJECT_ID\",\n  \"name\": \"Sweet & Diya Box\",\n  \"description\": \"A box of fresh sweets, 10 clay diyas, and oil.\",\n  \"price\": 150,\n  \"unit\": \"1 Box\"\n}"
+              "raw": "{\n  \"name\": \"Krishnayan Gaushala Seva\",\n  \"about\": \"Dedicated to feeding and maintaining sick, abandoned, and old cows.\"\n}"
             },
             "url": {
-              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/items",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/ngo/profile",
               "protocol": "https",
               "host": [
                 "divinebackend-v5gl",
@@ -2584,8 +2812,97 @@
               ],
               "path": [
                 "api",
+                "ngo",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List NGO Dan Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/ngo/dan/items",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ngo",
                 "dan",
                 "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create NGO Dan Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subcategoryId\": \"REPLACE_WITH_SUBCATEGORY_OBJECT_ID\",\n  \"name\": \"Dry Grass Bundle for 10 Cows\",\n  \"description\": \"A bundle of dry grass fodder for cows.\",\n  \"price\": 100,\n  \"unit\": \"1 Bundle\"\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/ngo/dan/items",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ngo",
+                "dan",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Received Dan Donations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/ngo/dan/donations",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "ngo",
+                "dan",
+                "donations"
               ]
             }
           }

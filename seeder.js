@@ -642,6 +642,8 @@ const mockTransactions = [
   { transactionId: 'TXN-010', type: 'Course', user: 'Rohit Verma', item: 'Vedic Astrology Masterclass', amount: 2499, paymentPlan: 'EMI - Completed', status: 'Success', date: daysAgo(25) },
   { transactionId: 'TXN-011', type: 'Donation', user: 'Ravi Teja', item: 'Winter Clothes Distribution', amount: 12000, paymentPlan: 'None', status: 'Success', date: daysAgo(28) },
   { transactionId: 'TXN-012', type: 'Course', user: 'Simran Jeet', item: 'Vedic Astrology Masterclass', amount: 4999, paymentPlan: 'Full Payment', status: 'Failed', date: daysAgo(4) },
+  { transactionId: 'TXN-9871', type: 'Donation', user: 'Rahul Sharma', item: 'Dan: Ration Kit For Needy Family - 30days (x2), Feed Brahmins And Saints (x4)', amount: 1200, paymentPlan: 'None', status: 'Success', date: new Date('2026-06-20') },
+  { transactionId: 'TXN-9872', type: 'Donation', user: 'Anjali Verma', item: 'Dan: Ration Kit For Needy Family - 60days (x1)', amount: 600, paymentPlan: 'None', status: 'Success', date: new Date('2026-06-24') }
 ];
 
 const mockReviews = [
@@ -823,6 +825,67 @@ const mockDanItems = [
   { _id: itemRation60Id, itemId: 'ITM-RATION-60', subcategoryId: subSaintsId, name: 'Ration Kit For Needy Family - 60days', description: 'Provide basic dry ration supply for a family of 4 to survive 60 days.', price: 600, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId }
 ];
 
+const mockDanDonations = [
+  {
+    donationId: 'DON-9871',
+    donorName: 'Rahul Sharma',
+    donorPhone: '+91 9876543210',
+    donorEmail: 'rahul.sharma@example.com',
+    items: [
+      {
+        itemId: itemRation30Id,
+        name: 'Ration Kit For Needy Family - 30days',
+        price: 300,
+        quantity: 2,
+        subtotal: 600
+      },
+      {
+        itemId: itemFeedSaintsId,
+        name: 'Feed Brahmins And Saints',
+        price: 150,
+        quantity: 4,
+        subtotal: 600
+      }
+    ],
+    totalAmount: 1200,
+    frequency: 'One-Time',
+    eventType: 'Birthday',
+    eventName: 'Rahul Birthday Seva',
+    eventDate: new Date('2026-06-20'),
+    paymentMethod: 'UPI',
+    paymentStatus: 'Success',
+    ngoId: krishnayanId,
+    transactionId: 'TXN-9871',
+    createdAt: new Date('2026-06-20T10:00:00Z'),
+    updatedAt: new Date('2026-06-20T10:05:00Z')
+  },
+  {
+    donationId: 'DON-9872',
+    donorName: 'Anjali Verma',
+    donorPhone: '+91 9811223344',
+    donorEmail: 'anjali@example.com',
+    items: [
+      {
+        itemId: itemRation60Id,
+        name: 'Ration Kit For Needy Family - 60days',
+        price: 600,
+        quantity: 1,
+        subtotal: 600
+      }
+    ],
+    totalAmount: 600,
+    frequency: 'Monthly',
+    eventType: 'Others',
+    eventName: '',
+    paymentMethod: 'Card',
+    paymentStatus: 'Success',
+    ngoId: krishnayanId,
+    transactionId: 'TXN-9872',
+    createdAt: new Date('2026-06-24T14:30:00Z'),
+    updatedAt: new Date('2026-06-24T14:32:00Z')
+  }
+];
+
 async function seedDatabase() {
   console.log('Clearing old data from DB...');
   await DanCategory.deleteMany({});
@@ -878,6 +941,7 @@ async function seedDatabase() {
   await DanCategory.insertMany(mockDanCategories);
   await DanSubcategory.insertMany(mockDanSubcategories);
   await DanItem.insertMany(mockDanItems);
+  await DanDonation.insertMany(mockDanDonations);
   
   console.log('Database seeded successfully with all Divine features!');
 }

@@ -4,6 +4,9 @@ const NGO = require('../models/NGO');
 const Campaign = require('../models/Campaign');
 const CampaignCategory = require('../models/CampaignCategory');
 const User = require('../models/User');
+const DanItem = require('../models/DanItem');
+const DanSubcategory = require('../models/DanSubcategory');
+const DanDonation = require('../models/DanDonation');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -217,6 +220,100 @@ router.post('/gallery', async (req, res) => {
     res.status(201).json(ngo.activityGallery[ngo.activityGallery.length - 1]);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// NGO Dan Portal Routes
+// ----------------------------------------------------
+
+// List NGO's Dan items
+router.get('/dan/items', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const items = await DanItem.find({ ngoId: ngo._id })
+      .populate({
+        path: 'subcategoryId',
+        select: 'name categoryId',
+        populate: { path: 'categoryId', select: 'name' }
+      });
+    res.json({ status: true, data: items });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Create NGO's Dan item
+router.post('/dan/items', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const { subcategoryId, name, description, price, unit, imageUrl } = req.body;
+    if (!subcategoryId || !name || price === undefined) {
+      return res.status(400).json({ status: false, message: 'subcategoryId, name, and price are required' });
+    }
+    const subcategory = await DanSubcategory.findById(subcategoryId);
+    if (!subcategory) {
+      return res.status(404).json({ status: false, message: 'Subcategory not found' });
+    }
+    const itemId = `ITM-DAN-${Date.now().toString().slice(-4)}`;
+    const newItem = new DanItem({
+      itemId,
+      subcategoryId,
+      name,
+      description,
+      price: Number(price),
+      unit: unit || 'Unit',
+      imageUrl,
+      creatorType: 'NGO',
+      ngoId: ngo._id
+    });
+    await newItem.save();
+    res.status(201).json({ status: true, message: 'Dan Item created successfully', data: newItem });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Edit NGO's Dan item
+router.put('/dan/items/:id', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const item = await DanItem.findOne({ _id: req.params.id, ngoId: ngo._id });
+    if (!item) {
+      return res.status(404).json({ status: false, message: 'Item not found or access denied' });
+    }
+    const updated = await DanItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json({ status: true, message: 'Item updated successfully', data: updated });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Delete NGO's Dan item
+router.delete('/dan/items/:id', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const item = await DanItem.findOne({ _id: req.params.id, ngoId: ngo._id });
+    if (!item) {
+      return res.status(404).json({ status: false, message: 'Item not found or access denied' });
+    }
+    await DanItem.findByIdAndDelete(req.params.id);
+    res.json({ status: true, message: 'Item deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// NGO's received donations list
+router.get('/dan/donations', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const donations = await DanDonation.find({ ngoId: ngo._id })
+      .populate('ngoId', 'name logo')
+      .sort({ createdAt: -1 });
+    res.json({ status: true, data: donations });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 

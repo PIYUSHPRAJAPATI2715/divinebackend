@@ -19,7 +19,7 @@ const danDonationSchema = new mongoose.Schema({
   frequency: { type: String, enum: ['One-Time', 'Monthly'], default: 'One-Time' },
   eventType: { 
     type: String, 
-    enum: ['Others', 'Birthday', 'Anniversary', 'Occasion', 'In Memory', 'Festival', 'Shradh / Punya Tithi'], 
+    enum: ['Others', 'Birthday', 'Anniversary', 'Occasion', 'In Memory', 'Festival', 'Shradh / Punya Tithi', 'Shradh/Punya Tithi'], 
     default: 'Others' 
   },
   eventName: { type: String, default: '' },

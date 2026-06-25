@@ -60,6 +60,21 @@ app.post('/api/system/seed', async (req, res) => {
   }
 });
 
+// GET seeding endpoint for easy execution via browser
+app.get('/api/system/seed', async (req, res) => {
+  try {
+    await seedDatabase();
+    res.send('<h1>Database seeded successfully!</h1><p>You can now test the Daan/Dan flow APIs and interfaces.</p><p><a href="/">Go to Home</a></p>');
+  } catch (err) {
+    res.status(500).send('<h1>Seeding failed</h1><p>' + err.message + '</p>');
+  }
+});
+
+// Postman collection file serve route
+app.get('/postman_collection.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'postman_collection.json'));
+});
+
 // Root route welcome/health check landing dashboard page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));

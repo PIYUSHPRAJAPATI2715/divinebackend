@@ -8,6 +8,8 @@ const DanDonation = require('../models/DanDonation');
 const NGO = require('../models/NGO');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
+const DanCart = require('../models/DanCart');
+const Admin = require('../models/Admin');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -19,17 +21,31 @@ const extractUser = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       const userId = decoded.id || decoded._id;
-      const dbUser = await User.findById(userId);
-      if (dbUser) {
-        req.user = {
-          ...decoded,
-          id: userId,
-          _id: userId,
-          role: dbUser.role,
-          name: dbUser.name || dbUser.organizationName || 'User',
-          phone: dbUser.phone,
-          email: dbUser.email
-        };
+      if (decoded.role === 'admin') {
+        const dbAdmin = await Admin.findById(userId);
+        if (dbAdmin) {
+          req.user = {
+            ...decoded,
+            id: userId,
+            _id: userId,
+            role: 'admin',
+            name: 'Admin',
+            email: dbAdmin.email
+          };
+        }
+      } else {
+        const dbUser = await User.findById(userId);
+        if (dbUser) {
+          req.user = {
+            ...decoded,
+            id: userId,
+            _id: userId,
+            role: dbUser.role,
+            name: dbUser.name || dbUser.organizationName || 'User',
+            phone: dbUser.phone,
+            email: dbUser.email
+          };
+        }
       }
     } catch (err) {
       console.log('Extract user token failed:', err.message);
@@ -45,6 +61,16 @@ const requireNGOOrAdmin = (req, res, next) => {
   }
   if (req.user.role !== 'admin' && req.user.role !== 'ngo') {
     return res.status(403).json({ status: false, message: 'Access denied: NGO or Admin role required' });
+  }
+  next();
+};
+
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
+  }
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ status: false, message: 'Access denied: Admin role required' });
   }
   next();
 };
@@ -79,7 +105,7 @@ router.get('/categories', async (req, res) => {
 });
 
 // Create category
-router.post('/categories', requireNGOOrAdmin, async (req, res) => {
+router.post('/categories', requireAdmin, async (req, res) => {
   try {
     const { name, icon, imageUrl, description } = req.body;
     if (!name) {
@@ -115,7 +141,7 @@ router.post('/categories', requireNGOOrAdmin, async (req, res) => {
 });
 
 // Edit category
-router.put('/categories/:id', requireNGOOrAdmin, async (req, res) => {
+router.put('/categories/:id', requireAdmin, async (req, res) => {
   try {
     const category = await DanCategory.findById(req.params.id);
     if (!category) {
@@ -134,7 +160,7 @@ router.put('/categories/:id', requireNGOOrAdmin, async (req, res) => {
 });
 
 // Delete category
-router.delete('/categories/:id', requireNGOOrAdmin, async (req, res) => {
+router.delete('/categories/:id', requireAdmin, async (req, res) => {
   try {
     const category = await DanCategory.findById(req.params.id);
     if (!category) {
@@ -174,7 +200,7 @@ router.get('/subcategories', async (req, res) => {
 });
 
 // Create subcategory
-router.post('/subcategories', requireNGOOrAdmin, async (req, res) => {
+router.post('/subcategories', requireAdmin, async (req, res) => {
   try {
     const { categoryId, name, imageUrl, description } = req.body;
     if (!categoryId || !name) {
@@ -215,7 +241,7 @@ router.post('/subcategories', requireNGOOrAdmin, async (req, res) => {
 });
 
 // Edit subcategory
-router.put('/subcategories/:id', requireNGOOrAdmin, async (req, res) => {
+router.put('/subcategories/:id', requireAdmin, async (req, res) => {
   try {
     const subcategory = await DanSubcategory.findById(req.params.id);
     if (!subcategory) {
@@ -234,7 +260,7 @@ router.put('/subcategories/:id', requireNGOOrAdmin, async (req, res) => {
 });
 
 // Delete subcategory
-router.delete('/subcategories/:id', requireNGOOrAdmin, async (req, res) => {
+router.delete('/subcategories/:id', requireAdmin, async (req, res) => {
   try {
     const subcategory = await DanSubcategory.findById(req.params.id);
     if (!subcategory) {
@@ -377,6 +403,10 @@ router.post('/donate', async (req, res) => {
       paymentMethod 
     } = req.body;
 
+    if (frequency && !['One-Time', 'Monthly'].includes(frequency)) {
+      return res.status(400).json({ status: false, message: 'Invalid frequency. Must be One-Time or Monthly.' });
+    }
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ status: false, message: 'Items list is required and cannot be empty' });
     }
@@ -499,6 +529,232 @@ router.get('/donations', requireNGOOrAdmin, async (req, res) => {
       .populate('ngoId', 'name logo')
       .sort({ createdAt: -1 });
     res.json({ status: true, data: donations });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// 5. Cart APIs
+// ----------------------------------------------------
+
+const requireAuth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
+  }
+  next();
+};
+
+// Get saved cart
+router.get('/cart', requireAuth, async (req, res) => {
+  try {
+    let cart = await DanCart.findOne({ userId: req.user.id })
+      .populate({
+        path: 'items.itemId',
+        populate: {
+          path: 'subcategoryId',
+          select: 'name categoryId',
+          populate: { path: 'categoryId', select: 'name' }
+        }
+      });
+    if (!cart) {
+      cart = new DanCart({ userId: req.user.id, items: [] });
+      await cart.save();
+    }
+    res.json({ status: true, data: cart });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Save / Update Cart Items
+router.post('/cart', requireAuth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ status: false, message: 'Items array is required' });
+    }
+
+    for (const item of items) {
+      if (!item.itemId || item.quantity === undefined || Number(item.quantity) <= 0) {
+        return res.status(400).json({ status: false, message: 'Valid itemId and quantity are required for each item' });
+      }
+      const dbItem = await DanItem.findById(item.itemId);
+      if (!dbItem) {
+        return res.status(404).json({ status: false, message: `Dan Item not found: ${item.itemId}` });
+      }
+    }
+
+    let cart = await DanCart.findOne({ userId: req.user.id });
+    if (!cart) {
+      cart = new DanCart({ userId: req.user.id });
+    }
+    cart.items = items.map(item => ({
+      itemId: item.itemId,
+      quantity: Number(item.quantity)
+    }));
+    await cart.save();
+
+    const populated = await DanCart.findById(cart._id).populate({
+      path: 'items.itemId',
+      populate: {
+        path: 'subcategoryId',
+        select: 'name categoryId',
+        populate: { path: 'categoryId', select: 'name' }
+      }
+    });
+
+    res.json({ status: true, message: 'Cart items updated successfully', data: populated });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Update Cart Event details & frequency
+router.put('/cart/event', requireAuth, async (req, res) => {
+  try {
+    const { frequency, eventType, eventName, eventDate } = req.body;
+    
+    if (frequency && !['One-Time', 'Monthly'].includes(frequency)) {
+      return res.status(400).json({ status: false, message: 'Invalid frequency. Must be One-Time or Monthly.' });
+    }
+
+    const validEventTypes = ['Others', 'Birthday', 'Anniversary', 'Occasion', 'In Memory', 'Festival', 'Shradh / Punya Tithi', 'Shradh/Punya Tithi'];
+    if (eventType && !validEventTypes.includes(eventType)) {
+      return res.status(400).json({ status: false, message: `Invalid eventType. Must be one of: ${validEventTypes.join(', ')}` });
+    }
+
+    let cart = await DanCart.findOne({ userId: req.user.id });
+    if (!cart) {
+      cart = new DanCart({ userId: req.user.id });
+    }
+
+    if (frequency !== undefined) cart.frequency = frequency;
+    if (eventType !== undefined) cart.eventType = eventType;
+    if (eventName !== undefined) cart.eventName = eventName;
+    if (eventDate !== undefined) cart.eventDate = eventDate ? new Date(eventDate) : null;
+
+    await cart.save();
+
+    res.json({ status: true, message: 'Cart event details updated successfully', data: cart });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Clear Cart
+router.delete('/cart', requireAuth, async (req, res) => {
+  try {
+    let cart = await DanCart.findOne({ userId: req.user.id });
+    if (cart) {
+      cart.items = [];
+      cart.frequency = 'One-Time';
+      cart.eventType = 'Others';
+      cart.eventName = '';
+      cart.eventDate = null;
+      await cart.save();
+    }
+    res.json({ status: true, message: 'Cart cleared successfully', data: cart });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Checkout / Donate from Cart
+router.post('/cart/checkout', requireAuth, async (req, res) => {
+  try {
+    const { paymentMethod } = req.body;
+
+    const cart = await DanCart.findOne({ userId: req.user.id });
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ status: false, message: 'Cart is empty. Cannot checkout.' });
+    }
+
+    let totalAmount = 0;
+    const resolvedItems = [];
+    let primaryNgoId = null;
+
+    for (const itemInput of cart.items) {
+      const dbItem = await DanItem.findById(itemInput.itemId);
+      if (!dbItem) {
+        return res.status(404).json({ status: false, message: `Dan Item not found in cart: ${itemInput.itemId}` });
+      }
+
+      if (dbItem.ngoId) {
+        primaryNgoId = dbItem.ngoId;
+      }
+
+      const subtotal = dbItem.price * itemInput.quantity;
+      totalAmount += subtotal;
+
+      resolvedItems.push({
+        itemId: dbItem._id,
+        name: dbItem.name,
+        price: dbItem.price,
+        quantity: itemInput.quantity,
+        subtotal
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ status: false, message: 'User profile not found' });
+    }
+
+    if (paymentMethod === 'Wallet') {
+      if ((user.walletBalance || 0) < totalAmount) {
+        return res.status(400).json({ status: false, message: 'Insufficient wallet balance. Please top up.' });
+      }
+      user.walletBalance -= totalAmount;
+      await user.save();
+    }
+
+    const donationId = `DON-${Date.now().toString().slice(-4)}`;
+    const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
+
+    const itemDesc = resolvedItems.map(item => `${item.name} (x${item.quantity})`).join(', ');
+    const newTx = new Transaction({
+      transactionId,
+      type: 'Donation',
+      user: user.name || user.phone,
+      amount: totalAmount,
+      status: 'Success',
+      date: new Date(),
+      item: `Dan: ${itemDesc.slice(0, 100)}`
+    });
+    await newTx.save();
+
+    const danDonation = new DanDonation({
+      donationId,
+      donorId: user._id,
+      donorName: user.name || 'Anonymous Donor',
+      donorPhone: user.phone || '',
+      donorEmail: user.email || '',
+      items: resolvedItems,
+      totalAmount,
+      frequency: cart.frequency || 'One-Time',
+      eventType: cart.eventType || 'Others',
+      eventName: cart.eventName || '',
+      eventDate: cart.eventDate,
+      paymentMethod: paymentMethod || 'UPI',
+      paymentStatus: 'Success',
+      ngoId: primaryNgoId,
+      transactionId
+    });
+    await danDonation.save();
+
+    cart.items = [];
+    cart.frequency = 'One-Time';
+    cart.eventType = 'Others';
+    cart.eventName = '';
+    cart.eventDate = null;
+    await cart.save();
+
+    res.json({
+      status: true,
+      message: 'Donation completed successfully from cart!',
+      data: danDonation
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }

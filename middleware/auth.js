@@ -45,7 +45,13 @@ module.exports = async (req, res, next) => {
       
       // Enforce DB lookup to prevent null reference errors for deleted/re-seeded users
       const User = require('../models/User');
-      const userExists = await User.findById(userId);
+      const Admin = require('../models/Admin');
+      let userExists = null;
+      if (decoded.role === 'admin') {
+        userExists = await Admin.findById(userId);
+      } else {
+        userExists = await User.findById(userId);
+      }
       if (!userExists) {
         return res.status(401).json({ status: false, message: 'User account no longer exists in database. Please register/login again.' });
       }
