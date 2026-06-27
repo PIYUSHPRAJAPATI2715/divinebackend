@@ -75,10 +75,18 @@ router.get('/', optionalAuth, async (req, res) => {
       createdAt: tx.createdAt
     }));
 
+    // Calculate total donate amount on platform from successful transactions
+    const totalDonateResult = await Transaction.aggregate([
+      { $match: { type: 'Donation', status: 'Success' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalDonateAmount = totalDonateResult.length > 0 ? totalDonateResult[0].total : 0;
+
     res.json({
       status: true,
       data: {
         user: userProfile,
+        totalDonateAmount,
         banners: banners.map(b => ({
           bannerId: b.bannerId,
           title: b.title,

@@ -1,49 +1,95 @@
 const router = require('express').Router();
 const Review = require('../../models/Review');
 
-// Get all reviews
+/**
+ * @route   GET /api/admin/reviews
+ * @desc    Admin: Get all reviews with optional filters
+ * @access  Private (Admin)
+ * @query   ?type=Teacher|Course|Campaign|General
+ *          &status=Approved|Pending|Rejected
+ *          &rating=5
+ *          &search=keyword
+ */
 router.get('/', async (req, res) => {
   try {
-    const reviews = await Review.find().sort({ createdAt: -1 });
-    res.json(reviews);
+    const { type, status, rating, search } = req.query;
+    const filter = {};
+
+    if (type) filter.type = type;
+    if (status) filter.status = status;
+    if (rating) filter.rating = Number(rating);
+    if (search) {
+      filter.$or = [
+        { userName: { $regex: search, $options: 'i' } },
+        { comment: { $regex: search, $options: 'i' } },
+        { targetName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const reviews = await Review.find(filter).sort({ createdAt: -1 });
+
+    // Aggregate stats
+    const total = await Review.countDocuments();
+    const approved = await Review.countDocuments({ status: 'Approved' });
+    const pending = await Review.countDocuments({ status: 'Pending' });
+    const avgRatingResult = await Review.aggregate([
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+    const avgRating = avgRatingResult.length > 0 ? Math.round(avgRatingResult[0].avgRating * 10) / 10 : 0;
+
+    res.json({
+      status: true,
+      stats: { total, approved, pending, rejected: total - approved - pending, avgRating },
+      data: reviews
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 
-// Add a review
+/**
+ * @route   POST /api/admin/reviews
+ * @desc    Add a new review
+ * @access  Private (Admin or authenticated user)
+ * @body    { userName, userRole, type, targetName, rating, comment, videoUrl }
+ */
 router.post('/', async (req, res) => {
   try {
-    const reviewId = `REV-${Date.now().toString().slice(-4)}`;
+    const reviewId = `REV-${Date.now().toString().slice(-6)}`;
     const newReview = new Review({ ...req.body, reviewId });
     const savedReview = await newReview.save();
-    res.status(201).json(savedReview);
+    res.status(201).json({ status: true, message: 'Review submitted successfully', data: savedReview });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 });
 
-// Update review status
+/**
+ * @route   PUT /api/admin/reviews/:id
+ * @desc    Update review status (Approve/Reject) or any field
+ * @access  Private (Admin)
+ */
 router.put('/:id', async (req, res) => {
   try {
-    const updatedReview = await Review.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json(updatedReview);
+    const updatedReview = await Review.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedReview) return res.status(404).json({ status: false, message: 'Review not found' });
+    res.json({ status: true, message: 'Review updated', data: updatedReview });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 });
 
-// Delete review
+/**
+ * @route   DELETE /api/admin/reviews/:id
+ * @desc    Delete a review
+ * @access  Private (Admin)
+ */
 router.delete('/:id', async (req, res) => {
   try {
     await Review.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Review deleted' });
+    res.json({ status: true, message: 'Review deleted successfully' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 
