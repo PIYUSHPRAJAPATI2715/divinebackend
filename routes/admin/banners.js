@@ -1,11 +1,28 @@
 const router = require('express').Router();
 const Banner = require('../../models/Banner');
 
-// Get all banners
+// Helper: compute effective status based on date timeline
+const getBannerTimeline = (banner) => {
+  const now = new Date();
+  if (banner.startDate && banner.endDate) {
+    if (now < new Date(banner.startDate)) return 'Scheduled';
+    if (now > new Date(banner.endDate)) return 'Expired';
+    return 'Live';
+  }
+  if (banner.startDate && now < new Date(banner.startDate)) return 'Scheduled';
+  if (banner.endDate && now > new Date(banner.endDate)) return 'Expired';
+  return 'Live';
+};
+
+// Get all banners (sorted by displayOrder)
 router.get('/', async (req, res) => {
   try {
-    const banners = await Banner.find();
-    res.json(banners);
+    const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
+    const enriched = banners.map(b => ({
+      ...b.toObject(),
+      timelineStatus: getBannerTimeline(b)
+    }));
+    res.json(enriched);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -14,10 +31,13 @@ router.get('/', async (req, res) => {
 // Add a banner
 router.post('/', async (req, res) => {
   try {
-    const bannerId = `BNR-${Date.now().toString().slice(-4)}`;
+    const bannerId = `BNR-${Date.now().toString().slice(-6)}`;
     const newBanner = new Banner({ ...req.body, bannerId });
     const savedBanner = await newBanner.save();
-    res.status(201).json(savedBanner);
+    res.status(201).json({
+      ...savedBanner.toObject(),
+      timelineStatus: getBannerTimeline(savedBanner)
+    });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -31,7 +51,10 @@ router.put('/:id', async (req, res) => {
       req.body,
       { new: true }
     );
-    res.json(updatedBanner);
+    res.json({
+      ...updatedBanner.toObject(),
+      timelineStatus: getBannerTimeline(updatedBanner)
+    });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

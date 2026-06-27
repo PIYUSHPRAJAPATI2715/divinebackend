@@ -13,6 +13,8 @@ const ngoSchema = new mongoose.Schema({
   about: { type: String, default: '' },
   years: { type: String, default: '' },
   ourMission: { type: String, default: '' },
+  // Individual or Organization type
+  ngoType: { type: String, enum: ['Individual', 'Organization'], default: 'Organization' },
   status: { type: String, enum: ['Pending', 'Verified', 'Rejected'], default: 'Pending' },
   activityProof: [{ type: String }], // Proof of donations spent (images/videos)
   verifiedCampaignsCount: { type: Number, default: 0 },

@@ -5,8 +5,16 @@ const bannerSchema = new mongoose.Schema({
   title: { type: String, required: true },
   imageUrl: { type: String, required: true },
   linkUrl: { type: String, default: '' },
-  placement: { type: String, enum: ['Home', 'Campaigns', 'Courses', 'DaanTop', 'DaanBottom'], default: 'Home' },
-  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' }
+  placement: {
+    type: String,
+    enum: ['Home', 'Campaigns', 'Courses', 'DaanTop', 'DaanBottom', 'Membership'],
+    default: 'Home'
+  },
+  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  // Timeline fields
+  startDate: { type: Date, default: null },
+  endDate: { type: Date, default: null },
+  displayOrder: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Banner', bannerSchema);

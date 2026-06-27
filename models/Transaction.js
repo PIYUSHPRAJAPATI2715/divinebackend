@@ -4,6 +4,8 @@ const transactionSchema = new mongoose.Schema({
   transactionId: { type: String, required: true, unique: true },
   type: { type: String, enum: ['Donation', 'Course', 'Seminar'], required: true },
   user: { type: String, required: true },
+  mobile: { type: String, default: '' },
+  fundCategory: { type: String, default: '' },
   item: { type: String, required: true },
   amount: { type: Number, required: true },
   paymentPlan: { type: String, enum: ['Full Payment', 'EMI - 50% Advance', 'EMI - Completed', 'None'], default: 'None' },

@@ -210,7 +210,7 @@ router.get('/subcategories', async (req, res) => {
   }
 });
 
-// Create subcategory
+// Create subcategory (Admin only)
 router.post('/subcategories', requireAdmin, async (req, res) => {
   try {
     const { categoryId, name, imageUrl, description } = req.body;
@@ -314,8 +314,8 @@ router.get('/items', async (req, res) => {
   }
 });
 
-// Create item
-router.post('/items', requireNGOOrAdmin, async (req, res) => {
+// Create item (Admin only)
+router.post('/items', requireAdmin, async (req, res) => {
   try {
     const { subcategoryId, name, description, price, unit, imageUrl } = req.body;
     if (!subcategoryId || !name || price === undefined) {
@@ -482,12 +482,26 @@ router.post('/donate', async (req, res) => {
     const donationId = `DON-${Date.now().toString().slice(-4)}`;
     const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
 
+    // Derive fund category from first item's subcategory chain
+    let fundCategory = 'Daan';
+    if (resolvedItems.length > 0) {
+      const firstItem = await DanItem.findById(resolvedItems[0].itemId).populate({
+        path: 'subcategoryId',
+        populate: { path: 'categoryId', select: 'name' }
+      });
+      if (firstItem?.subcategoryId?.categoryId?.name) {
+        fundCategory = firstItem.subcategoryId.categoryId.name;
+      }
+    }
+
     // Create Transaction Ledger Entry
     const itemDesc = resolvedItems.map(item => `${item.name} (x${item.quantity})`).join(', ');
     const newTx = new Transaction({
       transactionId,
       type: 'Donation',
       user: finalDonorName,
+      mobile: finalDonorPhone || '',
+      fundCategory,
       amount: totalAmount,
       status: 'Success',
       date: new Date(),
@@ -538,6 +552,15 @@ router.get('/donations', requireNGOOrAdmin, async (req, res) => {
     }
     const donations = await DanDonation.find(filter)
       .populate('ngoId', 'name logo')
+      .populate({
+        path: 'items.itemId',
+        select: 'name subcategoryId',
+        populate: {
+          path: 'subcategoryId',
+          select: 'name categoryId',
+          populate: { path: 'categoryId', select: 'name' }
+        }
+      })
       .sort({ createdAt: -1 });
     res.json({ status: true, data: donations });
   } catch (err) {
@@ -723,11 +746,25 @@ router.post('/cart/checkout', requireAuth, async (req, res) => {
     const donationId = `DON-${Date.now().toString().slice(-4)}`;
     const transactionId = `TXN-${Date.now().toString().slice(-4)}`;
 
+    // Derive fund category from first item's subcategory chain
+    let cartFundCategory = 'Daan';
+    if (resolvedItems.length > 0) {
+      const firstCartItem = await DanItem.findById(resolvedItems[0].itemId).populate({
+        path: 'subcategoryId',
+        populate: { path: 'categoryId', select: 'name' }
+      });
+      if (firstCartItem?.subcategoryId?.categoryId?.name) {
+        cartFundCategory = firstCartItem.subcategoryId.categoryId.name;
+      }
+    }
+
     const itemDesc = resolvedItems.map(item => `${item.name} (x${item.quantity})`).join(', ');
     const newTx = new Transaction({
       transactionId,
       type: 'Donation',
       user: user.name || user.phone,
+      mobile: user.phone || '',
+      fundCategory: cartFundCategory,
       amount: totalAmount,
       status: 'Success',
       date: new Date(),
