@@ -411,7 +411,8 @@ router.post('/donate', async (req, res) => {
       eventType, 
       eventName, 
       eventDate, 
-      paymentMethod 
+      paymentMethod,
+      ngoId
     } = req.body;
 
     if (frequency && !['One-Time', 'Monthly'].includes(frequency)) {
@@ -524,7 +525,7 @@ router.post('/donate', async (req, res) => {
       eventDate: eventDate ? new Date(eventDate) : null,
       paymentMethod: paymentMethod || 'UPI',
       paymentStatus: 'Success',
-      ngoId: primaryNgoId,
+      ngoId: ngoId || primaryNgoId,
       transactionId
     });
     await danDonation.save();
@@ -694,10 +695,9 @@ router.delete('/cart', requireAuth, async (req, res) => {
   }
 });
 
-// Checkout / Donate from Cart
 router.post('/cart/checkout', requireAuth, async (req, res) => {
   try {
-    const { paymentMethod } = req.body;
+    const { paymentMethod, ngoId } = req.body;
 
     const cart = await DanCart.findOne({ userId: req.user.id });
     if (!cart || cart.items.length === 0) {
@@ -786,7 +786,7 @@ router.post('/cart/checkout', requireAuth, async (req, res) => {
       eventDate: cart.eventDate,
       paymentMethod: paymentMethod || 'UPI',
       paymentStatus: 'Success',
-      ngoId: primaryNgoId,
+      ngoId: ngoId || primaryNgoId,
       transactionId
     });
     await danDonation.save();

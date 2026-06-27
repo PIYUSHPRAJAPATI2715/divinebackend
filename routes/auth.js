@@ -381,6 +381,22 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
     const currentRaised = Number(campaign.raised.replace(/[^0-9]/g, '')) || 0;
     campaign.raised = `₹${(currentRaised + Number(amount)).toLocaleString()}`;
     await campaign.save();
+
+    // Sync to NGO's campaigns array if it belongs to an NGO
+    try {
+      const NGO = require('../models/NGO');
+      const ngo = await NGO.findOne({ name: campaign.user });
+      if (ngo) {
+        const cmpIdx = ngo.campaigns.findIndex(c => c.campaignId === campaign.campaignId);
+        if (cmpIdx !== -1) {
+          ngo.campaigns[cmpIdx].raised = campaign.raised;
+          await ngo.save();
+        }
+      }
+    } catch (ngoErr) {
+      console.error('Failed to sync donation to NGO campaigns array:', ngoErr.message);
+    }
+
     const transactionId = `TXN-${Date.now().toString().slice(-6)}`;
     const newTx = new Transaction({
       transactionId, type: 'Donation', user: user.name || user.phone,

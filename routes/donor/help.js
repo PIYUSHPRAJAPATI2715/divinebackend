@@ -51,7 +51,70 @@ router.get('/ngos/:id', async (req, res) => {
     if (!ngo) {
       return res.status(404).json({ status: false, message: 'NGO details not found' });
     }
-    res.json({ status: true, data: ngo });
+
+    // 1. Fetch Approved Reviews for this NGO
+    const reviews = await Review.find({
+      type: 'NGO',
+      targetName: ngo.name,
+      status: 'Approved'
+    }).sort({ createdAt: -1 });
+
+    // 2. Fetch User model associated with NGO to get KYC/Document details
+    const user = await User.findOne({
+      $or: [
+        { phone: ngo.phone },
+        { email: ngo.email }
+      ]
+    });
+
+    const verification = {
+      isRegistrationVerified: !!ngo.registrationNumber && ngo.registrationNumber !== 'REG-PENDING',
+      panVerified: user ? !!user.panNumber : false,
+      tanVerified: user ? !!user.tanNumber : false,
+      gstVerified: user ? !!user.gstNumber : false,
+      taxExempt12AVerified: user ? !!user.registration12A : false,
+      taxExempt80GVerified: user ? !!user.registration80G : false,
+      darpanVerified: user ? !!user.hasDarpan : false,
+      csr1Verified: user ? !!user.hasCSR1 : false,
+      fcraVerified: user ? !!user.hasFCRA : false,
+      documentsStatus: {
+        registrationNumber: ngo.registrationNumber,
+        panNumber: user?.panNumber || '',
+        tanNumber: user?.tanNumber || '',
+        gstNumber: user?.gstNumber || '',
+        registration12A: user?.registration12A || '',
+        registration80G: user?.registration80G || ''
+      }
+    };
+
+    // 3. Fetch Transparency stats
+    const DanDonation = require('../../models/DanDonation');
+    const totalDaanResult = await DanDonation.aggregate([
+      { $match: { ngoId: ngo._id, paymentStatus: 'Success' } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    const totalDaanReceived = totalDaanResult.length > 0 ? totalDaanResult[0].total : 0;
+
+    const totalPayoutsGranted = ngo.payoutHistory
+      .filter(p => p.status === 'Approved')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    const transparency = {
+      totalCampaigns: ngo.verifiedCampaignsCount || 0,
+      totalDaanReceived,
+      totalPayoutsGranted,
+      activityProofUploaded: ngo.activityGallery && ngo.activityGallery.length > 0,
+      activityGallery: ngo.activityGallery || [],
+      payoutHistory: ngo.payoutHistory || []
+    };
+
+    // Attach to NGO object safely to prevent frontend breaking changes
+    const ngoObj = ngo.toObject();
+    ngoObj.reviews = reviews;
+    ngoObj.verification = verification;
+    ngoObj.transparency = transparency;
+
+    res.json({ status: true, data: ngoObj });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -86,6 +149,23 @@ router.post('/notifications/read', async (req, res) => {
   try {
     await Notification.updateMany({ user: req.user._id }, { isRead: true });
     res.json({ status: true, message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Mark single notification as read
+router.post('/notifications/:id/read', async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { isRead: true },
+      { new: true }
+    );
+    if (!notification) {
+      return res.status(404).json({ status: false, message: 'Notification not found' });
+    }
+    res.json({ status: true, message: 'Notification marked as read', data: notification });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }

@@ -4,7 +4,7 @@ const reviewSchema = new mongoose.Schema({
   reviewId: { type: String, required: true, unique: true },
   userName: { type: String, required: true },
   userRole: { type: String, enum: ['Student', 'Donor', 'User'], default: 'User' },
-  type: { type: String, enum: ['Teacher', 'Course', 'Campaign', 'General'], required: true },
+  type: { type: String, enum: ['Teacher', 'Course', 'Campaign', 'General', 'NGO'], required: true },
   targetName: { type: String, required: true },
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, required: true },

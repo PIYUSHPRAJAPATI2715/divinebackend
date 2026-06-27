@@ -6,6 +6,7 @@ const Banner = require('../models/Banner');
 const CampaignCategory = require('../models/CampaignCategory');
 const Campaign = require('../models/Campaign');
 const Transaction = require('../models/Transaction');
+const Notification = require('../models/Notification');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -28,16 +29,23 @@ router.get('/', optionalAuth, async (req, res) => {
   try {
     let userProfile = null;
 
+    let isRead = true; // default true if not authenticated
+
     // 1. If user is authenticated, retrieve user
     if (req.user && req.user.id) {
       const dbUser = await User.findById(req.user.id);
       if (dbUser) {
+        // If there are unread notifications, isRead is false
+        const unreadCount = await Notification.countDocuments({ user: req.user.id, isRead: false });
+        isRead = unreadCount === 0;
+
         userProfile = {
           id: dbUser._id,
           phone: dbUser.phone,
           name: dbUser.name || dbUser.organizationName || 'User',
           role: dbUser.role,
-          walletBalance: dbUser.walletBalance || 0
+          walletBalance: dbUser.walletBalance || 0,
+          isRead // attached to user profile
         };
       }
     }
@@ -86,6 +94,7 @@ router.get('/', optionalAuth, async (req, res) => {
       status: true,
       data: {
         user: userProfile,
+        isRead, // root-level indicator for notification bell
         totalDonateAmount,
         banners: banners.map(b => ({
           bannerId: b.bannerId,

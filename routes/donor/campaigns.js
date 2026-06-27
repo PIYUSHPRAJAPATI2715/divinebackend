@@ -46,7 +46,28 @@ router.get('/campaigns/:id', async (req, res) => {
     if (!campaign) {
       return res.status(404).json({ status: false, message: 'Campaign not found' });
     }
-    res.json({ status: true, data: campaign });
+
+    // Fetch recent successful transactions for this campaign
+    const Transaction = require('../../models/Transaction');
+    const recentTransactions = await Transaction.find({
+      type: 'Donation',
+      item: campaign.title,
+      status: 'Success'
+    })
+    .sort({ date: -1 })
+    .limit(10);
+
+    const recentDonors = recentTransactions.map(tx => ({
+      name: tx.user,
+      amount: tx.amount,
+      date: tx.date
+    }));
+
+    // Attach to campaign object safely to prevent frontend breaking changes
+    const campaignObj = campaign.toObject();
+    campaignObj.recentDonors = recentDonors;
+
+    res.json({ status: true, data: campaignObj });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
