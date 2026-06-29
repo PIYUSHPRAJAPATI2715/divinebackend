@@ -33,7 +33,21 @@ router.get('/campaigns', async (req, res) => {
     }
 
     const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
-    res.json({ status: true, data: campaigns });
+    const enriched = campaigns.map(c => {
+      let days = c.daysLeft || 30;
+      if (c.endDate) {
+        const diffTime = new Date(c.endDate) - new Date();
+        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      } else if (c.createdAt) {
+        const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
+        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      }
+      const obj = c.toObject();
+      obj.daysLeft = days;
+      obj.donorsCount = obj.donorsCount || 0;
+      return obj;
+    });
+    res.json({ status: true, data: enriched });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -65,6 +79,16 @@ router.get('/campaigns/:id', async (req, res) => {
 
     // Attach to campaign object safely to prevent frontend breaking changes
     const campaignObj = campaign.toObject();
+    let days = campaignObj.daysLeft || 30;
+    if (campaignObj.endDate) {
+      const diffTime = new Date(campaignObj.endDate) - new Date();
+      days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    } else if (campaignObj.createdAt) {
+      const diffTime = (new Date(campaignObj.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
+      days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    }
+    campaignObj.daysLeft = days;
+    campaignObj.donorsCount = campaignObj.donorsCount || 0;
     campaignObj.recentDonors = recentDonors;
 
     res.json({ status: true, data: campaignObj });

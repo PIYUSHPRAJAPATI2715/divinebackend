@@ -441,6 +441,7 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
 
       const currentRaised = Number(campaign.raised.replace(/[^0-9]/g, '')) || 0;
       campaign.raised = `₹${(currentRaised + Number(amount)).toLocaleString()}`;
+      campaign.donorsCount = (campaign.donorsCount || 0) + 1;
       await campaign.save();
 
       // Sync to NGO's campaigns array if it belongs to an NGO

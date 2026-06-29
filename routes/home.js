@@ -108,19 +108,29 @@ router.get('/', optionalAuth, async (req, res) => {
           icon: c.icon,
           description: c.description
         })),
-        campaigns: campaigns.map(c => ({
-          _id: c._id,
-          campaignId: c.campaignId,
-          title: c.title,
-          user: c.user,
-          category: c.category,
-          imageUrl: c.imageUrl,
-          goal: c.goal,
-          raised: c.raised,
-          donorsCount: c.donorsCount,
-          daysLeft: c.daysLeft,
-          description: c.description
-        })),
+        campaigns: campaigns.map(c => {
+          let days = c.daysLeft || 30;
+          if (c.endDate) {
+            const diffTime = new Date(c.endDate) - new Date();
+            days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+          } else if (c.createdAt) {
+            const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
+            days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+          }
+          return {
+            _id: c._id,
+            campaignId: c.campaignId,
+            title: c.title,
+            user: c.user,
+            category: c.category,
+            imageUrl: c.imageUrl,
+            goal: c.goal,
+            raised: c.raised,
+            donorsCount: c.donorsCount || 0,
+            daysLeft: days,
+            description: c.description
+          };
+        }),
         ngos: topNGOs.map(ngo => ({
           id: ngo._id,
           name: ngo.name,
