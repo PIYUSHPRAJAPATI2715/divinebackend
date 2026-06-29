@@ -55,6 +55,14 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
+    if (req.body.type) {
+      const typeLower = req.body.type.trim().toLowerCase();
+      if (typeLower === 'ngo') req.body.type = 'NGO';
+      else if (typeLower === 'teacher') req.body.type = 'Teacher';
+      else if (typeLower === 'course') req.body.type = 'Course';
+      else if (typeLower === 'campaign') req.body.type = 'Campaign';
+      else if (typeLower === 'general') req.body.type = 'General';
+    }
     const reviewId = `REV-${Date.now().toString().slice(-6)}`;
     const newReview = new Review({ ...req.body, reviewId });
     const savedReview = await newReview.save();

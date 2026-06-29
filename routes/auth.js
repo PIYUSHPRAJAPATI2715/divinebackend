@@ -365,46 +365,108 @@ router.post('/wallet/topup', authMiddleware, async (req, res) => {
  */
 router.post('/wallet/donate', authMiddleware, async (req, res) => {
   try {
-    const { campaignId, amount } = req.body;
-    if (!campaignId || !amount || isNaN(amount) || Number(amount) <= 0) {
-      return res.status(400).json({ status: false, message: 'Campaign ID and positive amount are required' });
+    const { campaignId, ngoId, amount } = req.body;
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      return res.status(400).json({ status: false, message: 'A positive donation amount is required' });
     }
+    if (!campaignId && !ngoId) {
+      return res.status(400).json({ status: false, message: 'Either campaignId or ngoId is required' });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
     if ((user.walletBalance || 0) < Number(amount)) {
       return res.status(400).json({ status: false, message: 'Insufficient wallet balance. Please top up.' });
     }
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign) return res.status(404).json({ status: false, message: 'Fundraising campaign not found' });
+
     user.walletBalance -= Number(amount);
     await user.save();
-    const currentRaised = Number(campaign.raised.replace(/[^0-9]/g, '')) || 0;
-    campaign.raised = `₹${(currentRaised + Number(amount)).toLocaleString()}`;
-    await campaign.save();
-
-    // Sync to NGO's campaigns array if it belongs to an NGO
-    try {
-      const NGO = require('../models/NGO');
-      const ngo = await NGO.findOne({ name: campaign.user });
-      if (ngo) {
-        const cmpIdx = ngo.campaigns.findIndex(c => c.campaignId === campaign.campaignId);
-        if (cmpIdx !== -1) {
-          ngo.campaigns[cmpIdx].raised = campaign.raised;
-          await ngo.save();
-        }
-      }
-    } catch (ngoErr) {
-      console.error('Failed to sync donation to NGO campaigns array:', ngoErr.message);
-    }
 
     const transactionId = `TXN-${Date.now().toString().slice(-6)}`;
-    const newTx = new Transaction({
-      transactionId, type: 'Donation', user: user.name || user.phone,
-      mobile: user.phone || '', amount: Number(amount), status: 'Success',
-      date: new Date(), item: campaign.title
-    });
-    await newTx.save();
-    res.json({ status: true, message: `Successfully donated ₹${amount} to "${campaign.title}"`, data: user, campaign });
+
+    if (ngoId) {
+      // 1. Direct NGO Donation Flow
+      const NGO = require('../models/NGO');
+      const DanDonation = require('../models/DanDonation');
+      
+      let ngo = await NGO.findById(ngoId).catch(() => null);
+      if (!ngo) {
+        ngo = await NGO.findOne({ ngoId });
+      }
+      if (!ngo) {
+        return res.status(404).json({ status: false, message: 'NGO not found' });
+      }
+
+      // Log transaction
+      const newTx = new Transaction({
+        transactionId, type: 'Donation', user: user.name || user.phone,
+        mobile: user.phone || '', amount: Number(amount), status: 'Success',
+        date: new Date(), item: `Direct Donation to ${ngo.name}`
+      });
+      await newTx.save();
+
+      // Create DanDonation
+      const danDonation = new DanDonation({
+        donationId: `DON-${Date.now().toString().slice(-6)}`,
+        donorId: user._id,
+        donorName: user.name || 'Anonymous Donor',
+        donorPhone: user.phone || '',
+        donorEmail: user.email || '',
+        items: [{
+          itemId: user._id, // use donorId as placeholder for direct donation item
+          name: 'Direct Donation',
+          price: Number(amount),
+          quantity: 1,
+          subtotal: Number(amount)
+        }],
+        totalAmount: Number(amount),
+        paymentMethod: 'Wallet',
+        paymentStatus: 'Success',
+        ngoId: ngo._id,
+        transactionId
+      });
+      await danDonation.save();
+
+      return res.json({
+        status: true,
+        message: `Successfully donated ₹${amount} directly to "${ngo.name}"`,
+        data: user,
+        ngo,
+        danDonation
+      });
+    } else {
+      // 2. Campaign Donation Flow
+      const campaign = await Campaign.findById(campaignId);
+      if (!campaign) return res.status(404).json({ status: false, message: 'Fundraising campaign not found' });
+
+      const currentRaised = Number(campaign.raised.replace(/[^0-9]/g, '')) || 0;
+      campaign.raised = `₹${(currentRaised + Number(amount)).toLocaleString()}`;
+      await campaign.save();
+
+      // Sync to NGO's campaigns array if it belongs to an NGO
+      try {
+        const NGO = require('../models/NGO');
+        const ngo = await NGO.findOne({ name: campaign.user });
+        if (ngo) {
+          const cmpIdx = ngo.campaigns.findIndex(c => c.campaignId === campaign.campaignId);
+          if (cmpIdx !== -1) {
+            ngo.campaigns[cmpIdx].raised = campaign.raised;
+            await ngo.save();
+          }
+        }
+      } catch (ngoErr) {
+        console.error('Failed to sync donation to NGO campaigns array:', ngoErr.message);
+      }
+
+      const newTx = new Transaction({
+        transactionId, type: 'Donation', user: user.name || user.phone,
+        mobile: user.phone || '', amount: Number(amount), status: 'Success',
+        date: new Date(), item: campaign.title
+      });
+      await newTx.save();
+
+      return res.json({ status: true, message: `Successfully donated ₹${amount} to "${campaign.title}"`, data: user, campaign });
+    }
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
