@@ -39,6 +39,16 @@ router.put('/:id', async (req, res) => {
   try {
     const ngo = await NGO.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!ngo) return res.status(404).json({ message: 'NGO not found' });
+
+    if (req.body.status) {
+      const User = require('../../models/User');
+      const isVerified = req.body.status === 'Verified';
+      await User.findOneAndUpdate(
+        { $or: [{ phone: ngo.phone }, { email: ngo.email }] },
+        { verified: isVerified }
+      );
+    }
+
     res.json(ngo);
   } catch (err) {
     res.status(400).json({ message: err.message });

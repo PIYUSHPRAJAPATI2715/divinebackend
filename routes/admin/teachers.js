@@ -41,6 +41,17 @@ router.put('/:id', async (req, res) => {
       req.body,
       { new: true }
     );
+    if (!updatedTeacher) return res.status(404).json({ message: 'Teacher not found' });
+
+    if (req.body.status) {
+      const User = require('../../models/User');
+      const isVerified = req.body.status === 'Verified';
+      await User.findOneAndUpdate(
+        { $or: [{ phone: updatedTeacher.phone }, { email: updatedTeacher.email }] },
+        { verified: isVerified }
+      );
+    }
+
     res.json(updatedTeacher);
   } catch (err) {
     res.status(400).json({ message: err.message });

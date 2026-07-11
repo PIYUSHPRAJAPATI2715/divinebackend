@@ -567,21 +567,24 @@ const mockUsers = [
     role: 'ngo',
     name: 'Pratham Education Foundation',
     email: 'save@children.org',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 8888822222',
     role: 'ngo',
     name: 'Green Earth Foundation',
     email: 'contact@greenearth.org',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 8888833333',
     role: 'ngo',
     name: 'Krishnayan Gaushala',
     email: 'seva@gaushala.org',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 9812345678',
@@ -589,7 +592,8 @@ const mockUsers = [
     name: 'Dr. Ramesh Jyotish',
     email: 'ramesh.jyotish@astroadvyc.com',
     gender: 'Male',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 9876543210',
@@ -597,7 +601,8 @@ const mockUsers = [
     name: 'Priya Sharma',
     email: 'priya.tarot@astroadvyc.com',
     gender: 'Female',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 9988776655',
@@ -605,7 +610,8 @@ const mockUsers = [
     name: 'Acharya Amit',
     email: 'acharya.amit@astroadvyc.com',
     gender: 'Male',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   },
   {
     phone: '+91 9122334455',
@@ -613,7 +619,8 @@ const mockUsers = [
     name: 'Neha Vastu',
     email: 'neha.vastu@astroadvyc.com',
     gender: 'Female',
-    isProfileComplete: true
+    isProfileComplete: true,
+    verified: true
   }
 ];
 

@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  verified: {
+    type: Boolean,
+    default: false
+  },
   // Social, referral, and rewards fields
   followingNgos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followingUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
