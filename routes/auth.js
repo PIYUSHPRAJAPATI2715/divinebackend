@@ -503,70 +503,24 @@ const registerHandler = async (req, res) => {
     }
 
     if (user.role === 'ngo') {
-      const {
-        organizationName, registeredAddress, addressCertificate, authorizedPerson, designation, gender, profilePhoto,
-        panNumber, panImage, tanNumber, tanImage, gstNumber, gstDocument,
-        registration12A, certificate12A, registration80G, certificate80G,
-        hasDarpan, darpanNumber, darpanCertificate, hasCSR1, csr1Number, csr1Certificate,
-        hasFCRA, fcraNumber, fcraCertificate, hasOtherRegistration, otherRegistrationName, otherRegistrationCertificate,
-        bankAccountHolder, bankName, bankBranch, bankAccountNumber, bankIFSC, ngoType
-      } = req.body;
-
+      const { organizationName, registeredAddress, authorizedPerson, designation, gender, profilePhoto } = req.body;
       if (!organizationName || !registeredAddress || !authorizedPerson || !designation) {
         return res.status(400).json({ status: false, message: 'Organization Name, Registered Address, Authorized Person name, and Designation are required for NGO registration.' });
       }
-
-      user.organizationName = organizationName;
-      user.registeredAddress = registeredAddress;
-      user.addressCertificate = addressCertificate || null;
-      user.authorizedPerson = authorizedPerson;
-      user.designation = designation;
+      user.name = organizationName;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
-      if (ngoType) user.ngoType = ngoType;
-
-      user.panNumber = panNumber || "";
-      user.panImage = panImage || null;
-      user.tanNumber = tanNumber || "";
-      user.tanImage = tanImage || null;
-      user.gstNumber = gstNumber || "";
-      user.gstDocument = gstDocument || null;
-      user.registration12A = registration12A || "";
-      user.certificate12A = certificate12A || null;
-      user.registration80G = registration80G || "";
-      user.certificate80G = certificate80G || null;
-
-      user.hasDarpan = !!hasDarpan;
-      user.darpanNumber = darpanNumber || "";
-      user.darpanCertificate = darpanCertificate || null;
-      user.hasCSR1 = !!hasCSR1;
-      user.csr1Number = csr1Number || "";
-      user.csr1Certificate = csr1Certificate || null;
-      user.hasFCRA = !!hasFCRA;
-      user.fcraNumber = fcraNumber || "";
-      user.fcraCertificate = fcraCertificate || null;
-      user.hasOtherRegistration = !!hasOtherRegistration;
-      user.otherRegistrationName = otherRegistrationName || "";
-      user.otherRegistrationCertificate = otherRegistrationCertificate || null;
-
-      user.bankAccountHolder = bankAccountHolder || "";
-      user.bankName = bankName || "";
-      user.bankBranch = bankBranch || "";
-      user.bankAccountNumber = bankAccountNumber || "";
-      user.bankIFSC = bankIFSC || "";
-
     } else if (user.role === 'teacher') {
-      const { name, expertise, experience, about, gender, profilePhoto } = req.body;
+      const { name, expertise, experience, gender, profilePhoto } = req.body;
       if (!name || !expertise || !experience) {
         return res.status(400).json({ status: false, message: 'Name, Expertise, and Experience are required for Teacher registration.' });
       }
       user.name = name;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
-
     } else {
       const { name, gender, profilePhoto } = req.body;
-      if (!name) return res.status(400).json({ status: false, message: 'Name is required for Donor registration.' });
+      if (!name) return res.status(400).json({ status: false, message: 'Name is required.' });
       user.name = name;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
@@ -578,47 +532,49 @@ const registerHandler = async (req, res) => {
     // ----------------------------------------------------
     // REAL-TIME MULTI-COLLECTION SYNC
     // ----------------------------------------------------
+    const finalEmail = user.email || req.body.email || `${user.phone.replace(/[^0-9]/g, '')}@divine.com`;
+
     if (user.role === 'ngo') {
-      let ngo = await NGO.findOne({ email: user.email });
+      let ngo = await NGO.findOne({ email: finalEmail });
       if (!ngo) {
         ngo = new NGO({
           ngoId: `NGO-${Date.now().toString().slice(-4)}`,
-          name: user.organizationName,
-          email: user.email,
+          name: req.body.organizationName || user.name || 'My NGO',
+          email: finalEmail,
           phone: user.phone,
-          registrationNumber: user.registrationNumber || 'Pending Incorporation',
-          contactPerson: user.authorizedPerson || 'Lead Trustee',
-          about: user.about || 'Dedicated social welfare trust.',
-          ngoType: user.ngoType || 'Organization',
-          logo: user.profilePhoto,
+          registrationNumber: req.body.registrationNumber || 'Pending Incorporation',
+          contactPerson: req.body.authorizedPerson || 'Lead Trustee',
+          about: req.body.about || 'Dedicated social welfare trust.',
+          ngoType: req.body.ngoType || 'Organization',
+          logo: req.body.logo || user.profilePhoto,
           status: 'Pending',
-          bankAccountHolder: user.bankAccountHolder,
-          bankName: user.bankName,
-          bankBranch: user.bankBranch,
-          bankAccountNumber: user.bankAccountNumber,
-          bankIFSC: user.bankIFSC,
-          panNumber: user.panNumber,
-          panImage: user.panImage,
-          tanNumber: user.tanNumber,
-          tanImage: user.tanImage,
-          gstNumber: user.gstNumber,
-          gstDocument: user.gstDocument,
-          registration12A: user.registration12A,
-          certificate12A: user.certificate12A,
-          registration80G: user.registration80G,
-          certificate80G: user.certificate80G,
-          darpanNumber: user.darpanNumber,
-          darpanCertificate: user.darpanCertificate
+          bankAccountHolder: req.body.bankAccountHolder || '',
+          bankName: req.body.bankName || '',
+          bankBranch: req.body.bankBranch || '',
+          bankAccountNumber: req.body.bankAccountNumber || '',
+          bankIFSC: req.body.bankIFSC || '',
+          panNumber: req.body.panNumber || '',
+          panImage: req.body.panImage || null,
+          tanNumber: req.body.tanNumber || '',
+          tanImage: req.body.tanImage || null,
+          gstNumber: req.body.gstNumber || '',
+          gstDocument: req.body.gstDocument || null,
+          registration12A: req.body.registration12A || '',
+          certificate12A: req.body.certificate12A || null,
+          registration80G: req.body.registration80G || '',
+          certificate80G: req.body.certificate80G || null,
+          darpanNumber: req.body.darpanNumber || '',
+          darpanCertificate: req.body.darpanCertificate || null
         });
         await ngo.save();
       }
     } else if (user.role === 'teacher') {
-      let teacher = await Teacher.findOne({ email: user.email });
+      let teacher = await Teacher.findOne({ email: finalEmail });
       if (!teacher) {
         teacher = new Teacher({
           teacherId: `TCH-${Date.now().toString().slice(-4)}`,
           name: user.name,
-          email: user.email,
+          email: finalEmail,
           phone: user.phone,
           expertise: req.body.expertise || 'Vedic Astrology',
           experience: req.body.experience || '5 Years',
@@ -628,21 +584,21 @@ const registerHandler = async (req, res) => {
           totalEarnings: 0,
           withdrawableAmount: 0,
           liveBatchesCount: 0,
-          bankAccountHolder: user.bankAccountHolder || '',
-          bankName: user.bankName || '',
-          bankBranch: user.bankBranch || '',
-          bankAccountNumber: user.bankAccountNumber || '',
-          bankIFSC: user.bankIFSC || ''
+          bankAccountHolder: req.body.bankAccountHolder || '',
+          bankName: req.body.bankName || '',
+          bankBranch: req.body.bankBranch || '',
+          bankAccountNumber: req.body.bankAccountNumber || '',
+          bankIFSC: req.body.bankIFSC || ''
         });
         await teacher.save();
       }
     } else if (user.role === 'student') {
-      let student = await Student.findOne({ email: user.email });
+      let student = await Student.findOne({ email: finalEmail });
       if (!student) {
         student = new Student({
           studentId: `STU-${Date.now().toString().slice(-4)}`,
           name: user.name,
-          email: user.email,
+          email: finalEmail,
           phone: user.phone,
           courseEnrolled: 'Vedic Astrology Masterclass',
           marks: 0,
@@ -657,12 +613,12 @@ const registerHandler = async (req, res) => {
         await student.save();
       }
     } else if (user.role === 'donor') {
-      let donor = await Donor.findOne({ email: user.email });
+      let donor = await Donor.findOne({ email: finalEmail });
       if (!donor) {
         donor = new Donor({
           donorId: `DNR-${Date.now().toString().slice(-4)}`,
           name: user.name,
-          email: user.email,
+          email: finalEmail,
           phone: user.phone,
           totalDonated: '₹0',
           campaignsSupported: 0,
