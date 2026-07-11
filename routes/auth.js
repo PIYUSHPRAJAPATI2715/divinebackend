@@ -232,82 +232,126 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 
     if (user.role === 'ngo') {
-      // NGO profile update fields
+      let ngo = await NGO.findOne({ email: user.email });
+      if (!ngo) {
+        ngo = new NGO({
+          ngoId: `NGO-${Date.now().toString().slice(-4)}`,
+          email: user.email,
+          phone: user.phone,
+          name: req.body.organizationName || user.name || 'My NGO',
+          registrationNumber: 'Pending Incorporation',
+          contactPerson: req.body.authorizedPerson || 'Lead Trustee'
+        });
+      }
+
       const {
-        organizationName, registeredAddress, addressCertificate, authorizedPerson,
+        organizationName, registeredAddress, authorizedPerson,
         designation, gender, profilePhoto, logo, about, impactStats, ngoType,
-        // Documents
         panNumber, panImage, tanNumber, tanImage,
         gstNumber, gstDocument, registration12A, certificate12A, registration80G, certificate80G,
-        // Extra Docs
-        hasDarpan, darpanNumber, darpanCertificate,
-        hasCSR1, csr1Number, csr1Certificate,
-        hasFCRA, fcraNumber, fcraCertificate,
-        hasOtherRegistration, otherRegistrationName, otherRegistrationCertificate,
-        // Bank
+        darpanNumber, darpanCertificate,
         bankAccountHolder, bankName, bankBranch, bankAccountNumber, bankIFSC
       } = req.body;
 
-      if (organizationName !== undefined) user.organizationName = organizationName;
-      if (registeredAddress !== undefined) user.registeredAddress = registeredAddress;
-      if (addressCertificate !== undefined) user.addressCertificate = addressCertificate;
-      if (authorizedPerson !== undefined) user.authorizedPerson = authorizedPerson;
-      if (designation !== undefined) user.designation = designation;
-      if (gender !== undefined) user.gender = gender;
-      if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
-      if (logo !== undefined) user.logo = logo;
-      if (about !== undefined) user.about = about;
-      if (impactStats !== undefined) user.impactStats = impactStats;
-      if (ngoType !== undefined) user.ngoType = ngoType;
+      if (organizationName !== undefined) ngo.name = organizationName;
+      if (registeredAddress !== undefined) ngo.registeredAddress = registeredAddress;
+      if (authorizedPerson !== undefined) ngo.contactPerson = authorizedPerson;
+      if (about !== undefined) ngo.about = about;
+      if (impactStats !== undefined) ngo.impactStats = impactStats;
+      if (ngoType !== undefined) ngo.ngoType = ngoType;
+      if (logo !== undefined) ngo.logo = logo;
+      if (bankAccountHolder !== undefined) ngo.bankAccountHolder = bankAccountHolder;
+      if (bankName !== undefined) ngo.bankName = bankName;
+      if (bankBranch !== undefined) ngo.bankBranch = bankBranch;
+      if (bankAccountNumber !== undefined) ngo.bankAccountNumber = bankAccountNumber;
+      if (bankIFSC !== undefined) ngo.bankIFSC = bankIFSC.toUpperCase();
+      if (panNumber !== undefined) ngo.panNumber = panNumber;
+      if (panImage !== undefined) ngo.panImage = panImage;
+      if (tanNumber !== undefined) ngo.tanNumber = tanNumber;
+      if (tanImage !== undefined) ngo.tanImage = tanImage;
+      if (gstNumber !== undefined) ngo.gstNumber = gstNumber;
+      if (gstDocument !== undefined) ngo.gstDocument = gstDocument;
+      if (registration12A !== undefined) ngo.registration12A = registration12A;
+      if (certificate12A !== undefined) ngo.certificate12A = certificate12A;
+      if (registration80G !== undefined) ngo.registration80G = registration80G;
+      if (certificate80G !== undefined) ngo.certificate80G = certificate80G;
+      if (darpanNumber !== undefined) ngo.darpanNumber = darpanNumber;
+      if (darpanCertificate !== undefined) ngo.darpanCertificate = darpanCertificate;
 
-      // Documents
-      if (panNumber !== undefined) user.panNumber = panNumber;
-      if (panImage !== undefined) user.panImage = panImage;
-      if (tanNumber !== undefined) user.tanNumber = tanNumber;
-      if (tanImage !== undefined) user.tanImage = tanImage;
-      if (gstNumber !== undefined) user.gstNumber = gstNumber;
-      if (gstDocument !== undefined) user.gstDocument = gstDocument;
-      if (registration12A !== undefined) user.registration12A = registration12A;
-      if (certificate12A !== undefined) user.certificate12A = certificate12A;
-      if (registration80G !== undefined) user.registration80G = registration80G;
-      if (certificate80G !== undefined) user.certificate80G = certificate80G;
+      await ngo.save();
 
-      // Extra verifications
-      if (hasDarpan !== undefined) user.hasDarpan = hasDarpan;
-      if (darpanNumber !== undefined) user.darpanNumber = darpanNumber;
-      if (darpanCertificate !== undefined) user.darpanCertificate = darpanCertificate;
-      if (hasCSR1 !== undefined) user.hasCSR1 = hasCSR1;
-      if (csr1Number !== undefined) user.csr1Number = csr1Number;
-      if (csr1Certificate !== undefined) user.csr1Certificate = csr1Certificate;
-      if (hasFCRA !== undefined) user.hasFCRA = hasFCRA;
-      if (fcraNumber !== undefined) user.fcraNumber = fcraNumber;
-      if (fcraCertificate !== undefined) user.fcraCertificate = fcraCertificate;
-      if (hasOtherRegistration !== undefined) user.hasOtherRegistration = hasOtherRegistration;
-      if (otherRegistrationName !== undefined) user.otherRegistrationName = otherRegistrationName;
-      if (otherRegistrationCertificate !== undefined) user.otherRegistrationCertificate = otherRegistrationCertificate;
-
-      // Bank
-      if (bankAccountHolder !== undefined) user.bankAccountHolder = bankAccountHolder;
-      if (bankName !== undefined) user.bankName = bankName;
-      if (bankBranch !== undefined) user.bankBranch = bankBranch;
-      if (bankAccountNumber !== undefined) user.bankAccountNumber = bankAccountNumber;
-      if (bankIFSC !== undefined) user.bankIFSC = bankIFSC.toUpperCase();
-
-    } else if (user.role === 'donor') {
-      // Donor profile update fields
-      const { name, gender, profilePhoto } = req.body;
-      if (name !== undefined) user.name = name;
+      if (organizationName !== undefined) user.name = organizationName;
       if (gender !== undefined) user.gender = gender;
       if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
 
     } else if (user.role === 'teacher') {
-      const { name, gender, profilePhoto, expertise, experience, about } = req.body;
+      let teacher = await Teacher.findOne({ email: user.email });
+      if (!teacher) {
+        teacher = new Teacher({
+          teacherId: `TCH-${Date.now().toString().slice(-4)}`,
+          email: user.email,
+          phone: user.phone,
+          name: user.name
+        });
+      }
+
+      const { name, gender, profilePhoto, expertise, experience, about, bankAccountHolder, bankName, bankBranch, bankAccountNumber, bankIFSC } = req.body;
+      if (name !== undefined) teacher.name = name;
+      if (expertise !== undefined) teacher.expertise = expertise;
+      if (experience !== undefined) teacher.experience = experience;
+      if (about !== undefined) teacher.about = about;
+      if (bankAccountHolder !== undefined) teacher.bankAccountHolder = bankAccountHolder;
+      if (bankName !== undefined) teacher.bankName = bankName;
+      if (bankBranch !== undefined) teacher.bankBranch = bankBranch;
+      if (bankAccountNumber !== undefined) teacher.bankAccountNumber = bankAccountNumber;
+      if (bankIFSC !== undefined) teacher.bankIFSC = bankIFSC.toUpperCase();
+      await teacher.save();
+
       if (name !== undefined) user.name = name;
       if (gender !== undefined) user.gender = gender;
       if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
-      if (expertise !== undefined) user.expertise = expertise;
-      if (experience !== undefined) user.experience = experience;
-      if (about !== undefined) user.about = about;
+
+    } else if (user.role === 'student') {
+      let student = await Student.findOne({ email: user.email });
+      if (!student) {
+        student = new Student({
+          studentId: `STU-${Date.now().toString().slice(-4)}`,
+          email: user.email,
+          phone: user.phone,
+          name: user.name,
+          courseEnrolled: 'Vedic Astrology Masterclass'
+        });
+      }
+
+      const { name, gender, profilePhoto, courseEnrolled } = req.body;
+      if (name !== undefined) student.name = name;
+      if (courseEnrolled !== undefined) student.courseEnrolled = courseEnrolled;
+      await student.save();
+
+      if (name !== undefined) user.name = name;
+      if (gender !== undefined) user.gender = gender;
+      if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
+
+    } else if (user.role === 'donor') {
+      let donor = await Donor.findOne({ email: user.email });
+      if (!donor) {
+        donor = new Donor({
+          donorId: `DNR-${Date.now().toString().slice(-4)}`,
+          email: user.email,
+          phone: user.phone,
+          name: user.name,
+          totalDonated: '₹0',
+          campaignsSupported: 0
+        });
+      }
+
+      const { name, gender, profilePhoto } = req.body;
+      if (name !== undefined) donor.name = name;
+      await donor.save();
+
+      if (name !== undefined) user.name = name;
+      if (gender !== undefined) user.gender = gender;
+      if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
     }
 
     await user.save();

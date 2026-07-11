@@ -154,17 +154,18 @@ router.put('/profile', async (req, res) => {
     if (expertise) teacher.expertise = expertise;
     if (experience) teacher.experience = experience;
     if (about !== undefined) teacher.about = about;
+    
+    if (bankAccountHolder !== undefined) teacher.bankAccountHolder = bankAccountHolder;
+    if (bankName !== undefined) teacher.bankName = bankName;
+    if (bankBranch !== undefined) teacher.bankBranch = bankBranch;
+    if (bankAccountNumber !== undefined) teacher.bankAccountNumber = bankAccountNumber;
+    if (bankIFSC !== undefined) teacher.bankIFSC = bankIFSC.toUpperCase();
     await teacher.save();
 
     // Sync user details
     const user = await User.findById(req.user.id);
     if (user) {
       if (gender) user.gender = gender;
-      if (bankAccountHolder) user.bankAccountHolder = bankAccountHolder;
-      if (bankName) user.bankName = bankName;
-      if (bankBranch) user.bankBranch = bankBranch;
-      if (bankAccountNumber) user.bankAccountNumber = bankAccountNumber;
-      if (bankIFSC) user.bankIFSC = bankIFSC;
       await user.save();
     }
 

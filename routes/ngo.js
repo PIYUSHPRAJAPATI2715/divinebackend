@@ -191,17 +191,19 @@ router.put('/profile', async (req, res) => {
     if (email) ngo.email = email;
     if (years !== undefined) ngo.years = years;
     if (ourMission !== undefined) ngo.ourMission = ourMission;
+    
+    if (bankAccountHolder !== undefined) ngo.bankAccountHolder = bankAccountHolder;
+    if (bankName !== undefined) ngo.bankName = bankName;
+    if (bankBranch !== undefined) ngo.bankBranch = bankBranch;
+    if (bankAccountNumber !== undefined) ngo.bankAccountNumber = bankAccountNumber;
+    if (bankIFSC !== undefined) ngo.bankIFSC = bankIFSC.toUpperCase();
     await ngo.save();
 
     // Sync user details
     const user = await User.findById(req.user.id);
     if (user) {
       if (gender) user.gender = gender;
-      if (bankAccountHolder) user.bankAccountHolder = bankAccountHolder;
-      if (bankName) user.bankName = bankName;
-      if (bankBranch) user.bankBranch = bankBranch;
-      if (bankAccountNumber) user.bankAccountNumber = bankAccountNumber;
-      if (bankIFSC) user.bankIFSC = bankIFSC;
+      if (name) user.name = name;
       await user.save();
     }
 
