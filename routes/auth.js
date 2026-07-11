@@ -183,7 +183,16 @@ router.post('/verify-otp', async (req, res) => {
     user.otpExpiry = null;
     await user.save();
     const token = jwt.sign({ id: user._id, role: user.role, phone: user.phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ status: true, message: 'OTP verified successfully', token, isProfileComplete: user.isProfileComplete, data: user });
+    res.json({
+      status: true,
+      message: 'OTP verified successfully',
+      token,
+      isProfileComplete: user.isProfileComplete,
+      data: {
+        ...user.toObject(),
+        verified: !!user.verified
+      }
+    });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message || 'OTP verification failed' });
   }
@@ -198,7 +207,13 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
-    res.json({ status: true, data: user });
+    res.json({
+      status: true,
+      data: {
+        ...user.toObject(),
+        verified: !!user.verified
+      }
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -359,7 +374,10 @@ router.put('/profile', authMiddleware, async (req, res) => {
     res.json({
       status: true,
       message: 'Profile updated successfully',
-      data: user
+      data: {
+        ...user.toObject(),
+        verified: !!user.verified
+      }
     });
 
   } catch (err) {
@@ -675,7 +693,14 @@ const registerHandler = async (req, res) => {
       }
     }
 
-    res.json({ status: true, message: 'Registration completed successfully', data: user });
+    res.json({
+      status: true,
+      message: 'Registration completed successfully',
+      data: {
+        ...user.toObject(),
+        verified: !!user.verified
+      }
+    });
 
   } catch (err) {
     console.error('Registration error:', err);
