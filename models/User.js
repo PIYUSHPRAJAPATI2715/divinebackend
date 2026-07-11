@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['donor', 'ngo', 'teacher'],
+    enum: ['donor', 'ngo', 'teacher', 'student'],
     required: true,
     default: 'donor'
   },
@@ -209,7 +209,47 @@ const userSchema = new mongoose.Schema({
   referralCode: { type: String, default: '' },
   referredBy: { type: String, default: '' },
   searchHistory: [{ type: String }],
-  couponsClaimed: [{ type: String }]
+  couponsClaimed: [{ type: String }],
+
+  // Student Learning Health
+  dailyStudyTime: { type: Number, default: 0 },
+  studyStreaks: { type: Number, default: 0 },
+  weeklyGoals: [{ type: String }],
+  wellnessBreaksCount: { type: Number, default: 0 },
+
+  // Astro Careers
+  aboutMe: { type: String, default: "" },
+  specializations: [{ type: String }],
+  indianLanguages: [{ type: String }],
+  foreignLanguages: [{ type: String }],
+  consultationAvailability: { type: Boolean, default: true },
+  portfolio: {
+    articles: [{ type: String }],
+    webinars: [{ type: String }],
+    assignments: [{ type: String }]
+  },
+  verificationBadge: { type: Boolean, default: false },
+  preferredWorkType: { type: String, default: "Full-time" },
+
+  // Career support plans
+  careerSupportPlan: { type: String, default: "Free" },
+  personalWebpageUrl: { type: String, default: "" },
+  coverLetterTemplate: { type: String, default: "" },
+  resumeTemplate: { type: String, default: "" },
+
+  // Digital Library progress
+  readingAnalytics: {
+    pagesRead: { type: Number, default: 0 },
+    hours: { type: Number, default: 0 },
+    streak: { type: Number, default: 0 }
+  },
+  readingChallenges: [{ type: String }],
+  completedBooks: [{ type: String }],
+
+  // Student Clubs & Scholarships
+  joinedClubs: [{ type: String }],
+  scholarshipsApplied: [{ type: String }],
+  scholarshipsStatus: { type: String, default: "None" }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

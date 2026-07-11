@@ -31,7 +31,25 @@ const teacherSchema = new mongoose.Schema({
       subject: { type: String },
       studentsCount: { type: Number, default: 0 }
     }
-  ]
+  ],
+
+  // Activity Monitoring
+  loginHistory: [{ type: Date }],
+  whiteboardUsageDuration: { type: Number, default: 0 },
+  screenShareDuration: { type: Number, default: 0 },
+  queryRepliesCount: { type: Number, default: 0 },
+
+  // Compliance Checklists
+  dressCodeCompliant: { type: Boolean, default: true },
+  audioQualityCheck: { type: String, default: "Excellent" },
+  videoQualityCheck: { type: String, default: "Excellent" },
+  classroomEtiquette: { type: String, default: "Compliant" },
+  adminObservations: [{ type: String }],
+
+  // Advanced Payout calculations
+  incentivesEarned: { type: Number, default: 0 },
+  deductionsApplied: { type: Number, default: 0 },
+  hybridBonus: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Teacher', teacherSchema);
