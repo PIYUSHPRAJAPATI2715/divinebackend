@@ -4,6 +4,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const NGO = require('../models/NGO');
+const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
+const Donor = require('../models/Donor');
 const authMiddleware = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
@@ -570,6 +574,104 @@ const registerHandler = async (req, res) => {
 
     user.isProfileComplete = true;
     await user.save();
+
+    // ----------------------------------------------------
+    // REAL-TIME MULTI-COLLECTION SYNC
+    // ----------------------------------------------------
+    if (user.role === 'ngo') {
+      let ngo = await NGO.findOne({ email: user.email });
+      if (!ngo) {
+        ngo = new NGO({
+          ngoId: `NGO-${Date.now().toString().slice(-4)}`,
+          name: user.organizationName,
+          email: user.email,
+          phone: user.phone,
+          registrationNumber: user.registrationNumber || 'Pending Incorporation',
+          contactPerson: user.authorizedPerson || 'Lead Trustee',
+          about: user.about || 'Dedicated social welfare trust.',
+          ngoType: user.ngoType || 'Organization',
+          logo: user.profilePhoto,
+          status: 'Pending',
+          bankAccountHolder: user.bankAccountHolder,
+          bankName: user.bankName,
+          bankBranch: user.bankBranch,
+          bankAccountNumber: user.bankAccountNumber,
+          bankIFSC: user.bankIFSC,
+          panNumber: user.panNumber,
+          panImage: user.panImage,
+          tanNumber: user.tanNumber,
+          tanImage: user.tanImage,
+          gstNumber: user.gstNumber,
+          gstDocument: user.gstDocument,
+          registration12A: user.registration12A,
+          certificate12A: user.certificate12A,
+          registration80G: user.registration80G,
+          certificate80G: user.certificate80G,
+          darpanNumber: user.darpanNumber,
+          darpanCertificate: user.darpanCertificate
+        });
+        await ngo.save();
+      }
+    } else if (user.role === 'teacher') {
+      let teacher = await Teacher.findOne({ email: user.email });
+      if (!teacher) {
+        teacher = new Teacher({
+          teacherId: `TCH-${Date.now().toString().slice(-4)}`,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          expertise: req.body.expertise || 'Vedic Astrology',
+          experience: req.body.experience || '5 Years',
+          about: req.body.about || 'Instructor bio details.',
+          status: 'Verified',
+          kycStatus: 'Completed',
+          totalEarnings: 0,
+          withdrawableAmount: 0,
+          liveBatchesCount: 0,
+          bankAccountHolder: user.bankAccountHolder || '',
+          bankName: user.bankName || '',
+          bankBranch: user.bankBranch || '',
+          bankAccountNumber: user.bankAccountNumber || '',
+          bankIFSC: user.bankIFSC || ''
+        });
+        await teacher.save();
+      }
+    } else if (user.role === 'student') {
+      let student = await Student.findOne({ email: user.email });
+      if (!student) {
+        student = new Student({
+          studentId: `STU-${Date.now().toString().slice(-4)}`,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          courseEnrolled: 'Vedic Astrology Masterclass',
+          marks: 0,
+          testStatus: 'Pending',
+          scholarshipStatus: user.scholarshipStatus || 'None',
+          scholarshipAmount: '₹0',
+          referredBy: '',
+          status: 'Active',
+          attendanceRate: 100,
+          subscriptionPlan: 'Course Purchase'
+        });
+        await student.save();
+      }
+    } else if (user.role === 'donor') {
+      let donor = await Donor.findOne({ email: user.email });
+      if (!donor) {
+        donor = new Donor({
+          donorId: `DNR-${Date.now().toString().slice(-4)}`,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          totalDonated: '₹0',
+          campaignsSupported: 0,
+          status: 'Active'
+        });
+        await donor.save();
+      }
+    }
+
     res.json({ status: true, message: 'Registration completed successfully', data: user });
 
   } catch (err) {

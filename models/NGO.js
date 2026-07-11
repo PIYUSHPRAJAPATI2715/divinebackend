@@ -43,7 +43,25 @@ const ngoSchema = new mongoose.Schema({
       raised: { type: String },
       status: { type: String }
     }
-  ]
+  ],
+  bankAccountHolder: { type: String, default: "" },
+  bankName: { type: String, default: "" },
+  bankBranch: { type: String, default: "" },
+  bankAccountNumber: { type: String, default: "" },
+  bankIFSC: { type: String, default: "" },
+
+  panNumber: { type: String, default: "" },
+  panImage: { type: String, default: null },
+  tanNumber: { type: String, default: "" },
+  tanImage: { type: String, default: null },
+  gstNumber: { type: String, default: "" },
+  gstDocument: { type: String, default: null },
+  registration12A: { type: String, default: "" },
+  certificate12A: { type: String, default: null },
+  registration80G: { type: String, default: "" },
+  certificate80G: { type: String, default: null },
+  darpanNumber: { type: String, default: "" },
+  darpanCertificate: { type: String, default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('NGO', ngoSchema);
