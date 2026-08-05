@@ -40,6 +40,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  impactStats: {
+    type: String,
+    default: ""
+  },
+  years: {
+    type: String,
+    default: ""
+  },
 
 
 

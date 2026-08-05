@@ -62,8 +62,8 @@ router.get('/profile', async (req, res) => {
       await ngo.save();
     }
 
-    // Count followers: donors/users who follow this NGO
-    const followersCount = await User.countDocuments({ followingNgos: ngo._id });
+    const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
+    const followersCount = followersList.length;
 
     const ngoObj = ngo.toObject();
 
@@ -82,11 +82,13 @@ router.get('/profile', async (req, res) => {
       rating: computedRating,
       reviewCount: reviews.length,
       reviews: formattedReviews,
-      followersCount,
-      followers: followersCount,
-      impact: ngoObj.impactStats || '',
-      impactStats: ngoObj.impactStats || '',
-      years: ngoObj.years || ''
+      followersCount: followersCount,
+      followers: followersList,
+      followingCount: 0,
+      impact: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      impactStats: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      years: ngoObj.years || '5 Years',
+      verified: true
     };
 
     res.json({

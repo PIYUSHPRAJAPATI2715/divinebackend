@@ -239,7 +239,8 @@ router.get('/me', authMiddleware, async (req, res) => {
           status: 'Approved'
         }).sort({ createdAt: -1 });
 
-        const followersCount = await User.countDocuments({ followingNgos: ngo._id });
+        const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
+        const followersCount = followersList.length;
 
         enrichedExtra = {
           ...ngo.toObject(),
@@ -253,12 +254,14 @@ router.get('/me', authMiddleware, async (req, res) => {
             videoUrl: r.videoUrl || '',
             createdAt: r.createdAt
           })),
-          followersCount,
-          followers: followersCount,
-          impact: ngo.impactStats || '',
-          impactStats: ngo.impactStats || '',
-          years: ngo.years || '',
-          rating: ngo.rating || 4.5
+          followersCount: followersCount,
+          followers: followersList,
+          followingCount: 0,
+          impact: ngo.impactStats || 'Grassroots community empowerment and emergency relief.',
+          impactStats: ngo.impactStats || 'Grassroots community empowerment and emergency relief.',
+          years: ngo.years || '5 Years',
+          rating: ngo.rating || 4.5,
+          verified: true
         };
       }
     }

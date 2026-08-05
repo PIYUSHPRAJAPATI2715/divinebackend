@@ -58,9 +58,9 @@ router.get('/profile', async (req, res) => {
       reviews: formattedReviews,
       followersCount,
       followers: userObj.followers || [],
-      impact: userObj.impactStats || '',
-      impactStats: userObj.impactStats || '',
-      years: userObj.years || ''
+      impact: userObj.impactStats || 'Active community contributor & donor.',
+      impactStats: userObj.impactStats || 'Active community contributor & donor.',
+      years: userObj.years || '3 Years'
     };
 
     res.json({
