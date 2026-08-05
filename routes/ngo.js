@@ -67,25 +67,35 @@ router.get('/profile', async (req, res) => {
 
     const ngoObj = ngo.toObject();
 
-    res.json({
+    const formattedReviews = reviews.map(r => ({
+      reviewId: r.reviewId,
+      userName: r.userName,
+      userRole: r.userRole,
+      rating: r.rating,
+      comment: r.comment,
+      videoUrl: r.videoUrl || '',
+      createdAt: r.createdAt
+    }));
+
+    const enrichedProfile = {
       ...ngoObj,
       rating: computedRating,
       reviewCount: reviews.length,
-      reviews: reviews.map(r => ({
-        reviewId: r.reviewId,
-        userName: r.userName,
-        userRole: r.userRole,
-        rating: r.rating,
-        comment: r.comment,
-        videoUrl: r.videoUrl || '',
-        createdAt: r.createdAt
-      })),
+      reviews: formattedReviews,
       followersCount,
+      followers: followersCount,
       impact: ngoObj.impactStats || '',
+      impactStats: ngoObj.impactStats || '',
       years: ngoObj.years || ''
+    };
+
+    res.json({
+      status: true,
+      data: enrichedProfile,
+      ...enrichedProfile
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 

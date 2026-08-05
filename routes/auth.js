@@ -207,10 +207,67 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
+
+    const userObj = user.toObject();
+    let enrichedExtra = {
+      reviewCount: 0,
+      reviews: [],
+      impact: userObj.impactStats || '',
+      impactStats: userObj.impactStats || '',
+      followersCount: (userObj.followers || []).length,
+      years: userObj.years || '',
+      rating: 4.5
+    };
+
+    if (user.role === 'ngo') {
+      const Review = require('../models/Review');
+      const NGO = require('../models/NGO');
+      
+      const ngoName = user.organizationName || user.name || '';
+      const ngo = await NGO.findOne({
+        $or: [
+          { email: user.email },
+          { phone: user.phone },
+          { name: { $regex: new RegExp(`^${ngoName}$`, 'i') } }
+        ]
+      });
+
+      if (ngo) {
+        const reviews = await Review.find({
+          targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') },
+          type: 'NGO',
+          status: 'Approved'
+        }).sort({ createdAt: -1 });
+
+        const followersCount = await User.countDocuments({ followingNgos: ngo._id });
+
+        enrichedExtra = {
+          ...ngo.toObject(),
+          reviewCount: reviews.length,
+          reviews: reviews.map(r => ({
+            reviewId: r.reviewId,
+            userName: r.userName,
+            userRole: r.userRole,
+            rating: r.rating,
+            comment: r.comment,
+            videoUrl: r.videoUrl || '',
+            createdAt: r.createdAt
+          })),
+          followersCount,
+          followers: followersCount,
+          impact: ngo.impactStats || '',
+          impactStats: ngo.impactStats || '',
+          years: ngo.years || '',
+          rating: ngo.rating || 4.5
+        };
+      }
+    }
+
     res.json({
       status: true,
       data: {
-        ...user.toObject(),
+        ...userObj,
+        ...enrichedExtra,
         verified: !!user.verified
       }
     });

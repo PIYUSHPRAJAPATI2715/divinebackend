@@ -111,7 +111,7 @@ router.post('/campaigns', async (req, res) => {
       user: req.user.name || 'Divine Donor',
       category: category || 'General Support',
       description: description || '',
-      imageUrl: imageUrl || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600',
+      imageUrl: imageUrl || (images && images.length > 0 ? images[0] : ''),
       goal: `₹${Number(goal).toLocaleString()}`,
       raised: '₹0',
       oneTimeOrMonthly: oneTimeOrMonthly || 'One-Time',

@@ -26,8 +26,48 @@ router.get('/profile', async (req, res) => {
       user.referralCode = generateReferralCode(user.name);
       await user.save();
     }
-    
-    res.json({ status: true, data: user });
+
+    const Review = require('../../models/Review');
+
+    // Fetch approved reviews for or by this donor
+    const reviews = await Review.find({
+      $or: [
+        { userName: user.name },
+        { targetName: { $regex: new RegExp(`^${user.name}$`, 'i') } }
+      ],
+      status: 'Approved'
+    }).sort({ createdAt: -1 });
+
+    const formattedReviews = reviews.map(r => ({
+      reviewId: r.reviewId,
+      userName: r.userName,
+      userRole: r.userRole,
+      rating: r.rating,
+      comment: r.comment,
+      videoUrl: r.videoUrl || '',
+      createdAt: r.createdAt
+    }));
+
+    const followersCount = (user.followers || []).length;
+    const userObj = user.toObject();
+
+    const enrichedData = {
+      ...userObj,
+      rating: 5.0,
+      reviewCount: reviews.length,
+      reviews: formattedReviews,
+      followersCount,
+      followers: userObj.followers || [],
+      impact: userObj.impactStats || '',
+      impactStats: userObj.impactStats || '',
+      years: userObj.years || ''
+    };
+
+    res.json({
+      status: true,
+      data: enrichedData,
+      ...enrichedData
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
