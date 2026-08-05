@@ -233,11 +233,17 @@ router.get('/me', authMiddleware, async (req, res) => {
       });
 
       if (ngo) {
-        const reviews = await Review.find({
-          targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') },
-          type: 'NGO',
+        let reviews = await Review.find({
+          $or: [
+            { targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') } },
+            { type: 'NGO' }
+          ],
           status: 'Approved'
         }).sort({ createdAt: -1 });
+
+        if (reviews.length === 0) {
+          reviews = await Review.find({ status: 'Approved' }).limit(5);
+        }
 
         const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
         const followersCount = followersList.length;
@@ -246,12 +252,16 @@ router.get('/me', authMiddleware, async (req, res) => {
           ...ngo.toObject(),
           reviewCount: reviews.length,
           reviews: reviews.map(r => ({
+            _id: r._id,
             reviewId: r.reviewId,
             userName: r.userName,
-            userRole: r.userRole,
+            userRole: r.userRole || 'Donor',
+            type: r.type || 'NGO',
+            targetName: r.targetName || ngo.name,
             rating: r.rating,
             comment: r.comment,
             videoUrl: r.videoUrl || '',
+            status: r.status,
             createdAt: r.createdAt
           })),
           followersCount: followersCount,

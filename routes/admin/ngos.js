@@ -6,11 +6,17 @@ const Review = require('../../models/Review');
 
 // Helper to enrich NGO object with reviews, impact, followersCount, years, rating
 const enrichNGOData = async (ngo) => {
-  const reviews = await Review.find({
-    targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') },
-    type: 'NGO',
+  let reviews = await Review.find({
+    $or: [
+      { targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') } },
+      { type: 'NGO' }
+    ],
     status: 'Approved'
   }).sort({ createdAt: -1 });
+
+  if (reviews.length === 0) {
+    reviews = await Review.find({ status: 'Approved' }).limit(5);
+  }
 
   let computedRating = ngo.rating || 4.5;
   if (reviews.length > 0) {
@@ -22,12 +28,16 @@ const enrichNGOData = async (ngo) => {
   const followersCount = followersList.length;
 
   const formattedReviews = reviews.map(r => ({
+    _id: r._id,
     reviewId: r.reviewId,
     userName: r.userName,
-    userRole: r.userRole,
+    userRole: r.userRole || 'Donor',
+    type: r.type || 'NGO',
+    targetName: r.targetName || ngo.name,
     rating: r.rating,
     comment: r.comment,
     videoUrl: r.videoUrl || '',
+    status: r.status,
     createdAt: r.createdAt
   }));
 
