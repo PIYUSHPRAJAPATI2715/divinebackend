@@ -649,8 +649,16 @@ const mockReviews = [
   { reviewId: 'REV-003', userName: 'Anonymous Donor', userRole: 'Donor', type: 'Campaign', targetName: 'Education for 10 Girls', rating: 5, comment: 'Very transparent process and happy to see children studying. Highly recommend supporting!', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', status: 'Approved' },
   { reviewId: 'REV-004', userName: 'Kriti Sen', userRole: 'User', type: 'General', targetName: 'Astroadvyc Platform', rating: 5, comment: 'Amazing user interface and great selection of spiritual coaching.', videoUrl: 'https://media.w3.org/2010/05/sintel/trailer_hd.mp4', status: 'Pending' },
   { reviewId: 'REV-005', userName: 'Spammer User', userRole: 'User', type: 'Teacher', targetName: 'Acharya Amit', rating: 1, comment: 'This is fake and terrible advertisement. Buy my cryptocurrency coin now!', status: 'Pending' },
-  { reviewId: 'REV-H1', userName: 'Noah', userRole: 'Donor', type: 'Campaign', targetName: 'Save the Children', rating: 5, comment: 'Incredible work by the team. Very happy with the impact reports shared!', status: 'Approved' }
+  { reviewId: 'REV-H1', userName: 'Noah', userRole: 'Donor', type: 'Campaign', targetName: 'Save the Children', rating: 5, comment: 'Incredible work by the team. Very happy with the impact reports shared!', status: 'Approved' },
+  // NGO-type reviews (these power the /api/ngo/profile reviewCount, reviews list, and rating)
+  { reviewId: 'REV-NGO-001', userName: 'Anil Sharma', userRole: 'Donor', type: 'NGO', targetName: 'Pratham Education Foundation', rating: 5, comment: 'Pratham does incredible work for underprivileged children. The transparency in fund usage is commendable!', status: 'Approved' },
+  { reviewId: 'REV-NGO-002', userName: 'Sunita Mehra', userRole: 'Donor', type: 'NGO', targetName: 'Pratham Education Foundation', rating: 4, comment: 'Great NGO, very responsive team. Impact reports are shared regularly which builds trust.', status: 'Approved' },
+  { reviewId: 'REV-NGO-003', userName: 'Ravi Kumar', userRole: 'Donor', type: 'NGO', targetName: 'Pratham Education Foundation', rating: 5, comment: 'One of the most trustworthy NGOs I have donated to. Highly recommend!', status: 'Approved' },
+  { reviewId: 'REV-NGO-004', userName: 'Meena Joshi', userRole: 'Donor', type: 'NGO', targetName: 'Save the Children India', rating: 5, comment: 'Save the Children does outstanding work. Their programs really make a difference at the grassroot level.', status: 'Approved' },
+  { reviewId: 'REV-NGO-005', userName: 'Deepak Nair', userRole: 'Donor', type: 'NGO', targetName: 'Save the Children India', rating: 4, comment: 'I have been donating here for 2 years. Very professional and impactful organization.', status: 'Approved' },
+  { reviewId: 'REV-NGO-006', userName: 'Priya Gupta', userRole: 'Donor', type: 'NGO', targetName: 'Karan mart', rating: 4, comment: 'Good organization with clear objectives. Keep up the great work!', status: 'Approved' },
 ];
+
 
 const mockPosts = [
   { postId: 'PST-001', title: 'Understanding Shani Sade Sati', type: 'Blog', content: 'Saturn transit, commonly referred to as Sade Sati, lasts for seven and a half years in an individual’s life. In this post, we explain how to navigate this period with grace and Vastu remedies...', author: 'Dr. Ramesh Jyotish', category: 'Astrology', reportsCount: 0, status: 'Active' },

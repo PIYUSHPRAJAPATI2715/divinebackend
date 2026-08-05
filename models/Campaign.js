@@ -5,7 +5,7 @@ const campaignSchema = new mongoose.Schema({
   title: { type: String, required: true },
   user: { type: String, required: true }, // Creator name / NGO name
   category: { type: String, default: 'General' },
-  imageUrl: { type: String, default: null },
+  imageUrl: { type: String, default: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&auto=format&fit=crop&q=80' },
   donorsCount: { type: Number, default: 0 },
   daysLeft: { type: Number, default: 30 },
   description: { type: String, default: '' },

@@ -4,6 +4,7 @@ const NGO = require('../models/NGO');
 const Campaign = require('../models/Campaign');
 const CampaignCategory = require('../models/CampaignCategory');
 const User = require('../models/User');
+const Review = require('../models/Review');
 const DanItem = require('../models/DanItem');
 const DanSubcategory = require('../models/DanSubcategory');
 const DanDonation = require('../models/DanDonation');
@@ -39,11 +40,50 @@ const getOrCreateNGOProfile = async (req) => {
   return ngo;
 };
 
-// 1. Get NGO Profile
+// 1. Get NGO Profile (enriched with reviews, followers, years, impact)
 router.get('/profile', async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
-    res.json(ngo);
+
+    // Fetch approved reviews targeting this NGO (by name)
+    const reviews = await Review.find({
+      targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') },
+      type: 'NGO',
+      status: 'Approved'
+    }).sort({ createdAt: -1 });
+
+    // Compute dynamic rating from approved reviews (fallback to stored rating)
+    let computedRating = ngo.rating || 4.5;
+    if (reviews.length > 0) {
+      const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      computedRating = Math.round(avg * 10) / 10;
+      // Persist updated rating
+      ngo.rating = computedRating;
+      await ngo.save();
+    }
+
+    // Count followers: donors/users who follow this NGO
+    const followersCount = await User.countDocuments({ followingNgos: ngo._id });
+
+    const ngoObj = ngo.toObject();
+
+    res.json({
+      ...ngoObj,
+      rating: computedRating,
+      reviewCount: reviews.length,
+      reviews: reviews.map(r => ({
+        reviewId: r.reviewId,
+        userName: r.userName,
+        userRole: r.userRole,
+        rating: r.rating,
+        comment: r.comment,
+        videoUrl: r.videoUrl || '',
+        createdAt: r.createdAt
+      })),
+      followersCount,
+      impact: ngoObj.impactStats || '',
+      years: ngoObj.years || ''
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -67,6 +107,7 @@ router.get('/campaigns', async (req, res) => {
       const obj = c.toObject();
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
+      obj.imageUrl = obj.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&auto=format&fit=crop&q=80';
       return obj;
     });
     res.json(enriched);
