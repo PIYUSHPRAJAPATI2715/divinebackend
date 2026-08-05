@@ -42,9 +42,26 @@ router.get('/campaigns', async (req, res) => {
         const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
         days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       }
+      let finalImage = '';
+      if (Array.isArray(c.images)) {
+        const uploadedImg = c.images.find(img => typeof img === 'string' && img.trim() !== '' && !img.includes('unsplash.com'));
+        if (uploadedImg) finalImage = uploadedImg;
+      }
+      if (!finalImage && c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '' && !c.imageUrl.includes('unsplash.com')) {
+        finalImage = c.imageUrl.trim();
+      }
+      if (!finalImage && Array.isArray(c.images)) {
+        const anyImg = c.images.find(img => typeof img === 'string' && img.trim() !== '');
+        if (anyImg) finalImage = anyImg.trim();
+      }
+      if (!finalImage) {
+        finalImage = (c.imageUrl && typeof c.imageUrl === 'string') ? c.imageUrl.trim() : '';
+      }
+
       const obj = c.toObject();
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
+      obj.imageUrl = finalImage;
       return obj;
     });
     res.json({ status: true, data: enriched });
@@ -87,8 +104,26 @@ router.get('/campaigns/:id', async (req, res) => {
       const diffTime = (new Date(campaignObj.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
       days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
+
+    let finalImage = '';
+    if (Array.isArray(campaignObj.images)) {
+      const uploadedImg = campaignObj.images.find(img => typeof img === 'string' && img.trim() !== '' && !img.includes('unsplash.com'));
+      if (uploadedImg) finalImage = uploadedImg;
+    }
+    if (!finalImage && campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string' && campaignObj.imageUrl.trim() !== '' && !campaignObj.imageUrl.includes('unsplash.com')) {
+      finalImage = campaignObj.imageUrl.trim();
+    }
+    if (!finalImage && Array.isArray(campaignObj.images)) {
+      const anyImg = campaignObj.images.find(img => typeof img === 'string' && img.trim() !== '');
+      if (anyImg) finalImage = anyImg.trim();
+    }
+    if (!finalImage) {
+      finalImage = (campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string') ? campaignObj.imageUrl.trim() : '';
+    }
+
     campaignObj.daysLeft = days;
     campaignObj.donorsCount = campaignObj.donorsCount || 0;
+    campaignObj.imageUrl = finalImage;
     campaignObj.recentDonors = recentDonors;
 
     res.json({ status: true, data: campaignObj });

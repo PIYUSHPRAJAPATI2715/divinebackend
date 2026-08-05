@@ -118,13 +118,32 @@ router.get('/', optionalAuth, async (req, res) => {
             const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
             days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
           }
+          let finalImage = '';
+          if (Array.isArray(c.images)) {
+            const uploadedImg = c.images.find(img => typeof img === 'string' && img.trim() !== '' && !img.includes('unsplash.com'));
+            if (uploadedImg) finalImage = uploadedImg;
+          }
+
+          if (!finalImage && c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '' && !c.imageUrl.includes('unsplash.com')) {
+            finalImage = c.imageUrl.trim();
+          }
+
+          if (!finalImage && Array.isArray(c.images)) {
+            const anyImg = c.images.find(img => typeof img === 'string' && img.trim() !== '');
+            if (anyImg) finalImage = anyImg.trim();
+          }
+
+          if (!finalImage) {
+            finalImage = (c.imageUrl && typeof c.imageUrl === 'string') ? c.imageUrl.trim() : '';
+          }
+
           return {
             _id: c._id,
             campaignId: c.campaignId,
             title: c.title,
             user: c.user,
             category: c.category,
-            imageUrl: (c.imageUrl && c.imageUrl.trim() !== '') ? c.imageUrl.trim() : (c.images && c.images.length > 0 ? c.images[0] : ''),
+            imageUrl: finalImage,
             goal: c.goal,
             raised: c.raised,
             donorsCount: c.donorsCount || 0,
