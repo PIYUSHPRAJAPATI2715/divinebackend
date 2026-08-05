@@ -545,10 +545,62 @@ const daysAgo = (num) => {
 };
 
 const mockCampaignCategories = [
-  { categoryId: 'CAT-TEMP', name: 'Temple', icon: 'church', description: 'Ancient Temple restoration and religious offerings support.' },
-  { categoryId: 'CAT-BOOK', name: 'Books', icon: 'book-open', description: 'Sponsor education, stationery, and schooling programs.' },
-  { categoryId: 'CAT-FOOD', name: 'Food', icon: 'utensils', description: 'Provide hot meals and dry ration packs to needy families.' },
-  { categoryId: 'CAT-COW', name: 'Gau Seva', icon: 'heart', description: 'Cow protection sanctuaries and green grass fodder support.' }
+  {
+    categoryId: 'CAT-TEMP',
+    name: 'Temple',
+    icon: '🛕',
+    imageUrl: 'https://images.unsplash.com/photo-1600100397990-a4a8ec90966a?auto=format&fit=crop&q=80&w=600',
+    description: 'Ancient Temple restoration and religious offerings support.'
+  },
+  {
+    categoryId: 'CAT-BOOK',
+    name: 'Books',
+    icon: '📚',
+    imageUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=600',
+    description: 'Sponsor education, stationery, and schooling programs.'
+  },
+  {
+    categoryId: 'CAT-FOOD',
+    name: 'Food',
+    icon: '🍱',
+    imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600',
+    description: 'Provide hot meals and dry ration packs to needy families.'
+  },
+  {
+    categoryId: 'CAT-COW',
+    name: 'Gau Seva',
+    icon: '🐄',
+    imageUrl: 'https://images.unsplash.com/photo-1570051008600-b34bac49e7f1?auto=format&fit=crop&q=80&w=600',
+    description: 'Cow protection sanctuaries and green grass fodder support.'
+  },
+  {
+    categoryId: 'CAT-MED',
+    name: 'Medical',
+    icon: '🏥',
+    imageUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=600',
+    description: 'Emergency medical treatment and surgery support for the underprivileged.'
+  },
+  {
+    categoryId: 'CAT-GIRL',
+    name: 'Girl Education',
+    icon: '👩‍🎓',
+    imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=600',
+    description: 'Empower girls through education, scholarships, and skill development.'
+  },
+  {
+    categoryId: 'CAT-FLOOD',
+    name: 'Disaster Relief',
+    icon: '🌊',
+    imageUrl: 'https://images.unsplash.com/photo-1617575521317-d2974f3b56d2?auto=format&fit=crop&q=80&w=600',
+    description: 'Flood, earthquake, and disaster relief camps and rehabilitation.'
+  },
+  {
+    categoryId: 'CAT-ENV',
+    name: 'Environment',
+    icon: '🌱',
+    imageUrl: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&q=80&w=600',
+    description: 'Tree plantation, river cleanup, and eco-restoration initiatives.'
+  }
 ];
 
 const mockUsers = [

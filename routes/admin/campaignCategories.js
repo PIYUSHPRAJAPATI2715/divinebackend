@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
 // Add a category
 router.post('/', async (req, res) => {
   try {
-    const { name, icon, description } = req.body;
+    const { name, icon, imageUrl, description } = req.body;
     if (!name) {
       return res.status(400).json({ status: false, message: 'Category name is required' });
     }
@@ -24,6 +24,7 @@ router.post('/', async (req, res) => {
       categoryId,
       name,
       icon: icon || '',
+      imageUrl: imageUrl || '',
       description: description || ''
     });
 

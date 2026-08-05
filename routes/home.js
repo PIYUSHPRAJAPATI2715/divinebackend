@@ -106,6 +106,7 @@ router.get('/', optionalAuth, async (req, res) => {
           categoryId: c.categoryId,
           name: c.name,
           icon: c.icon,
+          imageUrl: c.imageUrl || '',
           description: c.description
         })),
         campaigns: campaigns.map(c => {
