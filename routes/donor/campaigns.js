@@ -105,20 +105,27 @@ router.post('/campaigns', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
     }
     
+    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
+    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+
+    if (!finalCoverImage) {
+      return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
+    }
+
     const newCampaign = new Campaign({
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       title,
       user: req.user.name || 'Divine Donor',
       category: category || 'General Support',
       description: description || '',
-      imageUrl: imageUrl || (images && images.length > 0 ? images[0] : ''),
+      imageUrl: finalCoverImage,
       goal: `₹${Number(goal).toLocaleString()}`,
       raised: '₹0',
       oneTimeOrMonthly: oneTimeOrMonthly || 'One-Time',
       status: 'Live',
       donorsCount: 0,
       endDate: endDate || null,
-      images: images || [],
+      images: validImages.length > 0 ? validImages : [finalCoverImage],
       video: video || null,
       documents: documents || [],
       bankDetails: bankDetails || null

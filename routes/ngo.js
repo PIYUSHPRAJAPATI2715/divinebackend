@@ -119,7 +119,7 @@ router.get('/campaigns', async (req, res) => {
       const obj = c.toObject();
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
-      obj.imageUrl = obj.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&auto=format&fit=crop&q=80';
+      obj.imageUrl = obj.imageUrl || (obj.images && obj.images.length > 0 ? obj.images[0] : '');
       return obj;
     });
     res.json(enriched);
@@ -133,9 +133,23 @@ router.post('/campaigns', async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
     
+    const { imageUrl, images, title, goal } = req.body;
+    if (!title || !goal) {
+      return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
+    }
+
+    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
+    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+
+    if (!finalCoverImage) {
+      return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
+    }
+
     // Automatically enforce campaignId and user context (linked to NGO name)
     const campaignData = {
       ...req.body,
+      imageUrl: finalCoverImage,
+      images: validImages.length > 0 ? validImages : [finalCoverImage],
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       user: ngo.name,
       status: 'Live' // Default to Live so it renders on home feed immediately

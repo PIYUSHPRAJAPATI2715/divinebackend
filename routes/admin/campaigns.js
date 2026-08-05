@@ -25,11 +25,28 @@ router.get('/:id', async (req, res) => {
 // Add a new campaign
 router.post('/', async (req, res) => {
   try {
-    const newCampaign = new Campaign({ ...req.body, campaignId: `CMP-${Date.now().toString().slice(-4)}` });
+    const { title, goal, imageUrl, images } = req.body;
+    if (!title || !goal) {
+      return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
+    }
+
+    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
+    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+
+    if (!finalCoverImage) {
+      return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
+    }
+
+    const newCampaign = new Campaign({
+      ...req.body,
+      imageUrl: finalCoverImage,
+      images: validImages.length > 0 ? validImages : [finalCoverImage],
+      campaignId: `CMP-${Date.now().toString().slice(-4)}`
+    });
     const savedCampaign = await newCampaign.save();
-    res.status(201).json(savedCampaign);
+    res.status(201).json({ status: true, message: 'Campaign created successfully', data: savedCampaign, ...savedCampaign.toObject() });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 });
 

@@ -124,7 +124,7 @@ router.get('/', optionalAuth, async (req, res) => {
             title: c.title,
             user: c.user,
             category: c.category,
-            imageUrl: c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&auto=format&fit=crop&q=80',
+            imageUrl: (c.imageUrl && c.imageUrl.trim() !== '') ? c.imageUrl.trim() : (c.images && c.images.length > 0 ? c.images[0] : ''),
             goal: c.goal,
             raised: c.raised,
             donorsCount: c.donorsCount || 0,
