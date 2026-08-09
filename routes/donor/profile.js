@@ -76,22 +76,48 @@ router.get('/profile', async (req, res) => {
 // Update profile
 router.put('/profile', async (req, res) => {
   try {
-    const { name, email, gender, profilePhoto } = req.body;
-    const user = await User.findById(req.user._id);
+    const { name, organizationName, email, gender, profilePhoto, logo, image, avatar, photo, profile_photo, registeredAddress, years, about, impactStats } = req.body;
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found' });
     }
-    
-    if (name !== undefined) user.name = name;
+
+    const userName = name || organizationName;
+    if (userName !== undefined) {
+      user.name = userName;
+      user.organizationName = userName;
+    }
     if (email !== undefined) user.email = email;
     if (gender !== undefined) user.gender = gender;
-    if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
+    
+    const newPhoto = profilePhoto || logo || image || avatar || photo || profile_photo;
+    if (newPhoto) {
+      user.profilePhoto = newPhoto;
+      user.logo = newPhoto;
+    }
+    if (registeredAddress !== undefined) user.registeredAddress = registeredAddress;
+    if (years !== undefined) user.years = years;
+    if (about !== undefined) user.about = about;
+    if (impactStats !== undefined) user.impactStats = impactStats;
     
     if (user.name && user.email) {
       user.isProfileComplete = true;
     }
     
     await user.save();
+
+    // If NGO user, update linked NGO collection item
+    const NGO = require('../../models/NGO');
+    const ngo = await NGO.findOne({ $or: [{ email: user.email }, { phone: user.phone }] });
+    if (ngo) {
+      if (userName !== undefined) ngo.name = userName;
+      if (newPhoto) ngo.logo = newPhoto;
+      if (registeredAddress !== undefined) ngo.registeredAddress = registeredAddress;
+      if (years !== undefined) ngo.years = years;
+      if (about !== undefined) ngo.about = about;
+      if (impactStats !== undefined) ngo.impactStats = impactStats;
+      await ngo.save();
+    }
     
     const notification = new Notification({
       user: user._id,
@@ -100,7 +126,8 @@ router.put('/profile', async (req, res) => {
     });
     await notification.save();
     
-    res.json({ status: true, message: 'Profile updated successfully', data: user });
+    const userObj = user.toObject();
+    res.json({ status: true, message: 'Profile updated successfully', data: userObj, user: userObj, ngo: ngo ? ngo.toObject() : null });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });
   }

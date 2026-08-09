@@ -48,7 +48,7 @@ router.get('/profile', async (req, res) => {
     // Fetch approved reviews for NGO
     let reviews = await Review.find({
       $or: [
-        { targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') } },
+        { targetName: ngo.name },
         { type: 'NGO' }
       ],
       status: 'Approved'
@@ -71,7 +71,9 @@ router.get('/profile', async (req, res) => {
     const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
     const followersCount = followersList.length;
 
+    const user = req.user ? await User.findById(req.user.id) : null;
     const ngoObj = ngo.toObject();
+    const userObj = user ? user.toObject() : {};
 
     const formattedReviews = reviews.map(r => ({
       _id: r._id,
@@ -88,21 +90,31 @@ router.get('/profile', async (req, res) => {
     }));
 
     const enrichedProfile = {
+      ...userObj,
       ...ngoObj,
+      _id: ngoObj._id,
+      name: ngoObj.name || userObj.name || 'NGO',
+      organizationName: ngoObj.name || userObj.organizationName || userObj.name || '',
+      registeredAddress: ngoObj.registeredAddress || userObj.registeredAddress || '',
+      logo: ngoObj.logo || userObj.profilePhoto || null,
+      profilePhoto: userObj.profilePhoto || ngoObj.logo || null,
+      about: ngoObj.about || userObj.about || '',
+      years: ngoObj.years || userObj.years || '5 Years',
       rating: computedRating,
       reviewCount: reviews.length,
       reviews: formattedReviews,
       followersCount: followersCount,
       followers: followersList,
       followingCount: 0,
-      impact: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
-      impactStats: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
-      years: ngoObj.years || '5 Years',
-      verified: true
+      impact: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      impactStats: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      verified: true,
+      user: userObj
     };
 
     res.json({
       status: true,
+      ngo: enrichedProfile,
       data: enrichedProfile,
       ...enrichedProfile
     });
@@ -247,28 +259,84 @@ router.put('/profile', async (req, res) => {
     const ngo = await getOrCreateNGOProfile(req);
     const { 
       name, 
+      organizationName,
       registrationNumber, 
       contactPerson, 
+      authorizedPerson,
+      designation,
       about,
       email,
       gender,
+      registeredAddress,
+      logo,
+      profilePhoto,
+      years,
+      ourMission,
+      impact,
+      impactStats,
+      ngoType,
+      panNumber,
+      panImage,
+      tanNumber,
+      tanImage,
+      gstNumber,
+      gstDocument,
+      registration12A,
+      certificate12A,
+      registration80G,
+      certificate80G,
+      darpanNumber,
+      darpanCertificate,
+      csr1Number,
+      csr1Certificate,
+      fcraNumber,
+      fcraCertificate,
       bankAccountHolder,
       bankName,
       bankBranch,
       bankAccountNumber,
-      bankIFSC,
-      years,
-      ourMission
+      bankIFSC
     } = req.body;
 
-    if (name) ngo.name = name;
+    const ngoName = name || organizationName;
+    if (ngoName) {
+      ngo.name = ngoName;
+      ngo.organizationName = ngoName;
+    }
     if (registrationNumber) ngo.registrationNumber = registrationNumber;
-    if (contactPerson) ngo.contactPerson = contactPerson;
+    if (contactPerson || authorizedPerson) {
+      ngo.contactPerson = contactPerson || authorizedPerson;
+      ngo.authorizedPerson = authorizedPerson || contactPerson;
+    }
+    if (designation !== undefined) ngo.designation = designation;
     if (about !== undefined) ngo.about = about;
     if (email) ngo.email = email;
+    if (registeredAddress !== undefined) ngo.registeredAddress = registeredAddress;
+    if (logo || profilePhoto) {
+      ngo.logo = logo || profilePhoto;
+    }
     if (years !== undefined) ngo.years = years;
     if (ourMission !== undefined) ngo.ourMission = ourMission;
-    
+    if (impactStats || impact) ngo.impactStats = impactStats || impact;
+    if (ngoType !== undefined) ngo.ngoType = ngoType;
+
+    if (panNumber !== undefined) ngo.panNumber = panNumber;
+    if (panImage !== undefined) ngo.panImage = panImage;
+    if (tanNumber !== undefined) ngo.tanNumber = tanNumber;
+    if (tanImage !== undefined) ngo.tanImage = tanImage;
+    if (gstNumber !== undefined) ngo.gstNumber = gstNumber;
+    if (gstDocument !== undefined) ngo.gstDocument = gstDocument;
+    if (registration12A !== undefined) ngo.registration12A = registration12A;
+    if (certificate12A !== undefined) ngo.certificate12A = certificate12A;
+    if (registration80G !== undefined) ngo.registration80G = registration80G;
+    if (certificate80G !== undefined) ngo.certificate80G = certificate80G;
+    if (darpanNumber !== undefined) ngo.darpanNumber = darpanNumber;
+    if (darpanCertificate !== undefined) ngo.darpanCertificate = darpanCertificate;
+    if (csr1Number !== undefined) ngo.csr1Number = csr1Number;
+    if (csr1Certificate !== undefined) ngo.csr1Certificate = csr1Certificate;
+    if (fcraNumber !== undefined) ngo.fcraNumber = fcraNumber;
+    if (fcraCertificate !== undefined) ngo.fcraCertificate = fcraCertificate;
+
     if (bankAccountHolder !== undefined) ngo.bankAccountHolder = bankAccountHolder;
     if (bankName !== undefined) ngo.bankName = bankName;
     if (bankBranch !== undefined) ngo.bankBranch = bankBranch;
@@ -280,13 +348,46 @@ router.put('/profile', async (req, res) => {
     const user = await User.findById(req.user.id);
     if (user) {
       if (gender) user.gender = gender;
-      if (name) user.name = name;
+      if (ngoName) {
+        user.name = ngoName;
+        user.organizationName = ngoName;
+      }
+      if (email) user.email = email;
+      if (registeredAddress !== undefined) user.registeredAddress = registeredAddress;
+      if (logo || profilePhoto) {
+        user.profilePhoto = logo || profilePhoto;
+        user.logo = logo || profilePhoto;
+      }
+      if (authorizedPerson || contactPerson) user.authorizedPerson = authorizedPerson || contactPerson;
+      if (designation !== undefined) user.designation = designation;
+      if (about !== undefined) user.about = about;
+      if (years !== undefined) user.years = years;
+      if (impactStats || impact) user.impactStats = impactStats || impact;
       await user.save();
     }
 
-    res.json({ status: true, ngo, user });
+    const ngoObj = ngo.toObject();
+    const userObj = user ? user.toObject() : {};
+
+    const mergedData = {
+      ...userObj,
+      ...ngoObj,
+      _id: ngoObj._id,
+      name: ngoObj.name || userObj.name,
+      organizationName: ngoObj.name || userObj.organizationName || userObj.name || '',
+      registeredAddress: ngoObj.registeredAddress || userObj.registeredAddress || '',
+      logo: ngoObj.logo || userObj.profilePhoto || null,
+      profilePhoto: userObj.profilePhoto || ngoObj.logo || null,
+      rating: ngoObj.rating || 4.5,
+      impact: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      impactStats: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
+      years: ngoObj.years || '5 Years',
+      user: userObj
+    };
+
+    res.json({ status: true, message: 'Profile updated successfully', ngo: mergedData, user: userObj, data: mergedData });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 

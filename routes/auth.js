@@ -205,7 +205,10 @@ router.post('/verify-otp', async (req, res) => {
  */
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    if (!req.user || (!req.user.id && !req.user._id)) {
+      return res.status(401).json({ status: false, message: 'Authentication required' });
+    }
+    const user = await User.findById(req.user.id || req.user._id);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
 
     const userObj = user.toObject();
@@ -224,18 +227,28 @@ router.get('/me', authMiddleware, async (req, res) => {
       const NGO = require('../models/NGO');
       
       const ngoName = user.organizationName || user.name || '';
-      const ngo = await NGO.findOne({
-        $or: [
-          { email: user.email },
-          { phone: user.phone },
-          { name: { $regex: new RegExp(`^${ngoName}$`, 'i') } }
-        ]
-      });
+      let ngo = null;
+      if (ngoName && ngoName.trim() !== '') {
+        ngo = await NGO.findOne({
+          $or: [
+            { email: user.email },
+            { phone: user.phone },
+            { name: ngoName.trim() }
+          ]
+        });
+      } else {
+        ngo = await NGO.findOne({
+          $or: [
+            { email: user.email },
+            { phone: user.phone }
+          ]
+        });
+      }
 
       if (ngo) {
         let reviews = await Review.find({
           $or: [
-            { targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') } },
+            { targetName: ngo.name },
             { type: 'NGO' }
           ],
           status: 'Approved'
@@ -365,9 +378,23 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
       await ngo.save();
 
-      if (organizationName !== undefined) user.name = organizationName;
+      if (organizationName !== undefined) {
+        user.name = organizationName;
+        user.organizationName = organizationName;
+      }
+      if (req.body.name !== undefined) user.name = req.body.name;
       if (gender !== undefined) user.gender = gender;
       if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
+      if (logo !== undefined) {
+        user.logo = logo;
+        user.profilePhoto = logo;
+      }
+      if (registeredAddress !== undefined) user.registeredAddress = registeredAddress;
+      if (authorizedPerson !== undefined) user.authorizedPerson = authorizedPerson;
+      if (designation !== undefined) user.designation = designation;
+      if (about !== undefined) user.about = about;
+      if (impactStats !== undefined) user.impactStats = impactStats;
+      if (req.body.years !== undefined) user.years = req.body.years;
 
     } else if (user.role === 'teacher') {
       let teacher = await Teacher.findOne({ email: user.email });

@@ -80,6 +80,8 @@ router.get('/campaigns/:id', async (req, res) => {
 
     // Fetch recent successful transactions for this campaign
     const Transaction = require('../../models/Transaction');
+    const NGO = require('../../models/NGO');
+
     const recentTransactions = await Transaction.find({
       type: 'Donation',
       item: campaign.title,
@@ -88,14 +90,35 @@ router.get('/campaigns/:id', async (req, res) => {
     .sort({ date: -1 })
     .limit(10);
 
-    const recentDonors = recentTransactions.map(tx => ({
-      name: tx.user,
-      amount: tx.amount,
-      date: tx.date
+    const recentDonors = await Promise.all(recentTransactions.map(async tx => {
+      const donorUser = await User.findOne({
+        $or: [
+          { name: tx.user },
+          { phone: tx.mobile },
+          { phone: tx.mobile ? tx.mobile.replace('+91', '').trim() : '' }
+        ]
+      });
+      const photo = donorUser?.profilePhoto || donorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+      return {
+        name: tx.user || 'Anonymous Donor',
+        amount: tx.amount,
+        date: tx.date,
+        profilePhoto: photo,
+        userImage: photo,
+        donorImage: photo,
+        image: photo
+      };
     }));
 
     // Attach to campaign object safely to prevent frontend breaking changes
     const campaignObj = campaign.toObject();
+
+    // Look up creator dynamic profile info
+    const creatorNGO = await NGO.findOne({ name: campaign.user });
+    const creatorUser = await User.findOne({ $or: [{ name: campaign.user }, { organizationName: campaign.user }] });
+    const creatorName = creatorNGO?.name || creatorUser?.name || creatorUser?.organizationName || campaign.user || 'Divine Organizer';
+    const creatorPhoto = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+
     let days = campaignObj.daysLeft || 30;
     if (campaignObj.endDate) {
       const diffTime = new Date(campaignObj.endDate) - new Date();
@@ -121,6 +144,13 @@ router.get('/campaigns/:id', async (req, res) => {
       finalImage = (campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string') ? campaignObj.imageUrl.trim() : '';
     }
 
+    campaignObj.user = creatorName;
+    campaignObj.creatorName = creatorName;
+    campaignObj.userImage = creatorPhoto;
+    campaignObj.userLogo = creatorPhoto;
+    campaignObj.profilePhoto = creatorPhoto;
+    campaignObj.creatorImage = creatorPhoto;
+    campaignObj.creatorPhoto = creatorPhoto;
     campaignObj.daysLeft = days;
     campaignObj.donorsCount = campaignObj.donorsCount || 0;
     campaignObj.imageUrl = finalImage;
@@ -147,10 +177,17 @@ router.post('/campaigns', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
     }
 
+    const dbUser = await User.findById(req.user.id || req.user._id);
+    const creatorName = (dbUser && dbUser.name && dbUser.name.trim() !== '') 
+      ? dbUser.name 
+      : (dbUser && dbUser.organizationName && dbUser.organizationName.trim() !== '') 
+        ? dbUser.organizationName 
+        : (req.body.user && req.body.user.trim() !== '' ? req.body.user : (dbUser?.phone || 'Divine User'));
+
     const newCampaign = new Campaign({
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       title,
-      user: req.user.name || 'Divine Donor',
+      user: creatorName,
       category: category || 'General Support',
       description: description || '',
       imageUrl: finalCoverImage,

@@ -293,14 +293,31 @@ router.delete('/subcategories/:id', requireAdmin, async (req, res) => {
 // 3. Items APIs
 // ----------------------------------------------------
 
-// List items
+// List items (filtered by subcategory or category)
 router.get('/items', async (req, res) => {
   try {
-    const { subcategory } = req.query;
+    const { subcategory, subcategoryId, category, categoryId, daanType, type } = req.query;
     let filter = { status: 'Active' };
-    if (subcategory) {
-      filter.subcategoryId = subcategory;
+
+    const targetSubcat = subcategory || subcategoryId;
+    const targetCat = category || categoryId || daanType || type;
+
+    if (targetSubcat) {
+      const sub = await DanSubcategory.findOne({ $or: [{ subcategoryId: targetSubcat }, { _id: targetSubcat.match(/^[0-9a-fA-F]{24}$/) ? targetSubcat : null }, { name: { $regex: new RegExp(`^${targetSubcat}$`, 'i') } }] });
+      if (sub) {
+        filter.subcategoryId = sub._id;
+      } else {
+        filter.subcategoryId = targetSubcat;
+      }
+    } else if (targetCat) {
+      const cat = await DanCategory.findOne({ $or: [{ categoryId: targetCat }, { _id: targetCat.match(/^[0-9a-fA-F]{24}$/) ? targetCat : null }, { name: { $regex: new RegExp(`^${targetCat}$`, 'i') } }] });
+      if (cat) {
+        const subcats = await DanSubcategory.find({ categoryId: cat._id });
+        const subcatIds = subcats.map(s => s._id);
+        filter.subcategoryId = { $in: subcatIds };
+      }
     }
+
     const items = await DanItem.find(filter)
       .populate({
         path: 'subcategoryId',
@@ -314,8 +331,8 @@ router.get('/items', async (req, res) => {
   }
 });
 
-// Create item (Admin only)
-router.post('/items', requireAdmin, async (req, res) => {
+// Create item (Admin or NGO)
+router.post('/items', requireNGOOrAdmin, async (req, res) => {
   try {
     const { subcategoryId, name, description, price, unit, imageUrl } = req.body;
     if (!subcategoryId || !name || price === undefined) {

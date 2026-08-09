@@ -4,14 +4,20 @@ const User = require('../../models/User');
 const Transaction = require('../../models/Transaction');
 const Coupon = require('../../models/Coupon');
 
-// Helper to enrich transactions with Credit/Debit and In/Out flow labels
+// Helper to enrich transactions with Credit/Debit and In/Out flow labels + credit_amount and debit_amount keys
 const enrichTransactions = (transactions) => {
   return transactions.map(tx => {
-    const isCredit = tx.item && tx.item.toLowerCase().includes('top-up');
+    const isCredit = tx.item && (tx.item.toLowerCase().includes('top-up') || tx.item.toLowerCase().includes('recharge') || tx.item.toLowerCase().includes('credit'));
+    const amt = Number(tx.amount) || 0;
+    const txObj = tx.toObject ? tx.toObject() : tx;
     return {
-      ...tx.toObject(),
+      ...txObj,
       transactionType: isCredit ? 'Credit' : 'Debit',
-      flow: isCredit ? 'In' : 'Out'
+      flow: isCredit ? 'In' : 'Out',
+      credit_amount: isCredit ? amt : 0,
+      debit_amount: isCredit ? 0 : amt,
+      creditAmount: isCredit ? amt : 0,
+      debitAmount: isCredit ? 0 : amt
     };
   });
 };
@@ -19,7 +25,7 @@ const enrichTransactions = (transactions) => {
 // Get wallet balance, ledger history, and special offers
 router.get('/wallet', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
@@ -28,9 +34,14 @@ router.get('/wallet', async (req, res) => {
       $or: [
         { user: user.name },
         { user: user.phone },
-        { user: `+91 ${user.phone}` }
+        { mobile: user.phone },
+        { mobile: `+91 ${user.phone}` }
       ]
     }).sort({ createdAt: -1 });
+
+    const enrichedTx = enrichTransactions(transactions);
+    const totalCredit = enrichedTx.reduce((sum, tx) => sum + tx.credit_amount, 0);
+    const totalDebit = enrichedTx.reduce((sum, tx) => sum + tx.debit_amount, 0);
 
     // Fetch active discount coupons/special offers
     const activeCoupons = await Coupon.find({ isActive: true });
@@ -64,8 +75,12 @@ router.get('/wallet', async (req, res) => {
       status: true,
       data: {
         walletBalance: user.walletBalance || 0,
+        credit_amount: totalCredit,
+        debit_amount: totalDebit,
+        totalCreditAmount: totalCredit,
+        totalDebitAmount: totalDebit,
         specialOffers,
-        transactions: enrichTransactions(transactions)
+        transactions: enrichedTx
       }
     });
   } catch (err) {

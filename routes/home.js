@@ -83,19 +83,46 @@ router.get('/', optionalAuth, async (req, res) => {
       createdAt: tx.createdAt
     }));
 
-    // Calculate total donate amount on platform from successful transactions
-    const totalDonateResult = await Transaction.aggregate([
-      { $match: { type: 'Donation', status: 'Success' } },
+    // Calculate total donate amount for the currently logged in user
+    let userTotalDonateAmount = 0;
+    if (req.user && req.user.id) {
+      const dbUser = await User.findById(req.user.id);
+      if (dbUser) {
+        const userTxResults = await Transaction.aggregate([
+          {
+            $match: {
+              type: 'Donation',
+              status: 'Success',
+              item: { $ne: 'Wallet Top-up' },
+              $or: [
+                { mobile: dbUser.phone },
+                { mobile: `+91 ${dbUser.phone}` },
+                { user: dbUser.name }
+              ]
+            }
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        if (userTxResults.length > 0 && typeof userTxResults[0].total === 'number' && !isNaN(userTxResults[0].total)) {
+          userTotalDonateAmount = userTxResults[0].total;
+        }
+      }
+    }
+
+    // Platform-wide donation total
+    const platformDonateResult = await Transaction.aggregate([
+      { $match: { type: 'Donation', status: 'Success', item: { $ne: 'Wallet Top-up' } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
-    const totalDonateAmount = totalDonateResult.length > 0 ? totalDonateResult[0].total : 0;
+    const platformTotalDonateAmount = (platformDonateResult.length > 0 && typeof platformDonateResult[0].total === 'number' && !isNaN(platformDonateResult[0].total)) ? platformDonateResult[0].total : 0;
 
     res.json({
       status: true,
       data: {
         user: userProfile,
         isRead, // root-level indicator for notification bell
-        totalDonateAmount,
+        totalDonateAmount: userTotalDonateAmount,
+        platformTotalDonateAmount,
         banners: banners.map(b => ({
           bannerId: b.bannerId,
           title: b.title,

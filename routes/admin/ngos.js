@@ -8,7 +8,7 @@ const Review = require('../../models/Review');
 const enrichNGOData = async (ngo) => {
   let reviews = await Review.find({
     $or: [
-      { targetName: { $regex: new RegExp(`^${ngo.name}$`, 'i') } },
+      { targetName: ngo.name },
       { type: 'NGO' }
     ],
     status: 'Approved'
