@@ -855,13 +855,28 @@ const catNgoId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c80');
 const catBooksId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c81');
 const catTempleId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c82');
 
-const subSaintsId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c83');
-const subDryRationId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c84');
-const subNeedyChildrenId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c85');
 
-const itemRation30Id = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c86');
-const itemFeedSaintsId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c87');
-const itemRation60Id = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c88');
+const subSaintsId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac1');
+const subDryRationId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac2');
+const subNeedyChildrenId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac3');
+const subBlanketId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac4');
+const subKidClothesId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac5');
+const subFodderId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac6');
+const subCowMedId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac7');
+const subReliefId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac8');
+const subStationeryId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fac9');
+const subTempleSevaId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6faca');
+
+const itemRation30Id = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad1');
+const itemFeedSaintsId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad2');
+const itemRation60Id = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad3');
+const itemBlanketId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad4');
+const itemKidClothesId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad5');
+const itemFodderId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad6');
+const itemCowMedId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad7');
+const itemReliefId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad8');
+const itemStationeryId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fad9');
+const itemTempleSevaId = new mongoose.Types.ObjectId('6a79e3b0231053b51fb6fada');
 
 const mockDanCategories = [
   { _id: catFoodId, categoryId: 'CAT-FOOD', name: 'Food', description: 'Food for the needy', imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600', status: 'Active', creatorType: 'Admin' },
@@ -873,15 +888,51 @@ const mockDanCategories = [
 ];
 
 const mockDanSubcategories = [
+  // Food Category
   { _id: subSaintsId, subcategoryId: 'SUB-SAINTS', categoryId: catFoodId, name: 'Saints & Brahmins Seva', description: 'Sponsor those who dedicate their lives to dharma and spiritual guidance.', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
   { _id: subDryRationId, subcategoryId: 'SUB-DRY-RATION', categoryId: catFoodId, name: 'Dry Ration', description: 'Ration kits containing rice, dal, wheat flour, oil, and spices.', status: 'Active', creatorType: 'Admin' },
-  { _id: subNeedyChildrenId, subcategoryId: 'SUB-CHILDREN', categoryId: catFoodId, name: 'Support Needy Children', description: 'Support education and meals for street children.', status: 'Active', creatorType: 'NGO', ngoId: prathamId }
+  { _id: subNeedyChildrenId, subcategoryId: 'SUB-CHILDREN', categoryId: catFoodId, name: 'Support Needy Children', description: 'Support education and meals for street children.', status: 'Active', creatorType: 'NGO', ngoId: prathamId },
+  
+  // Clothes Category
+  { _id: subBlanketId, subcategoryId: 'SUB-BLANKETS', categoryId: catClothesId, name: 'Winter Blankets & Sweaters', description: 'Provide warm winter blankets and woolens to the homeless.', status: 'Active', creatorType: 'Admin' },
+  { _id: subKidClothesId, subcategoryId: 'SUB-KID-CLOTHES', categoryId: catClothesId, name: 'Children Clothing Sets', description: 'Fresh cotton clothes and uniforms for underprivileged children.', status: 'Active', creatorType: 'NGO', ngoId: prathamId },
+  
+  // Gau Dan Category
+  { _id: subFodderId, subcategoryId: 'SUB-FODDER', categoryId: catGauId, name: 'Green Grass & Fodder', description: 'Nourishing green fodder for gaushala cows.', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  { _id: subCowMedId, subcategoryId: 'SUB-COW-MED', categoryId: catGauId, name: 'Cow Medical & Gaushala Care', description: 'Veterinary care, medicines, and shelter for injured cows.', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  
+  // NGO Welfare Category
+  { _id: subReliefId, subcategoryId: 'SUB-RELIEF', categoryId: catNgoId, name: 'Emergency Relief & Welfare', description: 'Emergency funds for disaster recovery and grassroots welfare.', status: 'Active', creatorType: 'Admin' },
+  
+  // Books Category
+  { _id: subStationeryId, subcategoryId: 'SUB-STATIONERY', categoryId: catBooksId, name: 'School Notebooks & Stationery', description: 'Notebooks, pens, school bags, and educational kits for students.', status: 'Active', creatorType: 'NGO', ngoId: prathamId },
+  
+  // Temple Category
+  { _id: subTempleSevaId, subcategoryId: 'SUB-TEMPLE-SEVA', categoryId: catTempleId, name: 'Temple Annakshetra & Puja Seva', description: 'Sponsor daily temple prasadam meals and puja oil offerings.', status: 'Active', creatorType: 'Admin' }
 ];
 
 const mockDanItems = [
-  { _id: itemRation30Id, itemId: 'ITM-RATION-30', subcategoryId: subSaintsId, name: 'Ration Kit For Needy Family - 30days', description: 'Provide basic dry ration supply for a family of 4 to survive 30 days.', price: 300, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  // Food Items
+  { _id: itemRation30Id, itemId: 'ITM-RATION-30', subcategoryId: subDryRationId, name: 'Ration Kit For Needy Family - 30days', description: 'Provide basic dry ration supply for a family of 4 to survive 30 days.', price: 300, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
   { _id: itemFeedSaintsId, itemId: 'ITM-FEED-SAINTS', subcategoryId: subSaintsId, name: 'Feed Brahmins And Saints', description: 'Sponsor hot, nutritious cooked meals for Vedic scholars and saints.', price: 150, unit: '1 Saint Meal', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
-  { _id: itemRation60Id, itemId: 'ITM-RATION-60', subcategoryId: subSaintsId, name: 'Ration Kit For Needy Family - 60days', description: 'Provide basic dry ration supply for a family of 4 to survive 60 days.', price: 600, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId }
+  { _id: itemRation60Id, itemId: 'ITM-RATION-60', subcategoryId: subDryRationId, name: 'Ration Kit For Needy Family - 60days', description: 'Provide basic dry ration supply for a family of 4 to survive 60 days.', price: 600, unit: '1 Ration Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  
+  // Clothes Items
+  { _id: itemBlanketId, itemId: 'ITM-BLANKET', subcategoryId: subBlanketId, name: 'Warm Winter Blanket', description: 'Distribute heavy warm wool blanket to outdoor pavement dwellers during peak winter.', price: 250, unit: '1 Blanket', status: 'Active', creatorType: 'Admin' },
+  { _id: itemKidClothesId, itemId: 'ITM-KID-CLOTHES', subcategoryId: subKidClothesId, name: 'Child Cotton Clothing Set', description: 'Fresh pair of shirts, trousers/dresses for orphan children.', price: 350, unit: '1 Dress Set', status: 'Active', creatorType: 'NGO', ngoId: prathamId },
+  
+  // Gau Dan Items
+  { _id: itemFodderId, itemId: 'ITM-FODDER', subcategoryId: subFodderId, name: '1 Quintal Green Grass Fodder', description: 'Feed 10 cows fresh green grass fodder for a full day.', price: 500, unit: '1 Quintal Fodder', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  { _id: itemCowMedId, itemId: 'ITM-COW-MED', subcategoryId: subCowMedId, name: 'Cow Medical Care & Vaccine Kit', description: 'Provide medical treatment and health checkup for non-milking cows.', price: 350, unit: '1 Treatment Kit', status: 'Active', creatorType: 'NGO', ngoId: krishnayanId },
+  
+  // NGO Welfare Items
+  { _id: itemReliefId, itemId: 'ITM-RELIEF', subcategoryId: subReliefId, name: 'Emergency Disaster Relief Pack', description: 'Provide emergency water, dry food, and first aid kits to disaster affected families.', price: 750, unit: '1 Relief Pack', status: 'Active', creatorType: 'Admin' },
+  
+  // Books Items
+  { _id: itemStationeryId, itemId: 'ITM-STATIONERY', subcategoryId: subStationeryId, name: 'Complete Student Stationery Kit', description: 'Includes 6 notebooks, geometry box, pens, pencils, and school bag.', price: 200, unit: '1 Kit', status: 'Active', creatorType: 'NGO', ngoId: prathamId },
+  
+  // Temple Items
+  { _id: itemTempleSevaId, itemId: 'ITM-TEMPLE-SEVA', subcategoryId: subTempleSevaId, name: 'Annakshetra Prasadam Sponsoring', description: 'Sponsor fresh consecrated temple prasadam meals for 25 devotees.', price: 500, unit: '25 Meal Pack', status: 'Active', creatorType: 'Admin' }
 ];
 
 const mockDanDonations = [

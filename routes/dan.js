@@ -193,17 +193,39 @@ router.delete('/categories/:id', requireAdmin, async (req, res) => {
 // 2. Subcategories APIs
 // ----------------------------------------------------
 
-// List subcategories
+// List subcategories (filtered by categoryId, category, daanType, etc.)
 router.get('/subcategories', async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, categoryId, category_id, id, daanType, type, parentCategoryId, parentId } = req.query;
+    const catQuery = category || categoryId || category_id || id || daanType || type || parentCategoryId || parentId;
+
     let filter = { status: 'Active' };
-    if (category) {
-      filter.categoryId = category;
+
+    if (catQuery && catQuery.trim() !== '') {
+      const trimmedCat = catQuery.trim();
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(trimmedCat);
+
+      const foundCategory = await DanCategory.findOne({
+        $or: [
+          { categoryId: trimmedCat },
+          { name: { $regex: new RegExp(`^${trimmedCat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+          ...(isObjectId ? [{ _id: trimmedCat }] : [])
+        ]
+      });
+
+      if (foundCategory) {
+        filter.categoryId = foundCategory._id;
+      } else if (isObjectId) {
+        filter.categoryId = trimmedCat;
+      } else {
+        return res.json({ status: true, data: [] });
+      }
     }
+
     const subcategories = await DanSubcategory.find(filter)
-      .populate('categoryId', 'name')
+      .populate('categoryId', 'name categoryId')
       .populate('ngoId', 'name logo');
+
     res.json({ status: true, data: subcategories });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -296,25 +318,53 @@ router.delete('/subcategories/:id', requireAdmin, async (req, res) => {
 // List items (filtered by subcategory or category)
 router.get('/items', async (req, res) => {
   try {
-    const { subcategory, subcategoryId, category, categoryId, daanType, type } = req.query;
+    const { 
+      subcategory, subcategoryId, subcategory_id, subCategory, subCategoryId,
+      category, categoryId, category_id, daanType, type, id 
+    } = req.query;
+
     let filter = { status: 'Active' };
 
-    const targetSubcat = subcategory || subcategoryId;
-    const targetCat = category || categoryId || daanType || type;
+    const targetSubcat = subcategory || subcategoryId || subcategory_id || subCategory || subCategoryId;
+    const targetCat = category || categoryId || category_id || daanType || type || (targetSubcat ? null : id);
 
-    if (targetSubcat) {
-      const sub = await DanSubcategory.findOne({ $or: [{ subcategoryId: targetSubcat }, { _id: targetSubcat.match(/^[0-9a-fA-F]{24}$/) ? targetSubcat : null }, { name: { $regex: new RegExp(`^${targetSubcat}$`, 'i') } }] });
-      if (sub) {
-        filter.subcategoryId = sub._id;
+    if (targetSubcat && targetSubcat.trim() !== '') {
+      const trimmedSub = targetSubcat.trim();
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(trimmedSub);
+
+      const foundSubcat = await DanSubcategory.findOne({
+        $or: [
+          { subcategoryId: trimmedSub },
+          { name: { $regex: new RegExp(`^${trimmedSub.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+          ...(isObjectId ? [{ _id: trimmedSub }] : [])
+        ]
+      });
+
+      if (foundSubcat) {
+        filter.subcategoryId = foundSubcat._id;
+      } else if (isObjectId) {
+        filter.subcategoryId = trimmedSub;
       } else {
-        filter.subcategoryId = targetSubcat;
+        return res.json({ status: true, data: [] });
       }
-    } else if (targetCat) {
-      const cat = await DanCategory.findOne({ $or: [{ categoryId: targetCat }, { _id: targetCat.match(/^[0-9a-fA-F]{24}$/) ? targetCat : null }, { name: { $regex: new RegExp(`^${targetCat}$`, 'i') } }] });
-      if (cat) {
-        const subcats = await DanSubcategory.find({ categoryId: cat._id });
-        const subcatIds = subcats.map(s => s._id);
-        filter.subcategoryId = { $in: subcatIds };
+    } else if (targetCat && targetCat.trim() !== '') {
+      const trimmedCat = targetCat.trim();
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(trimmedCat);
+
+      const foundCat = await DanCategory.findOne({
+        $or: [
+          { categoryId: trimmedCat },
+          { name: { $regex: new RegExp(`^${trimmedCat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+          ...(isObjectId ? [{ _id: trimmedCat }] : [])
+        ]
+      });
+
+      if (foundCat) {
+        const subcats = await DanSubcategory.find({ categoryId: foundCat._id });
+        const subcatObjectIds = subcats.map(s => s._id);
+        filter.subcategoryId = { $in: subcatObjectIds };
+      } else {
+        return res.json({ status: true, data: [] });
       }
     }
 
