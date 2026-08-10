@@ -136,7 +136,7 @@ router.get('/', optionalAuth, async (req, res) => {
           imageUrl: c.imageUrl || '',
           description: c.description
         })),
-        campaigns: campaigns.map(c => {
+        campaigns: await Promise.all(campaigns.map(async c => {
           let days = c.daysLeft || 30;
           if (c.endDate) {
             const diffTime = new Date(c.endDate) - new Date();
@@ -164,11 +164,58 @@ router.get('/', optionalAuth, async (req, res) => {
             finalImage = (c.imageUrl && typeof c.imageUrl === 'string') ? c.imageUrl.trim() : '';
           }
 
+          let creatorNGO = null;
+          let creatorUser = null;
+          if (c.userId) creatorUser = await User.findById(c.userId);
+          if (c.ngoId) creatorNGO = await NGO.findById(c.ngoId);
+          if (!creatorUser && !creatorNGO && c.user && c.user !== 'Divine Donor' && c.user !== 'Divine Owner') {
+            const cleanUser = c.user.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            creatorNGO = await NGO.findOne({
+              $or: [
+                { name: { $regex: new RegExp(`^${cleanUser}$`, 'i') } },
+                { organizationName: { $regex: new RegExp(`^${cleanUser}$`, 'i') } }
+              ]
+            });
+            creatorUser = await User.findOne({
+              $or: [
+                { name: { $regex: new RegExp(`^${cleanUser}$`, 'i') } },
+                { organizationName: { $regex: new RegExp(`^${cleanUser}$`, 'i') } }
+              ]
+            });
+          }
+          if (!creatorUser && !creatorNGO) {
+            creatorNGO = await NGO.findOne({ status: 'Verified' });
+          }
+
+          const creatorName = creatorNGO?.name || creatorUser?.name || c.user || 'Divine Organizer';
+          const creatorPhoto = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+
+          const profileObj = {
+            _id: creatorNGO?._id || creatorUser?._id || c._id,
+            name: creatorName,
+            organizationName: creatorName,
+            phone: creatorNGO?.phone || creatorUser?.phone || '',
+            email: creatorNGO?.email || creatorUser?.email || '',
+            role: creatorNGO ? 'ngo' : (creatorUser?.role || 'ngo'),
+            profilePhoto: creatorPhoto,
+            logo: creatorPhoto,
+            registeredAddress: creatorNGO?.registeredAddress || creatorUser?.registeredAddress || ''
+          };
+
           return {
             _id: c._id,
             campaignId: c.campaignId,
             title: c.title,
-            user: c.user,
+            user: creatorName,
+            userName: creatorName,
+            creatorName: creatorName,
+            userImage: creatorPhoto,
+            userLogo: creatorPhoto,
+            profilePhoto: creatorPhoto,
+            creatorImage: creatorPhoto,
+            creatorPhoto: creatorPhoto,
+            userProfile: profileObj,
+            creatorProfile: profileObj,
             category: c.category,
             imageUrl: finalImage,
             goal: c.goal,
@@ -177,7 +224,7 @@ router.get('/', optionalAuth, async (req, res) => {
             daysLeft: days,
             description: c.description
           };
-        }),
+        })),
         ngos: topNGOs.map(ngo => ({
           id: ngo._id,
           name: ngo.name,

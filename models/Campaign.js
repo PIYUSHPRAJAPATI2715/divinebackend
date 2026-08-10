@@ -4,6 +4,9 @@ const campaignSchema = new mongoose.Schema({
   campaignId: { type: String, required: true, unique: true },
   title: { type: String, required: true },
   user: { type: String, required: true }, // Creator name / NGO name
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  ngoId: { type: mongoose.Schema.Types.ObjectId, ref: 'NGO', default: null },
+  userPhone: { type: String, default: '' },
   category: { type: String, default: 'General' },
   imageUrl: { type: String, default: '' },
   donorsCount: { type: Number, default: 0 },

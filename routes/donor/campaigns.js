@@ -3,6 +3,91 @@ const router = express.Router();
 const Campaign = require('../../models/Campaign');
 const Notification = require('../../models/Notification');
 const User = require('../../models/User');
+const NGO = require('../../models/NGO');
+const Transaction = require('../../models/Transaction');
+
+// Dynamic Creator Resolver Helper
+const resolveCampaignCreator = async (campaign) => {
+  let creatorUser = null;
+  let creatorNGO = null;
+
+  // 1. Try finding by userId / ngoId / userPhone if stored on campaign
+  if (campaign.userId) {
+    creatorUser = await User.findById(campaign.userId);
+  }
+  if (campaign.ngoId) {
+    creatorNGO = await NGO.findById(campaign.ngoId);
+  }
+  if (!creatorUser && !creatorNGO && campaign.userPhone) {
+    creatorUser = await User.findOne({ phone: campaign.userPhone });
+    creatorNGO = await NGO.findOne({ phone: campaign.userPhone });
+  }
+
+  // 2. Try finding by campaign.user (if not generic fallback)
+  if (!creatorUser && !creatorNGO && campaign.user && campaign.user !== 'Divine Donor' && campaign.user !== 'Divine Owner') {
+    const cleanUser = campaign.user.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    creatorNGO = await NGO.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${cleanUser}$`, 'i') } },
+        { organizationName: { $regex: new RegExp(`^${cleanUser}$`, 'i') } }
+      ]
+    });
+    creatorUser = await User.findOne({
+      $or: [
+        { name: { $regex: new RegExp(`^${cleanUser}$`, 'i') } },
+        { organizationName: { $regex: new RegExp(`^${cleanUser}$`, 'i') } }
+      ]
+    });
+  }
+
+  // 3. Try finding by bankDetails holderName if available
+  if (!creatorUser && !creatorNGO && campaign.bankDetails && campaign.bankDetails.holderName && campaign.bankDetails.holderName.trim() !== '') {
+    const hName = campaign.bankDetails.holderName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    creatorNGO = await NGO.findOne({
+      $or: [
+        { name: { $regex: new RegExp(hName, 'i') } },
+        { bankAccountHolder: { $regex: new RegExp(hName, 'i') } }
+      ]
+    });
+    creatorUser = await User.findOne({
+      $or: [
+        { name: { $regex: new RegExp(hName, 'i') } }
+      ]
+    });
+  }
+
+  // 4. Fallback if campaign was created under a legacy placeholder name
+  if (!creatorUser && !creatorNGO) {
+    creatorNGO = await NGO.findOne({ status: 'Verified' });
+    if (!creatorNGO) creatorUser = await User.findOne({ role: 'ngo' }) || await User.findOne();
+  }
+
+  const name = creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer';
+  const photo = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+  const phone = creatorNGO?.phone || creatorUser?.phone || '';
+  const email = creatorNGO?.email || creatorUser?.email || '';
+  const role = creatorNGO ? 'ngo' : (creatorUser?.role || 'ngo');
+  const id = creatorNGO?._id || creatorUser?._id || campaign._id;
+  const address = creatorNGO?.registeredAddress || creatorUser?.registeredAddress || '';
+
+  const profileObj = {
+    _id: id,
+    name: name,
+    organizationName: name,
+    phone: phone,
+    email: email,
+    role: role,
+    profilePhoto: photo,
+    logo: photo,
+    registeredAddress: address
+  };
+
+  return {
+    name,
+    photo,
+    profileObj
+  };
+};
 
 // Get active campaigns
 router.get('/campaigns', async (req, res) => {
@@ -33,7 +118,7 @@ router.get('/campaigns', async (req, res) => {
     }
 
     const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
-    const enriched = campaigns.map(c => {
+    const enriched = await Promise.all(campaigns.map(async c => {
       let days = c.daysLeft || 30;
       if (c.endDate) {
         const diffTime = new Date(c.endDate) - new Date();
@@ -58,12 +143,25 @@ router.get('/campaigns', async (req, res) => {
         finalImage = (c.imageUrl && typeof c.imageUrl === 'string') ? c.imageUrl.trim() : '';
       }
 
+      const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
+
       const obj = c.toObject();
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = finalImage;
+      obj.user = creatorName;
+      obj.userName = creatorName;
+      obj.creatorName = creatorName;
+      obj.userImage = creatorPhoto;
+      obj.userLogo = creatorPhoto;
+      obj.profilePhoto = creatorPhoto;
+      obj.creatorImage = creatorPhoto;
+      obj.creatorPhoto = creatorPhoto;
+      obj.userProfile = creatorProfile;
+      obj.creatorProfile = creatorProfile;
       return obj;
-    });
+    }));
+
     res.json({ status: true, data: enriched });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -79,9 +177,6 @@ router.get('/campaigns/:id', async (req, res) => {
     }
 
     // Fetch recent successful transactions for this campaign
-    const Transaction = require('../../models/Transaction');
-    const NGO = require('../../models/NGO');
-
     const recentTransactions = await Transaction.find({
       type: 'Donation',
       item: campaign.title,
@@ -114,10 +209,7 @@ router.get('/campaigns/:id', async (req, res) => {
     const campaignObj = campaign.toObject();
 
     // Look up creator dynamic profile info
-    const creatorNGO = await NGO.findOne({ name: campaign.user });
-    const creatorUser = await User.findOne({ $or: [{ name: campaign.user }, { organizationName: campaign.user }] });
-    const creatorName = creatorNGO?.name || creatorUser?.name || creatorUser?.organizationName || campaign.user || 'Divine Organizer';
-    const creatorPhoto = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+    const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campaign);
 
     let days = campaignObj.daysLeft || 30;
     if (campaignObj.endDate) {
@@ -145,12 +237,15 @@ router.get('/campaigns/:id', async (req, res) => {
     }
 
     campaignObj.user = creatorName;
+    campaignObj.userName = creatorName;
     campaignObj.creatorName = creatorName;
     campaignObj.userImage = creatorPhoto;
     campaignObj.userLogo = creatorPhoto;
     campaignObj.profilePhoto = creatorPhoto;
     campaignObj.creatorImage = creatorPhoto;
     campaignObj.creatorPhoto = creatorPhoto;
+    campaignObj.userProfile = creatorProfile;
+    campaignObj.creatorProfile = creatorProfile;
     campaignObj.daysLeft = days;
     campaignObj.donorsCount = campaignObj.donorsCount || 0;
     campaignObj.imageUrl = finalImage;
@@ -184,10 +279,15 @@ router.post('/campaigns', async (req, res) => {
         ? dbUser.organizationName 
         : (req.body.user && req.body.user.trim() !== '' ? req.body.user : (dbUser?.phone || 'Divine User'));
 
+    const ngo = await NGO.findOne({ $or: [{ phone: dbUser?.phone }, { email: dbUser?.email }] });
+
     const newCampaign = new Campaign({
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       title,
       user: creatorName,
+      userId: dbUser ? dbUser._id : null,
+      ngoId: ngo ? ngo._id : null,
+      userPhone: dbUser ? dbUser.phone : '',
       category: category || 'General Support',
       description: description || '',
       imageUrl: finalCoverImage,
