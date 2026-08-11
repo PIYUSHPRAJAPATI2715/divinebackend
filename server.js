@@ -14,6 +14,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Public Postman collection file endpoint for 1-click URL import
+app.get('/postman_collection.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'postman_collection.json'));
+});
+app.get('/api/postman_collection.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'postman_collection.json'));
+});
+
 // Public File Upload endpoint (decodes base64, saves as physical file, returns public URL)
 app.post('/api/upload', (req, res) => {
   try {
