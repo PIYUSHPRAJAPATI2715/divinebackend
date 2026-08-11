@@ -5,32 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 module.exports = async (req, res, next) => {
   console.log(`[AUTH] Path: ${req.originalUrl || req.path} | Method: ${req.method} | Authorization: ${req.header('Authorization') ? 'Present' : 'Missing'} | Origin: ${req.header('Origin') || req.header('Referer') || 'None'}`);
 
-  // 1. Allow public read access (GET requests) for client-side browsing, but protect admin, ngo, and teacher portal endpoints
-  const isPortalRoute = 
-    (req.originalUrl && (
-      req.originalUrl.startsWith('/api/ngo') || 
-      req.originalUrl.startsWith('/api/teacher') || 
-      req.originalUrl.startsWith('/api/donor') || 
-      req.originalUrl.startsWith('/api/donors') || 
-      req.originalUrl.startsWith('/api/admin')
-    )) || (req.path && (
-      req.path.startsWith('/api/ngo') || 
-      req.path.startsWith('/api/teacher') || 
-      req.path.startsWith('/api/donor') || 
-      req.path.startsWith('/api/donors') || 
-      req.path.startsWith('/api/admin') ||
-      req.path.startsWith('/ngo') ||
-      req.path.startsWith('/teacher') ||
-      req.path.startsWith('/donor') ||
-      req.path.startsWith('/donors') ||
-      req.path.startsWith('/admin')
-    ));
-
-  if (req.method === 'GET' && !isPortalRoute) {
-    return next();
-  }
-
-  // 2. If Authorization header is present, we must ALWAYS verify it!
+  // 1. If Authorization header is present, ALWAYS verify token first to set req.user!
   const authHeader = req.header('Authorization');
   if (authHeader) {
     if (!authHeader.startsWith('Bearer ')) {
@@ -39,11 +14,8 @@ module.exports = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      
-      // Normalize both id and _id so routes checking either key work seamlessly
       const userId = decoded.id || decoded._id;
       
-      // Enforce DB lookup to prevent null reference errors for deleted/re-seeded users
       const User = require('../models/User');
       const Admin = require('../models/Admin');
       let userExists = null;
@@ -67,8 +39,38 @@ module.exports = async (req, res, next) => {
     }
   }
 
-  // 3. Allow dashboard web requests (localhost, Render, or Vercel) to maintain panel compatibility,
-  // but ONLY for endpoints that do not strictly require user context (i.e. not register or profile-setup).
+  // 2. Allow public read access (GET requests) for client-side browsing if no portal token required
+  const isPortalRoute = 
+    (req.originalUrl && (
+      req.originalUrl.startsWith('/api/ngo') || 
+      req.originalUrl.startsWith('/api/teacher') || 
+      req.originalUrl.startsWith('/api/donor') || 
+      req.originalUrl.startsWith('/api/donors') || 
+      req.originalUrl.startsWith('/api/admin') ||
+      req.originalUrl.startsWith('/api/followers') ||
+      req.originalUrl.startsWith('/api/following') ||
+      req.originalUrl.startsWith('/api/social')
+    )) || (req.path && (
+      req.path.startsWith('/api/ngo') || 
+      req.path.startsWith('/api/teacher') || 
+      req.path.startsWith('/api/donor') || 
+      req.path.startsWith('/api/donors') || 
+      req.path.startsWith('/api/admin') ||
+      req.path.startsWith('/api/followers') ||
+      req.path.startsWith('/api/following') ||
+      req.path.startsWith('/api/social') ||
+      req.path.startsWith('/ngo') ||
+      req.path.startsWith('/teacher') ||
+      req.path.startsWith('/donor') ||
+      req.path.startsWith('/donors') ||
+      req.path.startsWith('/admin')
+    ));
+
+  if (req.method === 'GET' && !isPortalRoute) {
+    return next();
+  }
+
+  // 3. Allow dashboard web requests (localhost, Render, or Vercel)
   const origin = req.headers.origin || req.headers.referer || '';
   const isDashboardOrigin = 
     origin.includes('localhost') || 

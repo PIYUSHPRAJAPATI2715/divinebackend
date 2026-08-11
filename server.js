@@ -154,6 +154,13 @@ app.use('/api/banners', authMiddleware, bannerRoutes);
 app.use('/api/news', authMiddleware, newsRoutes);
 app.use('/api/seminars', authMiddleware, seminarRoutes);
 app.use('/api/referrals', authMiddleware, referralRoutes);
+const socialRoutes = require('./routes/donor/social');
+app.use('/api/social', authMiddleware, socialRoutes);
+app.get('/api/followers', authMiddleware, socialRoutes.handleFollowers);
+app.get('/api/following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/donor/followers', authMiddleware, socialRoutes.handleFollowers);
+app.get('/api/donor/following', authMiddleware, socialRoutes.handleFollowing);
+app.use('/api/follow', authMiddleware, socialRoutes);
 
 // MongoDB Connection and Server Start
 connectDB()
