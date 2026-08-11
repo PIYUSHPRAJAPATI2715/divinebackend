@@ -66,7 +66,12 @@ module.exports = async (req, res, next) => {
       req.path.startsWith('/admin')
     ));
 
-  if (req.method === 'GET' && !isPortalRoute) {
+  const isCategoryPublic = (req.originalUrl && (
+    req.originalUrl.includes('campaign-categories') ||
+    req.originalUrl.includes('fundraiser-categories')
+  ));
+
+  if (req.method === 'GET' && (!isPortalRoute || isCategoryPublic)) {
     return next();
   }
 

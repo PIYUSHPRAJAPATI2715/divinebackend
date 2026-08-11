@@ -43,8 +43,24 @@ const enrichNGOData = async (ngo) => {
 
   const ngoObj = ngo.toObject ? ngo.toObject() : ngo;
 
+  let userPhone = ngoObj.phone || '';
+  if (!userPhone) {
+    const userDoc = await User.findOne({
+      $or: [
+        { email: ngoObj.email },
+        { name: ngoObj.name }
+      ]
+    }).select('phone');
+    if (userDoc && userDoc.phone) {
+      userPhone = userDoc.phone;
+    }
+  }
+
   return {
     ...ngoObj,
+    phone: userPhone || ngoObj.phone || '',
+    mobileNumber: userPhone || ngoObj.phone || '',
+    userPhone: userPhone || ngoObj.phone || '',
     rating: computedRating,
     reviewCount: reviews.length,
     reviews: formattedReviews,
