@@ -164,6 +164,7 @@ app.use('/api/seminars', authMiddleware, seminarRoutes);
 app.use('/api/referrals', authMiddleware, referralRoutes);
 const socialRoutes = require('./routes/donor/social');
 app.use('/api/social', authMiddleware, socialRoutes);
+app.use('/api/discover', authMiddleware, socialRoutes);
 app.get('/api/followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/following', authMiddleware, socialRoutes.handleFollowing);
 app.get('/api/donor/followers', authMiddleware, socialRoutes.handleFollowers);

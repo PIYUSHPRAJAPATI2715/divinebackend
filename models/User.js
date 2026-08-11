@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema({
     default: false
   },
   // Social, referral, and rewards fields
-  followingNgos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followingNgos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'NGO' }],
   followingUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   referralCode: { type: String, default: '' },
