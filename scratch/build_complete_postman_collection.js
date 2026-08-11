@@ -1,0 +1,250 @@
+const fs = require('fs');
+const path = require('path');
+
+const collection = {
+  info: {
+    _postman_id: "divine-backend-collection-2026-v2",
+    name: "Divine Complete Backend API Collection",
+    description: "Full API Collection for Divine Mobile App, NGO Portal, Teacher LMS, and Admin Panel Ecosystem.",
+    schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  item: [
+    {
+      name: "1. Auth & User Profile APIs",
+      item: [
+        {
+          name: "Check User Role",
+          request: {
+            method: "POST",
+            header: [{ key: "Content-Type", value: "application/json" }],
+            body: { mode: "raw", raw: JSON.stringify({ phone: "+91 9870961933" }, null, 2) },
+            url: { raw: "{{baseUrl}}/api/auth/check-role", host: ["{{baseUrl}}"], path: ["api", "auth", "check-role"] }
+          }
+        },
+        {
+          name: "Login / Send OTP",
+          request: {
+            method: "POST",
+            header: [{ key: "Content-Type", value: "application/json" }],
+            body: { mode: "raw", raw: JSON.stringify({ phone: "+91 9870961933" }, null, 2) },
+            url: { raw: "{{baseUrl}}/api/auth/login", host: ["{{baseUrl}}"], path: ["api", "auth", "login"] }
+          }
+        },
+        {
+          name: "Verify OTP (Get Token)",
+          request: {
+            method: "POST",
+            header: [{ key: "Content-Type", value: "application/json" }],
+            body: { mode: "raw", raw: JSON.stringify({ phone: "+91 9870961933", otp: "1234" }, null, 2) },
+            url: { raw: "{{baseUrl}}/api/auth/verify-otp", host: ["{{baseUrl}}"], path: ["api", "auth", "verify-otp"] }
+          }
+        },
+        {
+          name: "Register NGO Profile",
+          request: {
+            method: "POST",
+            header: [
+              { key: "Content-Type", value: "application/json" },
+              { key: "Authorization", value: "Bearer {{token}}" }
+            ],
+            body: {
+              mode: "raw",
+              raw: JSON.stringify({
+                name: "Karan Foundation",
+                organizationName: "Karan Foundation Trust",
+                authorizedPerson: "Karan Sharma",
+                designation: "Trustee",
+                email: "contact@karanfoundation.org",
+                registeredAddress: "Jaipur, Rajasthan",
+                panNumber: "ABCDE1234F"
+              }, null, 2)
+            },
+            url: { raw: "{{baseUrl}}/api/auth/register-ngo", host: ["{{baseUrl}}"], path: ["api", "auth", "register-ngo"] }
+          }
+        },
+        {
+          name: "Get Current User Profile (/api/auth/me)",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/auth/me", host: ["{{baseUrl}}"], path: ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      name: "2. Social, Followers & Following APIs",
+      item: [
+        {
+          name: "Get My Following List (NGOs & Users)",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/donor/following", host: ["{{baseUrl}}"], path: ["api", "donor", "following"] }
+          }
+        },
+        {
+          name: "Get My Followers List",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/donor/followers", host: ["{{baseUrl}}"], path: ["api", "donor", "followers"] }
+          }
+        },
+        {
+          name: "Discover NGOs & Users to Follow (with isFollowing status)",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/donor/discover", host: ["{{baseUrl}}"], path: ["api", "donor", "discover"] }
+          }
+        },
+        {
+          name: "Check Follow Status for ID",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/donor/follow/check/6671c22d1ce70b55582f0c7b", host: ["{{baseUrl}}"], path: ["api", "donor", "follow", "check", "6671c22d1ce70b55582f0c7b"] }
+          }
+        },
+        {
+          name: "Toggle Follow / Unfollow (Unified)",
+          request: {
+            method: "POST",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/donor/follow/6671c22d1ce70b55582f0c7b", host: ["{{baseUrl}}"], path: ["api", "donor", "follow", "6671c22d1ce70b55582f0c7b"] }
+          }
+        }
+      ]
+    },
+    {
+      name: "3. Fundraiser Categories APIs",
+      item: [
+        {
+          name: "Get All Fundraiser Categories (Public / App)",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/donor/campaign-categories", host: ["{{baseUrl}}"], path: ["api", "donor", "campaign-categories"] }
+          }
+        },
+        {
+          name: "Get Fundraiser Categories (Admin)",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/admin/campaign-categories", host: ["{{baseUrl}}"], path: ["api", "admin", "campaign-categories"] }
+          }
+        },
+        {
+          name: "Create Fundraiser Category",
+          request: {
+            method: "POST",
+            header: [
+              { key: "Content-Type", value: "application/json" },
+              { key: "Authorization", value: "Bearer {{token}}" }
+            ],
+            body: {
+              mode: "raw",
+              raw: JSON.stringify({
+                name: "Spiritual & Temple Welfare",
+                icon: "🛕",
+                imageUrl: "https://images.unsplash.com/photo-1600100397990-a4a8ec90966a",
+                description: "Temple maintenance and bhandara prasad distribution."
+              }, null, 2)
+            },
+            url: { raw: "{{baseUrl}}/api/admin/campaign-categories", host: ["{{baseUrl}}"], path: ["api", "admin", "campaign-categories"] }
+          }
+        }
+      ]
+    },
+    {
+      name: "4. Daan Flow (Categories, Subcategories & Items)",
+      item: [
+        {
+          name: "Get Daan Categories",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/dan/categories", host: ["{{baseUrl}}"], path: ["api", "dan", "categories"] }
+          }
+        },
+        {
+          name: "Get Subcategories (Category Filtered)",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/dan/subcategories?categoryId=CAT-FOOD", host: ["{{baseUrl}}"], path: ["api", "dan", "subcategories"], query: [{ key: "categoryId", value: "CAT-FOOD" }] }
+          }
+        },
+        {
+          name: "Get Items (Category Filtered)",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/dan/items?categoryId=CAT-FOOD", host: ["{{baseUrl}}"], path: ["api", "dan", "items"], query: [{ key: "categoryId", value: "CAT-FOOD" }] }
+          }
+        }
+      ]
+    },
+    {
+      name: "5. Fundraising Campaigns APIs",
+      item: [
+        {
+          name: "Get Live Campaigns List",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/donor/campaigns", host: ["{{baseUrl}}"], path: ["api", "donor", "campaigns"] }
+          }
+        },
+        {
+          name: "Get Campaign Details (with Full Creator Profile)",
+          request: {
+            method: "GET",
+            url: { raw: "{{baseUrl}}/api/donor/campaigns/CMP-6518", host: ["{{baseUrl}}"], path: ["api", "donor", "campaigns", "CMP-6518"] }
+          }
+        },
+        {
+          name: "Get Admin Campaigns List",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/admin/campaigns", host: ["{{baseUrl}}"], path: ["api", "admin", "campaigns"] }
+          }
+        }
+      ]
+    },
+    {
+      name: "6. NGO Network & Admin Verification",
+      item: [
+        {
+          name: "Get NGOs List (with Mobile No. & enriched profile)",
+          request: {
+            method: "GET",
+            header: [{ key: "Authorization", value: "Bearer {{token}}" }],
+            url: { raw: "{{baseUrl}}/api/admin/ngos", host: ["{{baseUrl}}"], path: ["api", "admin", "ngos"] }
+          }
+        },
+        {
+          name: "Verify / Approve NGO",
+          request: {
+            method: "PUT",
+            header: [
+              { key: "Content-Type", value: "application/json" },
+              { key: "Authorization", value: "Bearer {{token}}" }
+            ],
+            body: { mode: "raw", raw: JSON.stringify({ status: "Verified" }, null, 2) },
+            url: { raw: "{{baseUrl}}/api/admin/ngos/6a79ee9c9648ffe06efc8f60", host: ["{{baseUrl}}"], path: ["api", "admin", "ngos", "6a79ee9c9648ffe06efc8f60"] }
+          }
+        }
+      ]
+    }
+  ],
+  variable: [
+    { key: "baseUrl", value: "https://divinebackend-v5gl.onrender.com" },
+    { key: "token", value: "" }
+  ]
+};
+
+const jsonStr = JSON.stringify(collection, null, 2);
+
+fs.writeFileSync(path.join(__dirname, '..', 'postman_collection.json'), jsonStr);
+fs.writeFileSync('C:\\Users\\AB COM\\.gemini\\antigravity\\brain\\6178f60a-d5db-4dc0-b81c-9decb865f08b\\divine_api_collection.json', jsonStr);
+
+console.log('Postman Collection generated successfully!');
