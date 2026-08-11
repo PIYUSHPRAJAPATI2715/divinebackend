@@ -317,9 +317,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/following",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/following",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -340,9 +340,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/followers",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/followers",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -363,9 +363,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/social",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/social",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -386,9 +386,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/discover",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/discover",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -409,9 +409,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/follow/check/6671c22d1ce70b55582f0c7b",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/check/6671c22d1ce70b55582f0c7b",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -434,9 +434,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/follow/6671c22d1ce70b55582f0c7b",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/6671c22d1ce70b55582f0c7b",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -458,9 +458,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/follow/ngo/6671c22d1ce70b55582f0c7b",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/ngo/6671c22d1ce70b55582f0c7b",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -483,9 +483,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/donor/follow/user/6a51f46231a397451edd4bda",
+                  "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/user/6a51f46231a397451edd4bda",
                   "host": [
-                    "{{baseUrl}}"
+                    "https://divinebackend-v5gl.onrender.com"
                   ],
                   "path": [
                     "api",
@@ -1937,9 +1937,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/following",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/following",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -1960,9 +1960,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/followers",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/followers",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -1983,9 +1983,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/social",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/social",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -2006,9 +2006,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/discover",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/discover",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -2029,9 +2029,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/follow/check/6671c22d1ce70b55582f0c7b",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/check/6671c22d1ce70b55582f0c7b",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -2054,9 +2054,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/follow/6671c22d1ce70b55582f0c7b",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/6671c22d1ce70b55582f0c7b",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -2078,9 +2078,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/follow/ngo/6671c22d1ce70b55582f0c7b",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/ngo/6671c22d1ce70b55582f0c7b",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -2103,9 +2103,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/donor/follow/user/6a51f46231a397451edd4bda",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/follow/user/6a51f46231a397451edd4bda",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -3210,9 +3210,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/donor/campaign-categories",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaign-categories",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -3233,9 +3233,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/campaign-categories",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -3264,9 +3264,9 @@
               "raw": "{\n  \"name\": \"Spiritual & Temple Welfare\",\n  \"icon\": \"🛕\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1600100397990-a4a8ec90966a\",\n  \"description\": \"Temple maintenance and bhandara prasad distribution.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/campaign-categories",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/admin/campaign-categories",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -3286,9 +3286,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/dan/subcategories?categoryId=CAT-FOOD",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/subcategories?categoryId=CAT-FOOD",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
@@ -3309,9 +3309,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/dan/items?categoryId=CAT-FOOD",
+              "raw": "https://divinebackend-v5gl.onrender.com/api/dan/items?categoryId=CAT-FOOD",
               "host": [
-                "{{baseUrl}}"
+                "https://divinebackend-v5gl.onrender.com"
               ],
               "path": [
                 "api",
