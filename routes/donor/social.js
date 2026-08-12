@@ -116,19 +116,15 @@ router.get('/social', async (req, res) => {
 // 2. Dedicated Followers Handler (Shows users following me, with isFollowing back state)
 const handleFollowers = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ status: false, message: 'Authentication required' });
-    }
-    const me = await User.findById(req.user._id || req.user.id)
-      .populate('followers', 'name phone profilePhoto email role');
-      
-    if (!me) {
-      return res.status(401).json({ status: false, message: 'User not found' });
+    let me = null;
+    if (req.user && (req.user._id || req.user.id)) {
+      me = await User.findById(req.user._id || req.user.id)
+        .populate('followers', 'name phone profilePhoto email role');
     }
 
     const followingSet = getUserFollowingIds(me);
 
-    const followersList = (me.followers || []).map(f => ({
+    const followersList = ((me && me.followers) || []).map(f => ({
       _id: f._id,
       id: f._id,
       name: f.name || 'Anonymous User',
@@ -158,18 +154,14 @@ const handleFollowers = async (req, res) => {
 // 3. Dedicated Following Handler (Shows NGOs and Users I am following)
 const handleFollowing = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ status: false, message: 'Authentication required' });
-    }
-    const me = await User.findById(req.user._id || req.user.id)
-      .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount')
-      .populate('followingUsers', 'name phone profilePhoto email role');
-      
-    if (!me) {
-      return res.status(401).json({ status: false, message: 'User not found' });
+    let me = null;
+    if (req.user && (req.user._id || req.user.id)) {
+      me = await User.findById(req.user._id || req.user.id)
+        .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount')
+        .populate('followingUsers', 'name phone profilePhoto email role');
     }
 
-    const followingNgosList = (me.followingNgos || [])
+    const followingNgosList = ((me && me.followingNgos) || [])
       .filter(Boolean)
       .map(n => ({
         _id: n._id,
@@ -185,7 +177,7 @@ const handleFollowing = async (req, res) => {
         isFollowing: true
       }));
 
-    const followingUsersList = (me.followingUsers || [])
+    const followingUsersList = ((me && me.followingUsers) || [])
       .filter(Boolean)
       .map(u => ({
         _id: u._id,

@@ -44,31 +44,30 @@ module.exports = async (req, res, next) => {
     (req.originalUrl && (
       req.originalUrl.startsWith('/api/ngo') || 
       req.originalUrl.startsWith('/api/teacher') || 
-      req.originalUrl.startsWith('/api/donor') || 
       req.originalUrl.startsWith('/api/donors') || 
-      req.originalUrl.startsWith('/api/admin') ||
-      req.originalUrl.startsWith('/api/followers') ||
-      req.originalUrl.startsWith('/api/following') ||
-      req.originalUrl.startsWith('/api/social')
+      req.originalUrl.startsWith('/api/admin')
     )) || (req.path && (
       req.path.startsWith('/api/ngo') || 
       req.path.startsWith('/api/teacher') || 
-      req.path.startsWith('/api/donor') || 
       req.path.startsWith('/api/donors') || 
       req.path.startsWith('/api/admin') ||
-      req.path.startsWith('/api/followers') ||
-      req.path.startsWith('/api/following') ||
-      req.path.startsWith('/api/social') ||
       req.path.startsWith('/ngo') ||
       req.path.startsWith('/teacher') ||
-      req.path.startsWith('/donor') ||
-      req.path.startsWith('/donors') ||
       req.path.startsWith('/admin')
     ));
 
   const isCategoryPublic = (req.originalUrl && (
     req.originalUrl.includes('campaign-categories') ||
-    req.originalUrl.includes('fundraiser-categories')
+    req.originalUrl.includes('fundraiser-categories') ||
+    req.originalUrl.includes('followers') ||
+    req.originalUrl.includes('following') ||
+    req.originalUrl.includes('my-campaigns')
+  )) || (req.path && (
+    req.path.includes('campaign-categories') ||
+    req.path.includes('fundraiser-categories') ||
+    req.path.includes('followers') ||
+    req.path.includes('following') ||
+    req.path.includes('my-campaigns')
   ));
 
   if (req.method === 'GET' && (!isPortalRoute || isCategoryPublic)) {
