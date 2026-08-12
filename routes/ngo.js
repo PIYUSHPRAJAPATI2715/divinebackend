@@ -253,55 +253,62 @@ router.post('/payouts', async (req, res) => {
   }
 });
 
+const saveBase64ImageNGO = (base64Str, req) => {
+  if (!base64Str || typeof base64Str !== 'string') return null;
+  if (!base64Str.startsWith('data:image/') && !base64Str.includes(';base64,')) {
+    return base64Str;
+  }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    let ext = 'png';
+    let rawData = base64Str;
+    const matches = base64Str.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+      rawData = matches[2];
+    }
+    const buffer = Buffer.from(rawData, 'base64');
+    const filename = `ngo_logo_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const uploadsDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host') || 'divinebackend-v5gl.onrender.com';
+    return `${protocol}://${host}/uploads/${filename}`;
+  } catch (err) {
+    return base64Str;
+  }
+};
+
 // 5b. Update NGO Profile (including linked User details/bank accounts)
-router.put('/profile', async (req, res) => {
+const handleUpdateNGOProfile = async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
     const { 
-      name, 
-      organizationName,
+      name, organizationName,
       registrationNumber, 
-      contactPerson, 
-      authorizedPerson,
-      designation,
-      about,
-      email,
+      contactPerson, authorizedPerson, designation,
+      about, aboutOrganization, ourMission, description,
+      email, emailAddress,
+      phone, phoneNumber, userPhone, mobile,
       gender,
-      registeredAddress,
-      logo,
-      profilePhoto,
-      years,
-      ourMission,
-      impact,
-      impactStats,
-      ngoType,
-      panNumber,
-      panImage,
-      tanNumber,
-      tanImage,
-      gstNumber,
-      gstDocument,
-      registration12A,
-      certificate12A,
-      registration80G,
-      certificate80G,
-      darpanNumber,
-      darpanCertificate,
-      csr1Number,
-      csr1Certificate,
-      fcraNumber,
-      fcraCertificate,
-      bankAccountHolder,
-      bankName,
-      bankBranch,
-      bankAccountNumber,
-      bankIFSC
+      registeredAddress, address, officialAddress,
+      logo, profilePhoto, image, avatar, photo,
+      years, organizationYears,
+      impact, impactStats, ngoType,
+      panNumber, panImage, tanNumber, tanImage, gstNumber, gstDocument,
+      registration12A, certificate12A, registration80G, certificate80G,
+      darpanNumber, darpanCertificate, csr1Number, csr1Certificate, fcraNumber, fcraCertificate,
+      bankAccountHolder, bankName, bankBranch, bankAccountNumber, bankIFSC
     } = req.body;
 
     const ngoName = name || organizationName;
-    if (ngoName) {
-      ngo.name = ngoName;
-      ngo.organizationName = ngoName;
+    if (ngoName !== undefined && ngoName.trim() !== '') {
+      ngo.name = ngoName.trim();
+      ngo.organizationName = ngoName.trim();
     }
     if (registrationNumber) ngo.registrationNumber = registrationNumber;
     if (contactPerson || authorizedPerson) {
@@ -309,14 +316,47 @@ router.put('/profile', async (req, res) => {
       ngo.authorizedPerson = authorizedPerson || contactPerson;
     }
     if (designation !== undefined) ngo.designation = designation;
-    if (about !== undefined) ngo.about = about;
-    if (email) ngo.email = email;
-    if (registeredAddress !== undefined) ngo.registeredAddress = registeredAddress;
-    if (logo || profilePhoto) {
-      ngo.logo = logo || profilePhoto;
+
+    const resolvedAbout = about || aboutOrganization || ourMission || description;
+    if (resolvedAbout !== undefined) {
+      ngo.about = resolvedAbout;
+      ngo.ourMission = resolvedAbout;
     }
-    if (years !== undefined) ngo.years = years;
-    if (ourMission !== undefined) ngo.ourMission = ourMission;
+
+    const resolvedEmail = email || emailAddress;
+    if (resolvedEmail !== undefined && resolvedEmail.trim() !== '') {
+      const user = req.user ? await User.findById(req.user._id || req.user.id) : null;
+      const existingEmail = await User.findOne({ email: resolvedEmail.trim(), _id: { $ne: user ? user._id : null } });
+      if (existingEmail) {
+        return res.status(400).json({ status: false, message: 'This email address is already in use by another account.' });
+      }
+      ngo.email = resolvedEmail.trim();
+    }
+
+    const resolvedPhone = phone || phoneNumber || userPhone || mobile;
+    if (resolvedPhone !== undefined && resolvedPhone.trim() !== '') {
+      const user = req.user ? await User.findById(req.user._id || req.user.id) : null;
+      const existingPhone = await User.findOne({ phone: resolvedPhone.trim(), _id: { $ne: user ? user._id : null } });
+      if (existingPhone) {
+        return res.status(400).json({ status: false, message: 'This phone number is already in use by another account.' });
+      }
+      ngo.phone = resolvedPhone.trim();
+    }
+
+    const resolvedAddress = registeredAddress || address || officialAddress;
+    if (resolvedAddress !== undefined) ngo.registeredAddress = resolvedAddress;
+
+    const rawPhoto = logo || profilePhoto || image || avatar || photo;
+    if (rawPhoto) {
+      const processedPhoto = saveBase64ImageNGO(rawPhoto, req);
+      if (processedPhoto) {
+        ngo.logo = processedPhoto;
+      }
+    }
+
+    const resolvedYears = years || organizationYears;
+    if (resolvedYears !== undefined) ngo.years = resolvedYears;
+
     if (impactStats || impact) ngo.impactStats = impactStats || impact;
     if (ngoType !== undefined) ngo.ngoType = ngoType;
 
@@ -345,23 +385,24 @@ router.put('/profile', async (req, res) => {
     await ngo.save();
 
     // Sync user details
-    const user = await User.findById(req.user.id);
+    const user = req.user ? await User.findById(req.user._id || req.user.id) : null;
     if (user) {
       if (gender) user.gender = gender;
-      if (ngoName) {
+      if (ngoName !== undefined) {
         user.name = ngoName;
         user.organizationName = ngoName;
       }
-      if (email) user.email = email;
-      if (registeredAddress !== undefined) user.registeredAddress = registeredAddress;
-      if (logo || profilePhoto) {
-        user.profilePhoto = logo || profilePhoto;
-        user.logo = logo || profilePhoto;
+      if (resolvedEmail !== undefined) user.email = resolvedEmail;
+      if (resolvedPhone !== undefined) user.phone = resolvedPhone;
+      if (resolvedAddress !== undefined) user.registeredAddress = resolvedAddress;
+      if (ngo.logo) {
+        user.profilePhoto = ngo.logo;
+        user.logo = ngo.logo;
       }
       if (authorizedPerson || contactPerson) user.authorizedPerson = authorizedPerson || contactPerson;
       if (designation !== undefined) user.designation = designation;
-      if (about !== undefined) user.about = about;
-      if (years !== undefined) user.years = years;
+      if (resolvedAbout !== undefined) user.about = resolvedAbout;
+      if (resolvedYears !== undefined) user.years = resolvedYears;
       if (impactStats || impact) user.impactStats = impactStats || impact;
       await user.save();
     }
@@ -387,9 +428,16 @@ router.put('/profile', async (req, res) => {
 
     res.json({ status: true, message: 'Profile updated successfully', ngo: mergedData, user: userObj, data: mergedData });
   } catch (err) {
+    if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+      return res.status(400).json({ status: false, message: 'Email address or phone number already in use by another account.' });
+    }
     res.status(500).json({ status: false, message: err.message });
   }
-});
+};
+
+router.put('/profile', handleUpdateNGOProfile);
+router.put('/update-profile', handleUpdateNGOProfile);
+module.exports.handleUpdateNGOProfile = handleUpdateNGOProfile;
 
 // 5c. Add NGO Relief Activity Proof (Gallery upload)
 router.post('/gallery', async (req, res) => {

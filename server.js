@@ -148,8 +148,12 @@ app.use('/api/admin/campaign-categories', authMiddleware, campaignCategoryRoutes
 
 const donorCampaignsRoutes = require('./routes/donor/campaigns');
 const donorReferralsRoutes = require('./routes/donor/referrals');
+const donorProfileRoutes = require('./routes/donor/profile');
 
 // Primary App Specific Overrides
+app.use('/api/user', authMiddleware, donorProfileRoutes);
+app.use('/api/profile', authMiddleware, donorProfileRoutes);
+
 app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
