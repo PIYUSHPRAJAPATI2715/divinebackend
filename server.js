@@ -95,7 +95,6 @@ const adminDonorPortalRoutes = require('./routes/admin/donor');
 
 app.use('/api/ngo', authMiddleware, ngoPortalRoutes);
 app.use('/api/teacher', authMiddleware, teacherPortalRoutes);
-app.use('/api/donor', authMiddleware, donorPortalRoutes);
 app.use('/api/admin/donor-help', authMiddleware, adminDonorPortalRoutes);
 app.use('/api/admin/donor', authMiddleware, adminDonorPortalRoutes);
 
@@ -147,6 +146,19 @@ app.use('/api/admin/seminars', authMiddleware, seminarRoutes);
 app.use('/api/admin/referrals', authMiddleware, referralRoutes);
 app.use('/api/admin/campaign-categories', authMiddleware, campaignCategoryRoutes);
 
+const donorCampaignsRoutes = require('./routes/donor/campaigns');
+const donorReferralsRoutes = require('./routes/donor/referrals');
+
+// Primary App Specific Overrides
+app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+
+app.get('/api/donor/referrals/stats', authMiddleware, donorReferralsRoutes.handleReferralStats);
+app.get('/api/donor/referrals', authMiddleware, donorReferralsRoutes.handleReferralStats);
+app.get('/api/referrals/stats', authMiddleware, donorReferralsRoutes.handleReferralStats);
+app.get('/api/referrals/my', authMiddleware, donorReferralsRoutes.handleReferralStats);
+
 // Secured Legacy Routes (Without /api/admin prefix, for compatibility)
 app.use('/api/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/teachers', authMiddleware, teacherRoutes);
@@ -180,11 +192,6 @@ app.get('/api/donor/following', authMiddleware, socialRoutes.handleFollowing);
 app.get('/api/my-followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/my-following', authMiddleware, socialRoutes.handleFollowing);
 app.use('/api/follow', authMiddleware, socialRoutes);
-
-const donorCampaignsRoutes = require('./routes/donor/campaigns');
-app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
-app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
-app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 
 // MongoDB Connection and Server Start
 connectDB()

@@ -15,9 +15,9 @@ const generateReferralCode = (name) => {
  * @desc    Get logged-in user's referral stats (points, invite counts, history list)
  * @access  Private (Donor Portal)
  */
-router.get('/referrals/stats', async (req, res) => {
+const handleReferralStats = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
@@ -27,7 +27,6 @@ router.get('/referrals/stats', async (req, res) => {
       await user.save();
     }
 
-    // Match referrals in Referral ledger using user name or phone (flexible match)
     const userNames = [];
     if (user.name) userNames.push(user.name);
     if (user.phone) {
@@ -39,7 +38,6 @@ router.get('/referrals/stats', async (req, res) => {
       referrerName: { $in: userNames }
     }).sort({ createdAt: -1 });
 
-    // Calculate aggregations
     let totalEarnPoints = 0;
     let successfulReferral = 0;
     let referralThisMonth = 0;
@@ -58,28 +56,50 @@ router.get('/referrals/stats', async (req, res) => {
       }
     });
 
+    const formattedList = referrals.map(ref => ({
+      referralId: ref.referralId,
+      referredUserName: ref.referredUserName,
+      rewardAmount: ref.rewardAmount || 0,
+      coins: ref.rewardAmount || 0,
+      status: ref.status || 'Pending',
+      date: ref.createdAt,
+      createdAt: ref.createdAt
+    }));
+
+    const responsePayload = {
+      referralCode: user.referralCode,
+      rewards: totalEarnPoints,
+      totalRewards: totalEarnPoints,
+      rewardAmount: totalEarnPoints,
+      totalCoins: totalEarnPoints,
+      coins: totalEarnPoints,
+      totalRewardCoins: totalEarnPoints,
+      totalEarnPoints: totalEarnPoints,
+      totalReferral: referrals.length,
+      successfulReferral,
+      referralThisMonth,
+      transactionList: formattedList,
+      transactionsList: formattedList,
+      transactions: formattedList,
+      transaction_list: formattedList,
+      history: formattedList
+    };
+
     res.json({
       status: true,
-      data: {
-        referralCode: user.referralCode,
-        totalEarnPoints,
-        totalReferral: referrals.length,
-        successfulReferral,
-        referralThisMonth,
-        transactionsList: referrals.map(ref => ({
-          referralId: ref.referralId,
-          referredUserName: ref.referredUserName,
-          rewardAmount: ref.rewardAmount,
-          status: ref.status,
-          date: ref.createdAt,
-          createdAt: ref.createdAt
-        }))
-      }
+      data: responsePayload,
+      ...responsePayload
     });
 
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
-});
+};
+
+router.get('/referrals/stats', handleReferralStats);
+router.get('/referrals', handleReferralStats);
+router.get('/referrals/my', handleReferralStats);
+router.get('/referrals/history', handleReferralStats);
 
 module.exports = router;
+module.exports.handleReferralStats = handleReferralStats;
