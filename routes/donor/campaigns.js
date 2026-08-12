@@ -340,4 +340,89 @@ router.post('/campaigns', async (req, res) => {
   }
 });
 
+// My Campaigns API (Campaigns created by the authenticated logged-in user or NGO)
+const handleMyCampaigns = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ status: false, message: 'Authentication required' });
+    }
+    const dbUser = await User.findById(req.user._id || req.user.id);
+    const dbNGO = await NGO.findOne({
+      $or: [
+        { phone: dbUser?.phone },
+        { email: dbUser?.email }
+      ]
+    });
+
+    const userPhone = dbUser?.phone || '';
+    const userId = dbUser?._id;
+    const ngoId = dbNGO?._id;
+    const userName = dbUser?.name || dbNGO?.name || '';
+
+    const queryConditions = [];
+    if (userId) queryConditions.push({ userId });
+    if (ngoId) queryConditions.push({ ngoId });
+    if (userPhone) queryConditions.push({ userPhone });
+    if (userName) queryConditions.push({ user: { $regex: new RegExp(`^${userName.trim()}$`, 'i') } });
+
+    const query = queryConditions.length > 0 ? { $or: queryConditions } : { userId: req.user._id };
+
+    const myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
+
+    const enriched = await Promise.all(myCampaigns.map(async c => {
+      let days = c.daysLeft || 30;
+      if (c.endDate) {
+        const diffTime = new Date(c.endDate) - new Date();
+        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      } else if (c.createdAt) {
+        const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
+        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      }
+
+      const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
+
+      const obj = c.toObject();
+      obj.daysLeft = days;
+      obj.donorsCount = obj.donorsCount || 0;
+      obj.user = creatorName;
+      obj.userName = creatorName;
+      obj.user_name = creatorName;
+      obj.creatorName = creatorName;
+      obj.creator_name = creatorName;
+      obj.fundraiserName = creatorName;
+      obj.fundraiser_name = creatorName;
+      obj.fundraiser = creatorName;
+      obj.userImage = creatorPhoto;
+      obj.user_image = creatorPhoto;
+      obj.userLogo = creatorPhoto;
+      obj.profilePhoto = creatorPhoto;
+      obj.creatorImage = creatorPhoto;
+      obj.creatorPhoto = creatorPhoto;
+      obj.fundraiserImage = creatorPhoto;
+      obj.fundraiser_image = creatorPhoto;
+      obj.fundraiserLogo = creatorPhoto;
+      obj.fundraiserPhoto = creatorPhoto;
+      obj.userProfile = creatorProfile;
+      obj.creatorProfile = creatorProfile;
+      obj.fundraiserProfile = creatorProfile;
+      return obj;
+    }));
+
+    res.json({
+      status: true,
+      count: enriched.length,
+      myCampaigns: enriched,
+      campaigns: enriched,
+      data: enriched
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+router.get('/my-campaigns', handleMyCampaigns);
+router.get('/campaigns/my', handleMyCampaigns);
+router.handleMyCampaigns = handleMyCampaigns;
+
 module.exports = router;
+module.exports.handleMyCampaigns = handleMyCampaigns;

@@ -152,6 +152,7 @@ app.use('/api/campaigns', authMiddleware, campaignRoutes);
 app.use('/api/teachers', authMiddleware, teacherRoutes);
 app.use('/api/courses', authMiddleware, courseRoutes);
 app.use('/api/ngos', authMiddleware, ngoRoutes);
+app.use('/api/donor', authMiddleware, donorPortalRoutes);
 app.use('/api/donors', authMiddleware, donorPortalRoutes);
 app.use('/api/students', authMiddleware, studentRoutes);
 app.use('/api/transactions', authMiddleware, transactionRoutes);
@@ -162,9 +163,13 @@ app.use('/api/banners', authMiddleware, bannerRoutes);
 app.use('/api/news', authMiddleware, newsRoutes);
 app.use('/api/seminars', authMiddleware, seminarRoutes);
 app.use('/api/referrals', authMiddleware, referralRoutes);
+
+// Fundraiser Category APIs
 app.use('/api/donor/campaign-categories', authMiddleware, campaignCategoryRoutes);
 app.use('/api/campaign-categories', authMiddleware, campaignCategoryRoutes);
 app.use('/api/fundraiser-categories', authMiddleware, campaignCategoryRoutes);
+
+// Social & Followers/Following APIs
 const socialRoutes = require('./routes/donor/social');
 app.use('/api/social', authMiddleware, socialRoutes);
 app.use('/api/discover', authMiddleware, socialRoutes);
@@ -172,7 +177,14 @@ app.get('/api/followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/following', authMiddleware, socialRoutes.handleFollowing);
 app.get('/api/donor/followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/donor/following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/my-followers', authMiddleware, socialRoutes.handleFollowers);
+app.get('/api/my-following', authMiddleware, socialRoutes.handleFollowing);
 app.use('/api/follow', authMiddleware, socialRoutes);
+
+const donorCampaignsRoutes = require('./routes/donor/campaigns');
+app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 
 // MongoDB Connection and Server Start
 connectDB()
