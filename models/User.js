@@ -32,8 +32,34 @@ const userSchema = new mongoose.Schema({
   },
   walletBalance: {
     type: Number,
-    default: 100
+    default: 0
   },
+  cashbackBalance: {
+    type: Number,
+    default: 0
+  },
+  cashbackLedger: [
+    {
+      amount: { type: Number, default: 0 },
+      remainingAmount: { type: Number, default: 0 },
+      creditedAt: { type: Date, default: Date.now },
+      expiresAt: { type: Date },
+      source: { type: String, default: 'Recharge Cashback' },
+      isExpired: { type: Boolean, default: false }
+    }
+  ],
+  totalCoins: {
+    type: Number,
+    default: 0
+  },
+  coinsLedger: [
+    {
+      coins: { type: Number, default: 0 },
+      type: { type: String, enum: ['Earned', 'Redeemed', 'Admin Adjustment'], default: 'Earned' },
+      description: { type: String, default: '' },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
 
   // Donor-specific fields (e.g. Donate & Fundraise)
   name: {

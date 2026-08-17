@@ -140,12 +140,26 @@ const saveBase64Media = (base64Str, req, defaultPrefix = 'banner') => {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
     fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const host = req.get('host') || 'divinebackend-v5gl.onrender.com';
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : 'divinebackend-v5gl.onrender.com';
     return `${protocol}://${host}/uploads/${filename}`;
   } catch (err) {
     return base64Str;
   }
+};
+
+// Helper: Ensure URL is a public HTTP URL and never a base64 string
+const ensurePublicUrl = (urlStr, req = null, defaultPrefix = 'banner') => {
+  if (!urlStr || typeof urlStr !== 'string') return '';
+  if (urlStr.startsWith('data:') || urlStr.includes(';base64,')) {
+    return saveBase64Media(urlStr, req, defaultPrefix);
+  }
+  if (urlStr.startsWith('/uploads/')) {
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : 'divinebackend-v5gl.onrender.com';
+    return `${protocol}://${host}${urlStr}`;
+  }
+  return urlStr;
 };
 
 // Helper: compute effective timeline status
@@ -162,13 +176,17 @@ const getBannerTimeline = (banner) => {
   return 'Live';
 };
 
-const enrichBanner = (b) => {
+const enrichBanner = (b, req = null) => {
   const obj = b.toObject ? b.toObject() : b;
   const locKey = normalizeLocation(obj.location || obj.placement);
   const meta = LOCATION_METADATA[locKey] || LOCATION_METADATA['home_top'];
 
   const mediaType = obj.mediaType || (obj.videoUrl ? 'video' : 'image');
-  const mediaUrl = obj.mediaUrl || (mediaType === 'video' ? (obj.videoUrl || obj.imageUrl) : (obj.imageUrl || obj.videoUrl));
+  const rawMediaUrl = obj.mediaUrl || (mediaType === 'video' ? (obj.videoUrl || obj.imageUrl) : (obj.imageUrl || obj.videoUrl));
+
+  const finalMediaUrl = ensurePublicUrl(rawMediaUrl, req, 'banner_media');
+  const finalImageUrl = ensurePublicUrl(obj.imageUrl || finalMediaUrl, req, 'banner_img');
+  const finalVideoUrl = mediaType === 'video' ? ensurePublicUrl(obj.videoUrl || finalMediaUrl, req, 'banner_vid') : '';
 
   return {
     ...obj,
@@ -179,9 +197,9 @@ const enrichBanner = (b) => {
     locationName: meta.name,
     locationPath: meta.path,
     mediaType,
-    mediaUrl,
-    imageUrl: obj.imageUrl || mediaUrl,
-    videoUrl: obj.videoUrl || (mediaType === 'video' ? mediaUrl : ''),
+    mediaUrl: finalMediaUrl,
+    imageUrl: finalImageUrl || finalMediaUrl,
+    videoUrl: finalVideoUrl,
     timelineStatus: getBannerTimeline(obj)
   };
 };
@@ -213,7 +231,7 @@ router.get('/screen/:screenName', async (req, res) => {
     const screenInfo = getScreenBannerLocations(req.params.screenName);
     const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
     const enriched = banners
-      .map(b => enrichBanner(b))
+      .map(b => enrichBanner(b, req))
       .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
 
     const topBanners = screenInfo.topKey ? enriched.filter(b => b.location === screenInfo.topKey) : [];
@@ -250,7 +268,7 @@ router.get('/screens', async (req, res) => {
   try {
     const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
     const enriched = banners
-      .map(b => enrichBanner(b))
+      .map(b => enrichBanner(b, req))
       .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
 
     const screenKeys = ['home', 'donate', 'daan_category', 'campaign_list', 'following_list', 'campaign_details'];
@@ -285,7 +303,7 @@ router.get('/', async (req, res) => {
       const screenInfo = getScreenBannerLocations(screen);
       const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
       const enriched = banners
-        .map(b => enrichBanner(b))
+        .map(b => enrichBanner(b, req))
         .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
 
       const topBanners = screenInfo.topKey ? enriched.filter(b => b.location === screenInfo.topKey) : [];
@@ -310,7 +328,7 @@ router.get('/', async (req, res) => {
     if (status) query.status = status;
 
     const banners = await Banner.find(query).sort({ displayOrder: 1, createdAt: -1 });
-    let enriched = banners.map(b => enrichBanner(b));
+    let enriched = banners.map(b => enrichBanner(b, req));
 
     if (location) {
       const targetLoc = normalizeLocation(location);
@@ -336,7 +354,7 @@ router.get('/location/:locationKey', async (req, res) => {
     const locKey = normalizeLocation(req.params.locationKey);
     const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
     const enriched = banners
-      .map(b => enrichBanner(b))
+      .map(b => enrichBanner(b, req))
       .filter(b => b.location === locKey && b.status === 'Active' && b.timelineStatus === 'Live');
 
     const meta = LOCATION_METADATA[locKey] || LOCATION_METADATA['home_top'];
@@ -388,7 +406,7 @@ router.post('/', async (req, res) => {
 
     const newBanner = new Banner(bannerData);
     const savedBanner = await newBanner.save();
-    const enriched = enrichBanner(savedBanner);
+    const enriched = enrichBanner(savedBanner, req);
 
     res.status(201).json({
       status: true,
@@ -439,7 +457,7 @@ router.put('/:id', async (req, res) => {
       { new: true }
     );
 
-    const enriched = enrichBanner(updatedBanner);
+    const enriched = enrichBanner(updatedBanner, req);
     res.json({
       status: true,
       message: 'Banner updated successfully',
@@ -472,7 +490,7 @@ router.get('/:idOrLocation', async (req, res, next) => {
     if (LOCATION_METADATA[normalized] || param.includes('_') || param.includes('-')) {
       const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
       const enriched = banners
-        .map(b => enrichBanner(b))
+        .map(b => enrichBanner(b, req))
         .filter(b => b.location === normalized && b.status === 'Active');
 
       return res.json({
@@ -491,7 +509,7 @@ router.get('/:idOrLocation', async (req, res, next) => {
     if (!banner) {
       return res.status(404).json({ status: false, message: 'Banner not found' });
     }
-    const enriched = enrichBanner(banner);
+    const enriched = enrichBanner(banner, req);
     res.json({ status: true, data: enriched, ...enriched });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });

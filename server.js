@@ -146,6 +146,8 @@ app.use('/api/admin/news', authMiddleware, newsRoutes);
 app.use('/api/admin/seminars', authMiddleware, seminarRoutes);
 app.use('/api/admin/referrals', authMiddleware, referralRoutes);
 app.use('/api/admin/campaign-categories', authMiddleware, campaignCategoryRoutes);
+app.use('/api/admin/wallet-settings', authMiddleware, require('./routes/admin/walletSettings'));
+app.use('/api/wallet-settings', require('./routes/admin/walletSettings'));
 
 const donorCampaignsRoutes = require('./routes/donor/campaigns');
 const donorReferralsRoutes = require('./routes/donor/referrals');
