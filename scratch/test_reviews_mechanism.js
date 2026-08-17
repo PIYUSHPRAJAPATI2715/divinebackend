@@ -32,50 +32,37 @@ function request(method, path, body = null, token = null) {
 }
 
 async function run() {
-  console.log('--- 🧪 TESTING TEXT REVIEW, VIDEO REVIEW & LIVE RATING AGGREGATION ---');
+  console.log('--- 🧪 TESTING DONOR REVIEWS API WITH VIDEO & VIDEO_URL KEYS ---');
+
+  // Login as test donor
+  const phone = `+91987${Math.floor(1000000 + Math.random() * 9000000)}`;
+  await request('POST', '/api/auth/login', { phone });
+  const verifyRes = await request('POST', '/api/auth/verify-otp', { phone, otp: '1234' });
+  const token = verifyRes.body?.token || verifyRes.body?.data?.token;
 
   // Sample base64 MP4 dummy video header
   const sampleBase64Video = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28ybXA0MQAAAAptZGF0';
 
-  console.log('\n1. POST /api/reviews (Submit Video Review with 5-Star Rating):');
-  const postRes1 = await request('POST', '/api/reviews', {
-    userName: 'Aarav Sharma',
-    userRole: 'Donor',
-    type: 'NGO',
-    targetName: 'Pratham Education Foundation',
+  console.log('\n1. POST /api/donor/reviews (Submit Video Review using video & videoUrl keys):');
+  const postRes1 = await request('POST', '/api/donor/reviews', {
+    type: 'Campaign',
+    targetName: 'Rural Education Initiative',
     rating: 5,
-    comment: 'Wonderful experience supporting children education! Video feedback attached.',
-    videoUrl: sampleBase64Video,
-    status: 'Approved'
-  });
+    comment: 'Inspiring campaign! Video testimonial attached.',
+    video: sampleBase64Video
+  }, token);
+
   console.log('   Status:', postRes1.status);
   console.log('   Review ID:', postRes1.body?.data?.reviewId);
-  console.log('   Video URL:', postRes1.body?.data?.videoUrl, '(Verified HTTP URL on server disk)');
+  console.log('   Returned videoUrl key:', postRes1.body?.data?.videoUrl);
+  console.log('   Returned video key:', postRes1.body?.data?.video);
 
-  console.log('\n2. POST /api/reviews (Submit 2nd Text Review with 4-Star Rating):');
-  const postRes2 = await request('POST', '/api/reviews', {
-    userName: 'Priya Verma',
-    userRole: 'Donor',
-    type: 'NGO',
-    targetName: 'Pratham Education Foundation',
-    rating: 4,
-    comment: 'Great transparent updates and photos provided by NGO.',
-    status: 'Approved'
-  });
-  console.log('   Status:', postRes2.status);
-
-  console.log('\n3. GET /api/reviews/target/NGO/Pratham Education Foundation (Check Rating Re-aggregation):');
-  const targetRes = await request('GET', '/api/reviews/target/NGO/Pratham Education Foundation');
-  console.log('   Status:', targetRes.status);
-  console.log('   Target Name:', targetRes.body?.targetName);
-  console.log('   Computed Average Rating:', targetRes.body?.averageRating, '(Expected ~4.5 ★)');
-  console.log('   Total Approved Reviews:', targetRes.body?.totalReviews);
-  console.log('   Star Distribution:', targetRes.body?.ratingDistribution);
-
-  console.log('\n4. GET /api/admin/reviews (Admin Dashboard Summary & Video Filters):');
-  const adminRes = await request('GET', '/api/admin/reviews');
-  console.log('   Status:', adminRes.status);
-  console.log('   Stats Summary:', adminRes.body?.stats);
+  console.log('\n2. GET /api/donor/reviews (Get Donor Reviews with video & videoUrl keys):');
+  const getRes = await request('GET', '/api/donor/reviews', null, token);
+  console.log('   Status:', getRes.status);
+  console.log('   Review Count:', getRes.body?.count);
+  console.log('   First Review video key:', getRes.body?.data?.[0]?.video);
+  console.log('   First Review videoUrl key:', getRes.body?.data?.[0]?.videoUrl);
 
   process.exit(0);
 }

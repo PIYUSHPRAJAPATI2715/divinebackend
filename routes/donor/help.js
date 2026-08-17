@@ -9,6 +9,78 @@ const Coupon = require('../../models/Coupon');
 const Notification = require('../../models/Notification');
 const Transaction = require('../../models/Transaction');
 const Content = require('../../models/Content');
+const Campaign = require('../../models/Campaign');
+const Teacher = require('../../models/Teacher');
+const Course = require('../../models/Course');
+const path = require('path');
+const fs = require('fs');
+
+// Helper: Save Base64 file upload (Video or Image)
+const saveBase64Media = (base64Str, req, defaultPrefix = 'donor_review_vid') => {
+  if (!base64Str || typeof base64Str !== 'string') return '';
+  if (!base64Str.startsWith('data:') && !base64Str.includes(';base64,')) {
+    return base64Str;
+  }
+  try {
+    let ext = 'mp4';
+    let rawData = base64Str;
+    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const mime = matches[1];
+      if (mime.includes('video/mp4')) ext = 'mp4';
+      else if (mime.includes('video/webm')) ext = 'webm';
+      else if (mime.includes('video/quicktime')) ext = 'mov';
+      else if (mime.includes('image/jpeg')) ext = 'jpg';
+      else if (mime.includes('image/png')) ext = 'png';
+      else if (mime.includes('image/webp')) ext = 'webp';
+      rawData = matches[2];
+    }
+    const buffer = Buffer.from(rawData, 'base64');
+    const filename = `${defaultPrefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : 'divinebackend-v5gl.onrender.com';
+    return `${protocol}://${host}/uploads/${filename}`;
+  } catch (err) {
+    return base64Str;
+  }
+};
+
+const recalculateTargetRating = async (targetType, targetName) => {
+  if (!targetType || !targetName) return;
+  try {
+    const approvedReviews = await Review.find({
+      targetName: { $regex: new RegExp(`^${targetName}$`, 'i') },
+      type: targetType,
+      status: 'Approved'
+    });
+
+    const count = approvedReviews.length;
+    let avgRating = 0;
+    if (count > 0) {
+      const sum = approvedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+      avgRating = Math.round((sum / count) * 10) / 10;
+    }
+
+    if (targetType === 'NGO') {
+      await NGO.updateOne(
+        { name: { $regex: new RegExp(`^${targetName}$`, 'i') } },
+        { $set: { rating: avgRating, reviewsCount: count } }
+      );
+    } else if (targetType === 'Campaign') {
+      await Campaign.updateOne(
+        { title: { $regex: new RegExp(`^${targetName}$`, 'i') } },
+        { $set: { rating: avgRating, reviewsCount: count } }
+      );
+    }
+  } catch (err) {
+    console.warn('Error recalculating target rating:', err.message);
+  }
+};
 
 // NGO lists
 router.get('/ngos', async (req, res) => {
@@ -294,15 +366,25 @@ router.post('/coupons/claim', async (req, res) => {
   }
 });
 
-// Reviews
+// Reviews (Supports Text Review + Video Review Upload & Rating)
 router.get('/reviews', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
     const reviews = await Review.find({ userName: user.name || user.phone }).sort({ createdAt: -1 });
-    res.json({ status: true, data: reviews });
+    const enriched = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : r;
+      const vid = obj.videoUrl || '';
+      return {
+        ...obj,
+        videoUrl: vid,
+        video: vid,
+        video_url: vid
+      };
+    });
+    res.json({ status: true, count: enriched.length, data: enriched, reviews: enriched });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -310,26 +392,47 @@ router.get('/reviews', async (req, res) => {
 
 router.post('/reviews', async (req, res) => {
   try {
-    const { type, targetName, rating, comment } = req.body;
-    if (!type || !targetName || !rating || !comment) {
-      return res.status(400).json({ status: false, message: 'All review fields are required' });
+    const { type, targetName, rating, comment, videoUrl, video, video_url } = req.body;
+    if (!type || !targetName || !rating || (!comment && !videoUrl && !video && !video_url)) {
+      return res.status(400).json({ status: false, message: 'Type, targetName, rating, and either comment or video are required.' });
     }
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
+
+    const rawVideo = videoUrl || video || video_url;
+    const processedVideoUrl = saveBase64Media(rawVideo, req, 'donor_rev_vid');
+
     const newReview = new Review({
       reviewId: `REV-${Date.now().toString().slice(-4)}`,
-      userName: user.name || 'Divine Donor',
+      userName: user.name || user.phone || 'Divine Donor',
       userRole: 'Donor',
       type,
       targetName,
       rating: Number(rating),
-      comment,
+      comment: comment || '',
+      videoUrl: processedVideoUrl,
       status: 'Approved'
     });
-    await newReview.save();
-    res.status(201).json({ status: true, message: 'Review submitted successfully', data: newReview });
+    const saved = await newReview.save();
+
+    await recalculateTargetRating(type, targetName);
+
+    const obj = saved.toObject ? saved.toObject() : saved;
+    const enriched = {
+      ...obj,
+      videoUrl: processedVideoUrl,
+      video: processedVideoUrl,
+      video_url: processedVideoUrl
+    };
+
+    res.status(201).json({
+      status: true,
+      message: 'Review submitted successfully',
+      data: enriched,
+      review: enriched
+    });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });
   }
