@@ -1,11 +1,41 @@
 const router = require('express').Router();
 const CampaignCategory = require('../../models/CampaignCategory');
 
-// Get all categories
+// Default fallback icons map to prevent icons disappearing
+const DEFAULT_CATEGORY_ICONS = {
+  'Education': '📚',
+  'Books': '📖',
+  'Health': '🏥',
+  'Food': '🍲',
+  'Animal Welfare': '🐄',
+  'Disaster Relief': '🚨',
+  'Environment': '🌱',
+  'Women Empowerment': '👩'
+};
+
+const DEFAULT_CATEGORY_IMAGES = {
+  'Education': 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=600',
+  'Books': 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=600',
+  'Health': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600',
+  'Food': 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600',
+  'Animal Welfare': 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&q=80&w=600'
+};
+
+// Get all categories with persistent icon fallback
 router.get('/', async (req, res) => {
   try {
     const categories = await CampaignCategory.find().sort({ name: 1 });
-    res.json({ status: true, data: categories });
+    const normalized = categories.map(c => {
+      const obj = c.toObject();
+      if (!obj.icon || obj.icon.trim() === '') {
+        obj.icon = DEFAULT_CATEGORY_ICONS[obj.name] || '🏷️';
+      }
+      if (!obj.imageUrl || obj.imageUrl.trim() === '') {
+        obj.imageUrl = DEFAULT_CATEGORY_IMAGES[obj.name] || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600';
+      }
+      return obj;
+    });
+    res.json({ status: true, data: normalized });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -18,13 +48,16 @@ router.post('/', async (req, res) => {
     if (!name) {
       return res.status(400).json({ status: false, message: 'Category name is required' });
     }
+    if (!icon && !imageUrl) {
+      return res.status(400).json({ status: false, message: 'Category Image or Icon is mandatory' });
+    }
 
     const categoryId = `CAT-${Date.now().toString().slice(-4)}`;
     const newCategory = new CampaignCategory({
       categoryId,
       name,
-      icon: icon || '',
-      imageUrl: imageUrl || '',
+      icon: icon || DEFAULT_CATEGORY_ICONS[name] || '🏷️',
+      imageUrl: imageUrl || DEFAULT_CATEGORY_IMAGES[name] || '',
       description: description || ''
     });
 

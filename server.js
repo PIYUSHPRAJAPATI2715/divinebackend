@@ -143,6 +143,8 @@ app.use('/api/admin/categories', authMiddleware, categoryRoutes);
 app.use('/api/admin/banners', bannerRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/admin/news', authMiddleware, newsRoutes);
+app.use('/api/news', require('./routes/admin/news'));
+app.use('/api/donor/news', require('./routes/admin/news'));
 app.use('/api/admin/seminars', authMiddleware, seminarRoutes);
 app.use('/api/admin/referrals', authMiddleware, referralRoutes);
 app.use('/api/admin/campaign-categories', authMiddleware, campaignCategoryRoutes);

@@ -83,10 +83,14 @@ const enrichNGOData = async (ngo) => {
   };
 };
 
-// Get all NGOs
+// Get all NGOs (Only registered organizations, excluding Individual users)
 router.get('/', async (req, res) => {
   try {
-    const ngos = await NGO.find().sort({ createdAt: -1 });
+    const ngos = await NGO.find({
+      ngoType: { $ne: 'Individual' },
+      isRegisteredNonProfit: { $ne: 'No' },
+      isRegisteredCompany: { $ne: 'No' }
+    }).sort({ createdAt: -1 });
     const enriched = await Promise.all(ngos.map(n => enrichNGOData(n)));
     res.json({ status: true, data: enriched });
   } catch (err) {
