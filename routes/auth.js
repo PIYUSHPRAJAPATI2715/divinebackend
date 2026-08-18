@@ -376,6 +376,20 @@ router.put('/profile', authMiddleware, async (req, res) => {
       if (darpanNumber !== undefined) ngo.darpanNumber = darpanNumber;
       if (darpanCertificate !== undefined) ngo.darpanCertificate = darpanCertificate;
 
+      // Copy all 25 Non-Profit & 21 Corporate fields dynamically
+      const extraFields = [
+        'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
+        'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+        'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
+        'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
+        'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
+        'purposeOfFundraising', 'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas',
+        'fundingPreferences', 'csrOfficerDetails', 'awardsRecognitions', 'declarations'
+      ];
+      extraFields.forEach(f => {
+        if (req.body[f] !== undefined) ngo[f] = req.body[f];
+      });
+
       await ngo.save();
 
       if (organizationName !== undefined) {
@@ -728,6 +742,21 @@ const registerHandler = async (req, res) => {
           darpanNumber: req.body.darpanNumber || '',
           darpanCertificate: req.body.darpanCertificate || null
         });
+
+        // Copy all 25 Non-Profit & 21 Corporate registration fields
+        const extraFields = [
+          'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
+          'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+          'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
+          'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
+          'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
+          'purposeOfFundraising', 'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas',
+          'fundingPreferences', 'csrOfficerDetails', 'awardsRecognitions', 'declarations'
+        ];
+        extraFields.forEach(f => {
+          if (req.body[f] !== undefined) ngo[f] = req.body[f];
+        });
+
         await ngo.save();
       }
     } else if (user.role === 'teacher') {

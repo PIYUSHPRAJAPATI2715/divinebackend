@@ -123,6 +123,54 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+// Update NGO / Corporate Profile (Supports all 25 Non-Profit & 21 Corporate fields)
+router.put('/profile', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const user = await User.findById(req.user.id || req.user._id);
+
+    const allowedFields = [
+      'name', 'legalName', 'logo', 'registrationNumber', 'contactPerson', 'registeredAddress',
+      'addressCertificate', 'designation', 'email', 'phone', 'about', 'briefProfile', 'years', 'ourMission',
+      'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany', 'ngoType', 'status',
+      'moaAoaDocs', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
+      'has12A', 'registration12A', 'certificate12A', 'has80G', 'registration80G', 'certificate80G',
+      'hasDarpan', 'darpanNumber', 'darpanCertificate', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+      'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl',
+      'bankAccountHolder', 'bankName', 'bankBranch', 'bankAccountNumber', 'bankIFSC', 'cancelledChequeDoc',
+      'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
+      'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
+      'purposeOfFundraising', 'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas',
+      'fundingPreferences', 'csrOfficerDetails', 'awardsRecognitions', 'declarations'
+    ];
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        ngo[field] = req.body[field];
+      }
+    });
+
+    await ngo.save();
+
+    if (user) {
+      if (req.body.name !== undefined) user.name = req.body.name;
+      if (req.body.organizationName !== undefined) user.name = req.body.organizationName;
+      if (req.body.email !== undefined) user.email = req.body.email;
+      if (req.body.gender !== undefined) user.gender = req.body.gender;
+      await user.save();
+    }
+
+    res.json({
+      status: true,
+      message: 'Organization profile updated successfully',
+      ngo,
+      user
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
 // 2. Get NGO Campaigns
 router.get('/campaigns', async (req, res) => {
   try {
