@@ -12,6 +12,46 @@ const authMiddleware = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
+const constructFullUserData = async (user) => {
+  if (!user) return null;
+  const userObj = user.toObject ? user.toObject() : user;
+  let extra = {};
+
+  if (user.role === 'ngo') {
+    let ngo = await NGO.findOne({
+      $or: [
+        { email: user.email },
+        { phone: user.phone },
+        { name: user.organizationName || user.name }
+      ]
+    });
+    if (ngo) {
+      extra = ngo.toObject();
+    }
+  } else if (user.role === 'teacher') {
+    let teacher = await Teacher.findOne({
+      $or: [{ email: user.email }, { phone: user.phone }]
+    });
+    if (teacher) extra = teacher.toObject();
+  } else if (user.role === 'student') {
+    let student = await Student.findOne({
+      $or: [{ email: user.email }, { phone: user.phone }]
+    });
+    if (student) extra = student.toObject();
+  } else if (user.role === 'donor') {
+    let donor = await Donor.findOne({
+      $or: [{ email: user.email }, { phone: user.phone }]
+    });
+    if (donor) extra = donor.toObject();
+  }
+
+  return {
+    ...userObj,
+    ...extra,
+    verified: !!user.verified
+  };
+};
+
 /**
  * @route   POST /api/auth/check-role
  * @desc    Get the registered role of a phone number
@@ -183,15 +223,13 @@ router.post('/verify-otp', async (req, res) => {
     user.otpExpiry = null;
     await user.save();
     const token = jwt.sign({ id: user._id, role: user.role, phone: user.phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const fullData = await constructFullUserData(user);
     res.json({
       status: true,
       message: 'OTP verified successfully',
       token,
       isProfileComplete: user.isProfileComplete,
-      data: {
-        ...user.toObject(),
-        verified: !!user.verified
-      }
+      data: fullData
     });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message || 'OTP verification failed' });
@@ -482,13 +520,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    const fullData = await constructFullUserData(user);
     res.json({
       status: true,
       message: 'Profile updated successfully',
-      data: {
-        ...user.toObject(),
-        verified: !!user.verified
-      }
+      data: fullData
     });
 
   } catch (err) {
@@ -819,13 +855,11 @@ const registerHandler = async (req, res) => {
       }
     }
 
+    const fullData = await constructFullUserData(user);
     res.json({
       status: true,
       message: 'Registration completed successfully',
-      data: {
-        ...user.toObject(),
-        verified: !!user.verified
-      }
+      data: fullData
     });
 
   } catch (err) {
