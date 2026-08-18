@@ -7,6 +7,216 @@
   },
   "item": [
     {
+      "name": "🏛️ & 🏢 NGO (25 PDF FIELDS) & CORPORATE (21 PDF FIELDS) REGISTRATION APIS",
+      "description": "Complete Postman Requests for Non-Profit NGO (25 Fields) & Corporate Company (21 Fields) Onboarding, Profile Fetch/Update, and Admin Dynamic Management.",
+      "item": [
+        {
+          "name": "1. Non-Profit NGO Registration Example 1 (Public Trust - 25 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Non-Profit\",\n  \"isRegisteredNonProfit\": \"Yes - As a Trust\",\n  \"organizationName\": \"Divine Seva Sansthan Trust\",\n  \"legalName\": \"Divine Seva Sansthan Public Charitable Trust\",\n  \"authorizedPerson\": \"Dr. Rajeshwar Sharma\",\n  \"designation\": \"Managing Trustee\",\n  \"registeredAddress\": \"Plot No. 42, Sector 14, Dwarka, New Delhi - 110078\",\n  \"email\": \"contact@divineseva.org\",\n  \"phone\": \"+91 9871100223\",\n  \"websiteUrl\": \"https://divineseva.org\",\n  \"briefProfile\": \"Divine Seva Sansthan is a registered public charitable trust dedicated to orphan education, mid-day meals for slum children, and emergency flood and disaster relief across North India.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/logo_divine_seva.png\",\n  \"panNumber\": \"AAATD1234F\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_divine_seva.pdf\",\n  \"tanNumber\": \"DELT12345E\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_divine_seva.pdf\",\n  \"gstNumber\": \"07AAATD1234F1Z5\",\n  \"gstDocument\": \"https://divinebackend-v5gl.onrender.com/uploads/gst_divine_seva.pdf\",\n  \"has12A\": \"Yes\",\n  \"registration12A\": \"12A/2026/DEL/90123\",\n  \"certificate12A\": \"https://divinebackend-v5gl.onrender.com/uploads/12a_cert.pdf\",\n  \"has80G\": \"Yes\",\n  \"registration80G\": \"80G/2026/DEL/55211\",\n  \"certificate80G\": \"https://divinebackend-v5gl.onrender.com/uploads/80g_cert.pdf\",\n  \"hasDarpan\": \"Yes\",\n  \"darpanNumber\": \"DL/2026/009182\",\n  \"darpanCertificate\": \"https://divinebackend-v5gl.onrender.com/uploads/darpan_cert.pdf\",\n  \"hasCSR1\": \"Yes\",\n  \"csr1Number\": \"CSR00019283\",\n  \"csr1Certificate\": \"https://divinebackend-v5gl.onrender.com/uploads/csr1_cert.pdf\",\n  \"hasFCRA\": \"Yes\",\n  \"fcraNumber\": \"231660192\",\n  \"fcraCertificate\": \"https://divinebackend-v5gl.onrender.com/uploads/fcra_cert.pdf\",\n  \"bankAccountHolder\": \"Divine Seva Sansthan Trust\",\n  \"bankName\": \"State Bank of India\",\n  \"bankBranch\": \"Connaught Place, New Delhi\",\n  \"bankAccountNumber\": \"309988112233\",\n  \"bankIFSC\": \"SBIN0000691\",\n  \"cancelledChequeDoc\": \"https://divinebackend-v5gl.onrender.com/uploads/cancelled_cheque.pdf\",\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Dr. Rajeshwar Sharma\",\n      \"designation\": \"Managing Trustee\",\n      \"email\": \"rajeshwar@divineseva.org\",\n      \"pan\": \"ABCPV1234A\",\n      \"aadharId\": \"998877665544\",\n      \"linkedInUrl\": \"https://linkedin.com/in/rajeshwarsharma\"\n    },\n    {\n      \"name\": \"Sunita Devi\",\n      \"designation\": \"Joint Trustee\",\n      \"email\": \"sunita@divineseva.org\",\n      \"pan\": \"XYZPS5678B\",\n      \"aadharId\": \"112233445566\",\n      \"linkedInUrl\": \"https://linkedin.com/in/sunitadevi\"\n    }\n  ],\n  \"formFillerDetails\": {\n    \"name\": \"Sunita Devi\",\n    \"designationRole\": \"Joint Trustee\",\n    \"phone\": \"+91 9871100223\",\n    \"email\": \"sunita@divineseva.org\",\n    \"pan\": \"XYZPS5678B\",\n    \"aadharId\": \"112233445566\"\n  },\n  \"lastFinancialYearBudget\": \"25 Lakhs - 1 Crore\",\n  \"donorDatabaseStrength\": \"500 - 1000\",\n  \"employeeStrength\": \"25 - 100\",\n  \"hasCrowdfundedBefore\": \"Yes\",\n  \"crowdfundingPlatformsUsed\": \"Ketto, GiveIndia\",\n  \"campaignPlanningTimeframe\": \"0 - 5 days\",\n  \"purposeOfFundraising\": \"Provide winter kits, warm blankets, and school bags to 1,000 underprivileged children in rural schools.\",\n  \"awardsRecognitions\": [\n    {\n      \"name\": \"National Social Welfare Excellence Award\",\n      \"awardedBy\": \"Ministry of Social Justice & Empowerment\",\n      \"year\": \"2025\",\n      \"description\": \"Recognized for outstanding grassroots flood relief and food security distribution.\"\n    }\n  ],\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"declaredPurposesOnly\": true,\n    \"maintainRecords\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true,\n    \"suspensionUnderstood\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Non-Profit NGO Registration Example 2 (Registered Society - 25 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Non-Profit\",\n  \"isRegisteredNonProfit\": \"Yes - As a Society\",\n  \"organizationName\": \"Arogya Welfare Society\",\n  \"legalName\": \"Arogya Healthcare & Social Welfare Society\",\n  \"authorizedPerson\": \"Dr. Ananya Roy\",\n  \"designation\": \"General Secretary\",\n  \"registeredAddress\": \"12/B Park Street, Kolkata, West Bengal - 700016\",\n  \"email\": \"info@arogyawelfare.org\",\n  \"phone\": \"+91 9830011224\",\n  \"websiteUrl\": \"https://arogyawelfare.org\",\n  \"briefProfile\": \"Registered society facilitating free mobile medical vans, cataract surgeries for seniors, and maternal health checkups in rural Bengal.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/arogya_logo.png\",\n  \"panNumber\": \"AAATA9876C\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_arogya.pdf\",\n  \"tanNumber\": \"KOLT54321A\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_arogya.pdf\",\n  \"has12A\": \"Yes\",\n  \"registration12A\": \"12A/2025/WB/33109\",\n  \"certificate12A\": \"https://divinebackend-v5gl.onrender.com/uploads/arogya_12a.pdf\",\n  \"has80G\": \"Yes\",\n  \"registration80G\": \"80G/2025/WB/44120\",\n  \"certificate80G\": \"https://divinebackend-v5gl.onrender.com/uploads/arogya_80g.pdf\",\n  \"hasDarpan\": \"Yes\",\n  \"darpanNumber\": \"WB/2025/011982\",\n  \"darpanCertificate\": \"https://divinebackend-v5gl.onrender.com/uploads/arogya_darpan.pdf\",\n  \"hasCSR1\": \"Yes\",\n  \"csr1Number\": \"CSR00088921\",\n  \"bankAccountHolder\": \"Arogya Welfare Society\",\n  \"bankName\": \"HDFC Bank\",\n  \"bankBranch\": \"Park Street Branch, Kolkata\",\n  \"bankAccountNumber\": \"5010022334455\",\n  \"bankIFSC\": \"HDFC0000014\",\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Dr. Ananya Roy\",\n      \"designation\": \"General Secretary\",\n      \"email\": \"ananya@arogyawelfare.org\",\n      \"pan\": \"ABCPR9876K\",\n      \"aadharId\": \"334455667788\",\n      \"linkedInUrl\": \"https://linkedin.com/in/drananyaroy\"\n    },\n    {\n      \"name\": \"Siddharth Das\",\n      \"designation\": \"Treasurer\",\n      \"email\": \"siddharth@arogyawelfare.org\",\n      \"pan\": \"XYZPD1234L\",\n      \"aadharId\": \"778899001122\"\n    }\n  ],\n  \"formFillerDetails\": {\n    \"name\": \"Dr. Ananya Roy\",\n    \"designationRole\": \"General Secretary\",\n    \"phone\": \"+91 9830011224\",\n    \"email\": \"ananya@arogyawelfare.org\"\n  },\n  \"lastFinancialYearBudget\": \"More than 1 Crore\",\n  \"donorDatabaseStrength\": \"More than 1000\",\n  \"employeeStrength\": \"25 - 100\",\n  \"hasCrowdfundedBefore\": \"Yes\",\n  \"crowdfundingPlatformsUsed\": \"Milaap\",\n  \"campaignPlanningTimeframe\": \"5 - 15 days\",\n  \"purposeOfFundraising\": \"Fund 200 free eye cataract surgeries and procure medical equipment for mobile dispensaries.\",\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"declaredPurposesOnly\": true,\n    \"maintainRecords\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true,\n    \"suspensionUnderstood\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Non-Profit NGO Registration Example 3 (Section 8 Company - 25 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Non-Profit\",\n  \"isRegisteredNonProfit\": \"Yes - As a Section 25 or Section 8 Company\",\n  \"organizationName\": \"Krishnayan Gaushala Foundation\",\n  \"legalName\": \"Krishnayan Cow Protection Foundation (Section 8 Co.)\",\n  \"authorizedPerson\": \"Swami Krishna Das\",\n  \"designation\": \"Executive Director\",\n  \"registeredAddress\": \"Gau Dham, National Highway 58, Haridwar, Uttarakhand - 249401\",\n  \"email\": \"contact@krishnayangaushala.org\",\n  \"phone\": \"+91 9897012345\",\n  \"websiteUrl\": \"https://krishnayangaushala.org\",\n  \"briefProfile\": \"Section 8 non-profit company sheltering and treating over 5,000 stray, injured, and abandoned cows with modern veterinary facilities and organic fodder management.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/krishnayan_logo.png\",\n  \"panNumber\": \"AAACK7788M\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_krishnayan.pdf\",\n  \"tanNumber\": \"UKDT33445P\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_krishnayan.pdf\",\n  \"has12A\": \"Yes\",\n  \"registration12A\": \"12A/2024/UK/99001\",\n  \"has80G\": \"Yes\",\n  \"registration80G\": \"80G/2024/UK/88112\",\n  \"hasDarpan\": \"Yes\",\n  \"darpanNumber\": \"UK/2024/007721\",\n  \"hasCSR1\": \"Yes\",\n  \"csr1Number\": \"CSR00044556\",\n  \"bankAccountHolder\": \"Krishnayan Cow Protection Foundation\",\n  \"bankName\": \"Punjab National Bank\",\n  \"bankBranch\": \"Haridwar Main Branch\",\n  \"bankAccountNumber\": \"012300210009988\",\n  \"bankIFSC\": \"PUNB0012300\",\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Swami Krishna Das\",\n      \"designation\": \"Director\",\n      \"email\": \"swami@krishnayan.org\",\n      \"pan\": \"AAAPK5566N\",\n      \"aadharId\": \"445566778899\"\n    }\n  ],\n  \"lastFinancialYearBudget\": \"More than 1 Crore\",\n  \"donorDatabaseStrength\": \"More than 1000\",\n  \"employeeStrength\": \"More than 100\",\n  \"hasCrowdfundedBefore\": \"Yes\",\n  \"crowdfundingPlatformsUsed\": \"Direct Website & Divine App\",\n  \"campaignPlanningTimeframe\": \"0 - 5 days\",\n  \"purposeOfFundraising\": \"Monthly organic fodder (Gaugrass) supply and veterinary medicine for 5,000 rescued cattle.\",\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"declaredPurposesOnly\": true,\n    \"maintainRecords\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true,\n    \"suspensionUnderstood\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Corporate Registration Example 1 (Pvt Ltd Co. - 21 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Corporate\",\n  \"isRegisteredCompany\": \"Yes - As a Private Limited Company\",\n  \"organizationName\": \"Divine Tech Solutions Pvt Ltd\",\n  \"legalName\": \"Divine Tech Solutions Private Limited\",\n  \"authorizedPerson\": \"Vikramaditya Roy\",\n  \"designation\": \"Managing Director\",\n  \"registeredAddress\": \"Tower B, 7th Floor, Cyber City, Gurugram, Haryana - 122002\",\n  \"email\": \"csr@divinetech.com\",\n  \"phone\": \"+91 9910088776\",\n  \"websiteUrl\": \"https://divinetech.com\",\n  \"briefProfile\": \"Leading enterprise software and cloud consultancy company deploying 2% net profit CSR funds to build digital smart classrooms in rural Haryana schools.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/divine_tech_logo.png\",\n  \"panNumber\": \"AAACD5678G\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_divine_tech.pdf\",\n  \"tanNumber\": \"GURT99887F\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_divine_tech.pdf\",\n  \"gstNumber\": \"06AAACD5678G1Z9\",\n  \"gstDocument\": \"https://divinebackend-v5gl.onrender.com/uploads/gst_divine_tech.pdf\",\n  \"csrObligation\": \"Committed ₹1.5 Crores in FY 2025-26 toward setting up 50 computer labs and solar power back-ups in rural government schools.\",\n  \"csrAmountSpentPreviousYear\": \"1 Crore - 10 Crore\",\n  \"csrFocusAreas\": [\n    \"Education\",\n    \"Skill Development\",\n    \"Environmental Sustainability\",\n    \"Rural Development\"\n  ],\n  \"fundingPreferences\": \"Project-Based Funding\",\n  \"csrOfficerDetails\": {\n    \"name\": \"Amitabh Sen\",\n    \"designation\": \"Head of CSR & Sustainability\",\n    \"department\": \"Corporate Social Responsibility\",\n    \"email\": \"csr.head@divinetech.com\",\n    \"phone\": \"+91 9910088776\",\n    \"linkedInUrl\": \"https://linkedin.com/in/amitabhsen\"\n  },\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Vikramaditya Roy\",\n      \"designation\": \"Managing Director\",\n      \"email\": \"vikram@divinetech.com\",\n      \"pan\": \"AAAPR1122K\",\n      \"aadharId\": \"556677889900\",\n      \"linkedInUrl\": \"https://linkedin.com/in/vikramroy\"\n    },\n    {\n      \"name\": \"Priyanshi Mehra\",\n      \"designation\": \"Executive Director\",\n      \"email\": \"priyanshi@divinetech.com\",\n      \"pan\": \"XYZPM9988L\",\n      \"aadharId\": \"889900112233\"\n    }\n  ],\n  \"formFillerDetails\": {\n    \"name\": \"Amitabh Sen\",\n    \"designationRole\": \"Head of CSR\",\n    \"phone\": \"+91 9910088776\",\n    \"email\": \"csr.head@divinetech.com\"\n  },\n  \"bankAccountHolder\": \"Divine Tech Solutions Pvt Ltd - CSR Escrow A/c\",\n  \"bankName\": \"ICICI Bank\",\n  \"bankBranch\": \"DLF Cyber City Branch, Gurugram\",\n  \"bankAccountNumber\": \"002105009988\",\n  \"bankIFSC\": \"ICIC0000021\",\n  \"cancelledChequeDoc\": \"https://divinebackend-v5gl.onrender.com/uploads/cheque_divine_tech.pdf\",\n  \"employeeStrength\": \"More than 1000\",\n  \"awardsRecognitions\": [\n    {\n      \"name\": \"BSE CSR Excellence Award for Education\",\n      \"awardedBy\": \"Bombay Stock Exchange Foundation\",\n      \"year\": \"2025\",\n      \"description\": \"Recognized for solar-powered digital classroom deployment in 50 villages.\"\n    }\n  ],\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Corporate Registration Example 2 (LLP Firm - 21 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Corporate\",\n  \"isRegisteredCompany\": \"Yes - As a LLP\",\n  \"organizationName\": \"Apex Healthcare Advisors LLP\",\n  \"legalName\": \"Apex Healthcare Advisors LLP\",\n  \"authorizedPerson\": \"Dr. Sanjeev Kapoor\",\n  \"designation\": \"Designated Partner\",\n  \"registeredAddress\": \"Suite 401, Bandra Kurla Complex, Mumbai, Maharashtra - 400051\",\n  \"email\": \"csr@apexhealth.in\",\n  \"phone\": \"+91 9820033445\",\n  \"websiteUrl\": \"https://apexhealth.in\",\n  \"briefProfile\": \"Healthcare consulting partnership allocating annual CSR grants toward clean drinking water plants and mobile diagnostic labs for tribal districts in Maharashtra.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/apex_logo.png\",\n  \"panNumber\": \"AAAFA1122N\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_apex.pdf\",\n  \"tanNumber\": \"MUMT44332K\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_apex.pdf\",\n  \"gstNumber\": \"27AAAFA1122N1Z3\",\n  \"gstDocument\": \"https://divinebackend-v5gl.onrender.com/uploads/gst_apex.pdf\",\n  \"csrObligation\": \"Funding clean water filtration plants in 15 drought-prone villages.\",\n  \"csrAmountSpentPreviousYear\": \"0 - 1 Crore\",\n  \"csrFocusAreas\": [\n    \"Healthcare\",\n    \"Sanitation & Clean Water\",\n    \"Child Welfare\"\n  ],\n  \"fundingPreferences\": \"Programme-Based Funding\",\n  \"csrOfficerDetails\": {\n    \"name\": \"Neha Kulkarni\",\n    \"designation\": \"CSR Coordinator\",\n    \"department\": \"Public Affairs\",\n    \"email\": \"neha@apexhealth.in\",\n    \"phone\": \"+91 9820033445\"\n  },\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Dr. Sanjeev Kapoor\",\n      \"designation\": \"Designated Partner\",\n      \"email\": \"sanjeev@apexhealth.in\",\n      \"pan\": \"ABCPK4455M\",\n      \"aadharId\": \"223344556677\"\n    }\n  ],\n  \"bankAccountHolder\": \"Apex Healthcare Advisors LLP\",\n  \"bankName\": \"Axis Bank\",\n  \"bankBranch\": \"BKC Branch, Mumbai\",\n  \"bankAccountNumber\": \"918020011223344\",\n  \"bankIFSC\": \"UTIB0000005\",\n  \"employeeStrength\": \"500 - 1000\",\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Corporate Registration Example 3 (Limited Company - 21 Fields)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signup_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ngo\",\n  \"organizationType\": \"Corporate\",\n  \"isRegisteredCompany\": \"Yes - As a Limited Company\",\n  \"organizationName\": \"Surya Green Power India Ltd\",\n  \"legalName\": \"Surya Green Power India Limited\",\n  \"authorizedPerson\": \"Rameshwar Goenka\",\n  \"designation\": \"Company Secretary & VP Legal\",\n  \"registeredAddress\": \"Surya House, CG Road, Ahmedabad, Gujarat - 380009\",\n  \"email\": \"csr@suryagreenpower.com\",\n  \"phone\": \"+91 9727099887\",\n  \"websiteUrl\": \"https://suryagreenpower.com\",\n  \"briefProfile\": \"Public listed renewable energy corporation driving CSR initiatives in women solar technician training and village afforestation drives.\",\n  \"logo\": \"https://divinebackend-v5gl.onrender.com/uploads/surya_logo.png\",\n  \"panNumber\": \"AAACS3344P\",\n  \"panImage\": \"https://divinebackend-v5gl.onrender.com/uploads/pan_surya.pdf\",\n  \"tanNumber\": \"AHMT11223R\",\n  \"tanImage\": \"https://divinebackend-v5gl.onrender.com/uploads/tan_surya.pdf\",\n  \"gstNumber\": \"24AAACS3344P1Z8\",\n  \"gstDocument\": \"https://divinebackend-v5gl.onrender.com/uploads/gst_surya.pdf\",\n  \"csrObligation\": \"Allocated ₹5 Crores for solar pump installation for women farmer cooperatives in Gujarat & Rajasthan.\",\n  \"csrAmountSpentPreviousYear\": \"More than 10 Crore\",\n  \"csrFocusAreas\": [\n    \"Women Empowerment\",\n    \"Environmental Sustainability\",\n    \"Farmers\",\n    \"Livelihood Development\"\n  ],\n  \"fundingPreferences\": \"Multi-Year Funding\",\n  \"csrOfficerDetails\": {\n    \"name\": \"Meera Patel\",\n    \"designation\": \"Chief CSR Officer\",\n    \"department\": \"CSR & Social Impact\",\n    \"email\": \"meera.patel@suryagreenpower.com\",\n    \"phone\": \"+91 9727099887\",\n    \"linkedInUrl\": \"https://linkedin.com/in/meerapatelcsr\"\n  },\n  \"directorsKeyManagement\": [\n    {\n      \"name\": \"Rameshwar Goenka\",\n      \"designation\": \"Company Secretary\",\n      \"email\": \"rameshwar@suryagreenpower.com\",\n      \"pan\": \"AAAPG8877Q\",\n      \"aadharId\": \"667788990011\"\n    }\n  ],\n  \"bankAccountHolder\": \"Surya Green Power India Ltd - CSR Account\",\n  \"bankName\": \"Bank of Baroda\",\n  \"bankBranch\": \"CG Road Branch, Ahmedabad\",\n  \"bankAccountNumber\": \"01920200001122\",\n  \"bankIFSC\": \"BARB0CGROAD\",\n  \"employeeStrength\": \"More than 1000\",\n  \"declarations\": {\n    \"infoTrueAccurate\": true,\n    \"privacyPolicyAgreed\": true,\n    \"kycAgreed\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/auth/register",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "⭐ CORE MOBILE APP APIS (4 Required Endpoints)",
       "description": "Direct clean endpoints for Followers, Following, Fundraiser Categories, and User Created Campaigns.",
       "item": [
