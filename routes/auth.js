@@ -17,7 +17,7 @@ const constructFullUserData = async (user) => {
   const userObj = user.toObject ? user.toObject() : user;
   let extra = {};
 
-  if (user.role === 'ngo') {
+  if (user.role === 'ngo' || user.role === 'corporate') {
     let ngo = await NGO.findOne({
       $or: [
         { email: user.email },
@@ -45,9 +45,12 @@ const constructFullUserData = async (user) => {
     if (donor) extra = donor.toObject();
   }
 
+  const determinedRole = (extra.organizationType === 'Corporate' || user.role === 'corporate') ? 'corporate' : (user.role || 'donor');
+
   return {
     ...userObj,
     ...extra,
+    role: determinedRole,
     verified: !!user.verified
   };
 };
@@ -699,10 +702,9 @@ const registerHandler = async (req, res) => {
     if (role) {
       let cleanRole = (role || '').toLowerCase().trim();
       if (cleanRole === 'corporate') {
-        cleanRole = 'ngo';
+        user.role = 'corporate';
         req.body.organizationType = req.body.organizationType || 'Corporate';
-      }
-      if (['donor', 'ngo', 'teacher', 'student'].includes(cleanRole)) {
+      } else if (['donor', 'ngo', 'corporate', 'teacher', 'student'].includes(cleanRole)) {
         user.role = cleanRole;
       } else {
         return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor", "ngo", "corporate", "teacher", or "student".' });
@@ -719,10 +721,10 @@ const registerHandler = async (req, res) => {
       user.phone = phone;
     }
 
-    if (user.role === 'ngo') {
+    if (user.role === 'ngo' || user.role === 'corporate') {
       const { organizationName, registeredAddress, authorizedPerson, designation, gender, profilePhoto } = req.body;
       if (!organizationName || !registeredAddress || !authorizedPerson || !designation) {
-        return res.status(400).json({ status: false, message: 'Organization Name, Registered Address, Authorized Person name, and Designation are required for NGO registration.' });
+        return res.status(400).json({ status: false, message: 'Organization Name, Registered Address, Authorized Person name, and Designation are required for registration.' });
       }
       user.name = organizationName;
       user.gender = gender || null;
@@ -751,7 +753,7 @@ const registerHandler = async (req, res) => {
     // ----------------------------------------------------
     const finalEmail = user.email || req.body.email || `${user.phone.replace(/[^0-9]/g, '')}@divine.com`;
 
-    if (user.role === 'ngo') {
+    if (user.role === 'ngo' || user.role === 'corporate') {
       let ngo = await NGO.findOne({ email: finalEmail });
       if (!ngo) {
         ngo = new NGO({
