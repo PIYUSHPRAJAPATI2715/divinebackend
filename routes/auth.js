@@ -697,8 +697,16 @@ const registerHandler = async (req, res) => {
     const { email, role, phone } = req.body;
 
     if (role) {
-      if (['donor', 'ngo', 'teacher', 'student'].includes(role)) user.role = role;
-      else return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor", "ngo", "teacher", or "student".' });
+      let cleanRole = (role || '').toLowerCase().trim();
+      if (cleanRole === 'corporate') {
+        cleanRole = 'ngo';
+        req.body.organizationType = req.body.organizationType || 'Corporate';
+      }
+      if (['donor', 'ngo', 'teacher', 'student'].includes(cleanRole)) {
+        user.role = cleanRole;
+      } else {
+        return res.status(400).json({ status: false, message: 'Invalid role. Must be either "donor", "ngo", "corporate", "teacher", or "student".' });
+      }
     }
     if (email) {
       const emailInUse = await User.findOne({ email, _id: { $ne: userId } });
