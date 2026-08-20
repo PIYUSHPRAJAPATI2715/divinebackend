@@ -287,17 +287,10 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
 
       if (ngo) {
-        let reviews = await Review.find({
-          $or: [
-            { targetName: ngo.name },
-            { type: 'NGO' }
-          ],
+        const reviews = await Review.find({
+          targetName: ngo.name,
           status: 'Approved'
         }).sort({ createdAt: -1 });
-
-        if (reviews.length === 0) {
-          reviews = await Review.find({ status: 'Approved' }).limit(5);
-        }
 
         const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
         const followersCount = followersList.length;

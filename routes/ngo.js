@@ -45,18 +45,11 @@ router.get('/profile', async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
 
-    // Fetch approved reviews for NGO
-    let reviews = await Review.find({
-      $or: [
-        { targetName: ngo.name },
-        { type: 'NGO' }
-      ],
+    // Fetch approved reviews specifically targeting this organization
+    const reviews = await Review.find({
+      targetName: ngo.name,
       status: 'Approved'
     }).sort({ createdAt: -1 });
-
-    if (reviews.length === 0) {
-      reviews = await Review.find({ status: 'Approved' }).limit(5);
-    }
 
     // Compute dynamic rating from approved reviews (fallback to stored rating)
     let computedRating = ngo.rating || 4.5;
