@@ -27,6 +27,9 @@ jobs:
             echo "Resetting to latest main..."
             git reset --hard origin/main
 
+            echo "Installing dependencies..."
+            npm install
+
             echo "Restarting PM2 application..."
             pm2 restart divine-backend
 
