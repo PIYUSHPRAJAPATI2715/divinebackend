@@ -165,6 +165,13 @@ app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMy
 app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 
+app.get('/api/donor/donation-history', authMiddleware, donorProfileRoutes.handleDonationHistory);
+app.get('/api/donor/donations', authMiddleware, donorProfileRoutes.handleDonationHistory);
+app.get('/api/donor/history', authMiddleware, donorProfileRoutes.handleDonationHistory);
+app.get('/api/donors/donation-history', authMiddleware, donorProfileRoutes.handleDonationHistory);
+app.get('/api/dan/my-donations', authMiddleware, donorProfileRoutes.handleDonationHistory);
+app.get('/api/ngo/donations', authMiddleware, donorProfileRoutes.handleDonationHistory);
+
 app.get('/api/donor/referrals/stats', authMiddleware, donorReferralsRoutes.handleReferralStats);
 app.get('/api/donor/referrals', authMiddleware, donorReferralsRoutes.handleReferralStats);
 app.get('/api/referrals/stats', authMiddleware, donorReferralsRoutes.handleReferralStats);

@@ -319,11 +319,7 @@ const handleMyCampaigns = async (req, res) => {
     if (userName) queryConditions.push({ user: { $regex: new RegExp(`^${userName.trim()}$`, 'i') } });
 
     let query = queryConditions.length > 0 ? { $or: queryConditions } : { userId: req.user?._id };
-    let myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
-
-    if (myCampaigns.length === 0) {
-      myCampaigns = await Campaign.find({ status: 'Live' }).limit(5).sort({ createdAt: -1 });
-    }
+    const myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
 
     let totalRaisedNum = 0;
     let totalGoalNum = 0;

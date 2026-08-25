@@ -240,4 +240,102 @@ router.post('/deactivate', async (req, res) => {
   }
 });
 
+// Donation History Handler
+const Transaction = require('../../models/Transaction');
+const DanDonation = require('../../models/DanDonation');
+
+const handleDonationHistory = async (req, res) => {
+  try {
+    if (!req.user || (!req.user._id && !req.user.id)) {
+      return res.status(401).json({ status: false, message: 'Authentication required' });
+    }
+
+    const userId = req.user._id || req.user.id;
+    const dbUser = await User.findById(userId);
+    const userPhone = dbUser?.phone || req.user.phone || '';
+    const userEmail = dbUser?.email || req.user.email || '';
+    const userName = dbUser?.name || dbUser?.organizationName || req.user.name || '';
+
+    const txConditions = [];
+    if (userPhone) {
+      const cleanPhone = userPhone.replace('+91', '').trim();
+      txConditions.push({ mobile: userPhone });
+      txConditions.push({ mobile: cleanPhone });
+      txConditions.push({ mobile: `+91 ${cleanPhone}` });
+    }
+    if (userName) {
+      txConditions.push({ user: { $regex: new RegExp(`^${userName.trim()}$`, 'i') } });
+    }
+
+    let transactions = [];
+    if (txConditions.length > 0) {
+      transactions = await Transaction.find({
+        type: 'Donation',
+        $or: txConditions
+      }).sort({ date: -1 });
+    }
+
+    const danConditions = [{ donorId: userId }];
+    if (userPhone) danConditions.push({ donorPhone: userPhone });
+    if (userEmail) danConditions.push({ donorEmail: userEmail });
+
+    const danDonations = await DanDonation.find({
+      $or: danConditions
+    }).sort({ createdAt: -1 });
+
+    const formattedFromTx = transactions.map(tx => ({
+      _id: tx._id,
+      donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
+      transactionId: tx.transactionId || '',
+      type: 'Donation',
+      item: tx.item || tx.fundCategory || 'Divine Donation',
+      fundCategory: tx.fundCategory || 'General Support',
+      amount: tx.amount || 0,
+      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+      status: tx.status || 'Success',
+      paymentMethod: tx.paymentMethod || 'UPI',
+      date: tx.date || tx.createdAt,
+      createdAt: tx.date || tx.createdAt
+    }));
+
+    const formattedFromDan = danDonations.map(d => ({
+      _id: d._id,
+      donationId: d.donationId || `DON-${d._id.toString().slice(-4)}`,
+      transactionId: d.transactionId || '',
+      type: 'Dan Donation',
+      item: d.items && d.items.length > 0 ? d.items.map(i => i.name).join(', ') : 'Dan Donation',
+      fundCategory: d.eventType || 'Daan',
+      amount: d.totalAmount || 0,
+      formattedAmount: `₹${(d.totalAmount || 0).toLocaleString('en-IN')}`,
+      status: d.paymentStatus || 'Success',
+      paymentMethod: d.paymentMethod || 'UPI',
+      items: d.items || [],
+      date: d.createdAt,
+      createdAt: d.createdAt
+    }));
+
+    const combined = [...formattedFromTx, ...formattedFromDan].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const totalDonatedAmount = combined.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+    res.json({
+      status: true,
+      count: combined.length,
+      totalDonated: `₹${totalDonatedAmount.toLocaleString('en-IN')}`,
+      totalDonatedAmount,
+      donations: combined,
+      donationHistory: combined,
+      history: combined,
+      data: combined
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+router.get('/donation-history', handleDonationHistory);
+router.get('/donations', handleDonationHistory);
+router.get('/history', handleDonationHistory);
+
+router.handleDonationHistory = handleDonationHistory;
 module.exports = router;
+module.exports.handleDonationHistory = handleDonationHistory;
