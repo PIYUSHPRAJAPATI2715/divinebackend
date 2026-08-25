@@ -242,9 +242,22 @@ router.post('/deactivate', async (req, res) => {
   }
 });
 
-// Donation History Handler
+// Donation History Handler (DONATIONS ONLY - excludes wallet recharges, top-ups, and non-donation transactions)
 const Transaction = require('../../models/Transaction');
 const DanDonation = require('../../models/DanDonation');
+
+const isTopupOrRecharge = (itemStr, fundCategoryStr, typeStr) => {
+  const combined = `${itemStr || ''} ${fundCategoryStr || ''} ${typeStr || ''}`.toLowerCase();
+  return (
+    combined.includes('wallet') ||
+    combined.includes('top-up') ||
+    combined.includes('topup') ||
+    combined.includes('recharge') ||
+    combined.includes('cashback') ||
+    combined.includes('refund') ||
+    combined.includes('admin adjustment')
+  );
+};
 
 const handleDonationHistory = async (req, res) => {
   try {
@@ -285,20 +298,22 @@ const handleDonationHistory = async (req, res) => {
       $or: danConditions
     }).sort({ createdAt: -1 });
 
-    const formattedFromTx = transactions.map(tx => ({
-      _id: tx._id,
-      donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
-      transactionId: tx.transactionId || '',
-      type: 'Donation',
-      item: tx.item || tx.fundCategory || 'Divine Donation',
-      fundCategory: tx.fundCategory || 'General Support',
-      amount: tx.amount || 0,
-      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
-      status: tx.status || 'Success',
-      paymentMethod: tx.paymentMethod || 'UPI',
-      date: tx.date || tx.createdAt,
-      createdAt: tx.date || tx.createdAt
-    }));
+    const formattedFromTx = transactions
+      .filter(tx => !isTopupOrRecharge(tx.item, tx.fundCategory, tx.type))
+      .map(tx => ({
+        _id: tx._id,
+        donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
+        transactionId: tx.transactionId || '',
+        type: 'Donation',
+        item: tx.item || tx.fundCategory || 'Divine Donation',
+        fundCategory: tx.fundCategory || 'General Support',
+        amount: tx.amount || 0,
+        formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+        status: tx.status || 'Success',
+        paymentMethod: tx.paymentMethod || 'UPI',
+        date: tx.date || tx.createdAt,
+        createdAt: tx.date || tx.createdAt
+      }));
 
     const formattedFromDan = danDonations.map(d => ({
       _id: d._id,
