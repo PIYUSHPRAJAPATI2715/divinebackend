@@ -260,10 +260,10 @@ router.get('/me', authMiddleware, async (req, res) => {
       impactStats: userObj.impactStats || '',
       followersCount: (userObj.followers || []).length,
       years: userObj.years || '',
-      rating: 4.5
+      rating: 0.0
     };
 
-    if (user.role === 'ngo') {
+    if (user.role === 'ngo' || user.role === 'corporate') {
       const Review = require('../models/Review');
       const NGO = require('../models/NGO');
       
@@ -292,6 +292,12 @@ router.get('/me', authMiddleware, async (req, res) => {
           status: 'Approved'
         }).sort({ createdAt: -1 });
 
+        let computedRating = 0.0;
+        if (reviews.length > 0) {
+          const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
+          computedRating = Math.round(avg * 10) / 10;
+        }
+
         const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
         const followersCount = followersList.length;
 
@@ -314,10 +320,10 @@ router.get('/me', authMiddleware, async (req, res) => {
           followersCount: followersCount,
           followers: followersList,
           followingCount: 0,
-          impact: ngo.impactStats || 'Grassroots community empowerment and emergency relief.',
-          impactStats: ngo.impactStats || 'Grassroots community empowerment and emergency relief.',
-          years: ngo.years || '5 Years',
-          rating: ngo.rating || 4.5,
+          impact: ngo.impactStats || '',
+          impactStats: ngo.impactStats || '',
+          years: ngo.years || '',
+          rating: computedRating,
           verified: true
         };
       }

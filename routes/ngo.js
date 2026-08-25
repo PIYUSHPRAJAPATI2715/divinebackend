@@ -51,15 +51,14 @@ router.get('/profile', async (req, res) => {
       status: 'Approved'
     }).sort({ createdAt: -1 });
 
-    // Compute dynamic rating from approved reviews (fallback to stored rating)
-    let computedRating = ngo.rating || 4.5;
+    // Compute dynamic rating from approved reviews (default to 0.0 for new entities with 0 reviews)
+    let computedRating = 0.0;
     if (reviews.length > 0) {
-      const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
       computedRating = Math.round(avg * 10) / 10;
-      // Persist updated rating
-      ngo.rating = computedRating;
-      await ngo.save();
     }
+    ngo.rating = computedRating;
+    await ngo.save();
 
     const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
     const followersCount = followersList.length;

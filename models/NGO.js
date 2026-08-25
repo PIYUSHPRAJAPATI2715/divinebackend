@@ -5,7 +5,7 @@ const ngoSchema = new mongoose.Schema({
   name: { type: String, required: true },
   legalName: { type: String, default: "" },
   logo: { type: String, default: null },
-  rating: { type: Number, default: 4.5 },
+  rating: { type: Number, default: 0.0 },
   impactStats: { type: String, default: "" },
   registrationNumber: { type: String, required: true },
   contactPerson: { type: String, required: true },

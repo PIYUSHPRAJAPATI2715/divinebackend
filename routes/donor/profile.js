@@ -49,11 +49,13 @@ router.get('/profile', async (req, res) => {
     }));
 
     const followersCount = (user.followers || []).length;
-    const userObj = user.toObject();
+    const computedRating = reviews.length > 0 
+      ? (Math.round((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length) * 10) / 10) 
+      : 0.0;
 
     const enrichedData = {
       ...userObj,
-      rating: 5.0,
+      rating: computedRating,
       reviewCount: reviews.length,
       reviews: formattedReviews,
       followersCount,
