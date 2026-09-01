@@ -557,35 +557,66 @@ router.post('/apple', async (req, res) => {
 });
 
 /**
- * @route   POST /api/auth/fcm-token
- * @desc    Update FCM Push Notification token
+ * @route   POST /api/device-token & POST /api/auth/fcm-token
+ * @desc    Register or Update Device Push Notification Token (FCM / APNs)
  * @access  Public / Private
  */
 const handleFcmTokenUpdate = async (req, res) => {
   try {
-    const { fcmToken, userId, phone } = req.body;
-    if (!fcmToken) {
-      return res.status(400).json({ status: false, message: 'fcmToken is required' });
+    const tokenVal = req.body.fcmToken || req.body.deviceToken || req.body.token || req.body.device_token || req.body.fcm_token;
+    if (!tokenVal) {
+      return res.status(400).json({ status: false, message: 'deviceToken or fcmToken is required in request body' });
     }
 
-    let targetUserId = req.user?.id || req.user?._id || userId;
+    let targetUserId = req.user?.id || req.user?._id || req.body.userId || req.body.user_id;
     let user = null;
     if (targetUserId) user = await User.findById(targetUserId);
-    if (!user && phone) user = await User.findOne({ phone });
+    if (!user && req.body.phone) user = await User.findOne({ phone: req.body.phone });
+    if (!user && req.body.email) user = await User.findOne({ email: String(req.body.email).toLowerCase().trim() });
 
     if (user) {
-      user.fcmToken = fcmToken;
+      user.fcmToken = tokenVal;
       await user.save();
-      return res.json({ status: true, message: 'FCM push token registered successfully', fcmToken });
+      return res.json({
+        status: true,
+        success: true,
+        message: 'Device push token registered successfully',
+        deviceToken: tokenVal,
+        fcmToken: tokenVal
+      });
     }
 
-    res.json({ status: true, message: 'FCM token received', fcmToken });
+    res.json({
+      status: true,
+      success: true,
+      message: 'Device token received successfully',
+      deviceToken: tokenVal,
+      fcmToken: tokenVal
+    });
   } catch (err) {
-    res.status(400).json({ status: false, message: err.message });
+    res.status(400).json({ status: false, success: false, message: err.message });
   }
 };
 
+const handleDeviceTokenInfo = (req, res) => {
+  res.json({
+    status: true,
+    message: 'Device Token Registration API',
+    purpose: 'Used by mobile applications (Flutter/iOS/Android) to register device push notification tokens (FCM/APNs) for sending push notifications to logged-in users.',
+    endpoint: 'POST /api/device-token or POST /api/auth/fcm-token',
+    samplePayload: {
+      deviceToken: 'FCM_OR_APNS_DEVICE_PUSH_TOKEN_HERE',
+      userId: 'OPTIONAL_USER_ID'
+    }
+  });
+};
+
+router.post('/device-token', handleFcmTokenUpdate);
 router.post('/fcm-token', handleFcmTokenUpdate);
+router.post('/', handleFcmTokenUpdate);
+router.get('/device-token', handleDeviceTokenInfo);
+router.get('/fcm-token', handleDeviceTokenInfo);
+router.get('/', handleDeviceTokenInfo);
 
 /**
  * @route   GET /api/auth/me

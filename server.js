@@ -153,6 +153,10 @@ app.use('/api/wallet-settings', require('./routes/admin/walletSettings'));
 app.use('/api/admin/master-settings', require('./routes/admin/masterSettings'));
 app.use('/api/master-settings', require('./routes/admin/masterSettings'));
 
+// Device Push Token Routes (FCM / APNs)
+app.use('/api/device-token', authRoutes);
+app.use('/api/fcm-token', authRoutes);
+
 const donorCampaignsRoutes = require('./routes/donor/campaigns');
 const donorReferralsRoutes = require('./routes/donor/referrals');
 const donorProfileRoutes = require('./routes/donor/profile');
