@@ -251,9 +251,12 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ status: false, success: false, message: 'Google ID token or email is required' });
     }
 
-    let user = null;
-    if (email) user = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (!user && idToken) user = await User.findOne({ googleId: idToken });
+    let existingUser = null;
+    if (email) existingUser = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!existingUser && idToken) existingUser = await User.findOne({ googleId: idToken });
+
+    const isUserExist = !!existingUser;
+    let user = existingUser;
 
     if (!user) {
       user = new User({
@@ -263,7 +266,7 @@ router.post('/google', async (req, res) => {
         profilePhoto: photoUrl || null,
         role: 'donor',
         fcmToken: fcmToken || null,
-        isProfileComplete: true
+        isProfileComplete: false
       });
       await user.save();
 
@@ -290,16 +293,26 @@ router.post('/google', async (req, res) => {
     return res.json({
       status: true,
       success: true,
-      message: 'Login successful',
+      isUserExist: isUserExist,
+      isProfileComplete: !!user.isProfileComplete,
+      isNewUser: !isUserExist,
+      message: isUserExist ? 'Login successful' : 'Registration successful',
       token,
+      role: user.role,
       data: {
         token,
+        isUserExist: isUserExist,
+        isProfileComplete: !!user.isProfileComplete,
+        isNewUser: !isUserExist,
+        role: user.role,
         user: {
           _id: user._id,
           id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
+          isUserExist: isUserExist,
+          isProfileComplete: !!user.isProfileComplete,
           ...fullData
         }
       }
@@ -313,6 +326,7 @@ router.post('/google', async (req, res) => {
         let retryUser = null;
         if (req.body.email) retryUser = await User.findOne({ email: String(req.body.email).toLowerCase().trim() });
         if (!retryUser && req.body.idToken) retryUser = await User.findOne({ googleId: req.body.idToken });
+        const isUserExist = !!retryUser;
         if (!retryUser) {
           retryUser = new User({
             email: req.body.email ? String(req.body.email).toLowerCase().trim() : undefined,
@@ -321,7 +335,7 @@ router.post('/google', async (req, res) => {
             profilePhoto: req.body.photoUrl || null,
             role: 'donor',
             fcmToken: req.body.fcmToken || null,
-            isProfileComplete: true
+            isProfileComplete: false
           });
           await retryUser.save();
         }
@@ -330,16 +344,26 @@ router.post('/google', async (req, res) => {
         return res.json({
           status: true,
           success: true,
-          message: 'Login successful',
+          isUserExist: isUserExist,
+          isProfileComplete: !!retryUser.isProfileComplete,
+          isNewUser: !isUserExist,
+          message: isUserExist ? 'Login successful' : 'Registration successful',
           token,
+          role: retryUser.role,
           data: {
             token,
+            isUserExist: isUserExist,
+            isProfileComplete: !!retryUser.isProfileComplete,
+            isNewUser: !isUserExist,
+            role: retryUser.role,
             user: {
               _id: retryUser._id,
               id: retryUser._id,
               name: retryUser.name,
               email: retryUser.email,
               role: retryUser.role,
+              isUserExist: isUserExist,
+              isProfileComplete: !!retryUser.isProfileComplete,
               ...fullData
             }
           }
@@ -369,13 +393,16 @@ router.post('/apple', async (req, res) => {
     const cleanLastName = (lastName && typeof lastName === 'string') ? lastName.trim() : '';
     const appleName = `${cleanFirstName} ${cleanLastName}`.trim() || null;
 
-    let user = null;
+    let existingUser = null;
     if (email && typeof email === 'string' && email.trim() !== '') {
-      user = await User.findOne({ email: email.trim().toLowerCase() });
+      existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     }
-    if (!user && identityToken) {
-      user = await User.findOne({ appleId: identityToken });
+    if (!existingUser && identityToken) {
+      existingUser = await User.findOne({ appleId: identityToken });
     }
+
+    const isUserExist = !!existingUser;
+    let user = existingUser;
 
     if (!user) {
       user = new User({
@@ -384,7 +411,7 @@ router.post('/apple', async (req, res) => {
         name: appleName || 'Apple User',
         role: 'donor',
         fcmToken: fcmToken || null,
-        isProfileComplete: true
+        isProfileComplete: false
       });
       await user.save();
 
@@ -419,16 +446,26 @@ router.post('/apple', async (req, res) => {
     return res.json({
       status: true,
       success: true,
-      message: 'Login successful',
+      isUserExist: isUserExist,
+      isProfileComplete: !!user.isProfileComplete,
+      isNewUser: !isUserExist,
+      message: isUserExist ? 'Login successful' : 'Registration successful',
       token,
+      role: user.role,
       data: {
         token,
+        isUserExist: isUserExist,
+        isProfileComplete: !!user.isProfileComplete,
+        isNewUser: !isUserExist,
+        role: user.role,
         user: {
           _id: user._id,
           id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
+          isUserExist: isUserExist,
+          isProfileComplete: !!user.isProfileComplete,
           ...fullData
         }
       }
@@ -442,6 +479,7 @@ router.post('/apple', async (req, res) => {
         let retryUser = null;
         if (req.body.email) retryUser = await User.findOne({ email: String(req.body.email).toLowerCase().trim() });
         if (!retryUser && req.body.identityToken) retryUser = await User.findOne({ appleId: req.body.identityToken });
+        const isUserExist = !!retryUser;
         if (!retryUser) {
           retryUser = new User({
             email: req.body.email ? String(req.body.email).toLowerCase().trim() : undefined,
@@ -449,7 +487,7 @@ router.post('/apple', async (req, res) => {
             name: 'Apple User',
             role: 'donor',
             fcmToken: req.body.fcmToken || null,
-            isProfileComplete: true
+            isProfileComplete: false
           });
           await retryUser.save();
         }
@@ -458,16 +496,26 @@ router.post('/apple', async (req, res) => {
         return res.json({
           status: true,
           success: true,
-          message: 'Login successful',
+          isUserExist: isUserExist,
+          isProfileComplete: !!retryUser.isProfileComplete,
+          isNewUser: !isUserExist,
+          message: isUserExist ? 'Login successful' : 'Registration successful',
           token,
+          role: retryUser.role,
           data: {
             token,
+            isUserExist: isUserExist,
+            isProfileComplete: !!retryUser.isProfileComplete,
+            isNewUser: !isUserExist,
+            role: retryUser.role,
             user: {
               _id: retryUser._id,
               id: retryUser._id,
               name: retryUser.name,
               email: retryUser.email,
               role: retryUser.role,
+              isUserExist: isUserExist,
+              isProfileComplete: !!retryUser.isProfileComplete,
               ...fullData
             }
           }
