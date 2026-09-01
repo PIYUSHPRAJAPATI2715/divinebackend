@@ -46,12 +46,14 @@ const constructFullUserData = async (user) => {
   }
 
   const determinedRole = (extra.organizationType === 'Corporate' || user.role === 'corporate') ? 'corporate' : (user.role || 'donor');
+  const isVer = (user.verified !== undefined && user.verified !== null) ? !!user.verified : ((extra.verified !== undefined && extra.verified !== null) ? !!extra.verified : true);
 
   return {
     ...userObj,
     ...extra,
     role: determinedRole,
-    verified: !!user.verified
+    verified: isVer,
+    isVerified: isVer
   };
 };
 
@@ -266,7 +268,8 @@ router.post('/google', async (req, res) => {
         profilePhoto: photoUrl || null,
         role: 'donor',
         fcmToken: fcmToken || null,
-        isProfileComplete: false
+        isProfileComplete: false,
+        verified: true
       });
       await user.save();
 
@@ -284,6 +287,7 @@ router.post('/google', async (req, res) => {
       if (displayName && (!user.name || user.name === 'User')) { user.name = displayName; updated = true; }
       if (photoUrl && !user.profilePhoto) { user.profilePhoto = photoUrl; updated = true; }
       if (fcmToken) { user.fcmToken = fcmToken; updated = true; }
+      if (!user.verified) { user.verified = true; updated = true; }
       if (updated) await user.save();
     }
 
@@ -296,6 +300,8 @@ router.post('/google', async (req, res) => {
       isUserExist: isUserExist,
       isProfileComplete: !!user.isProfileComplete,
       isNewUser: !isUserExist,
+      verified: user.verified !== undefined ? !!user.verified : true,
+      isVerified: user.verified !== undefined ? !!user.verified : true,
       message: isUserExist ? 'Login successful' : 'Registration successful',
       token,
       role: user.role,
@@ -304,6 +310,8 @@ router.post('/google', async (req, res) => {
         isUserExist: isUserExist,
         isProfileComplete: !!user.isProfileComplete,
         isNewUser: !isUserExist,
+        verified: user.verified !== undefined ? !!user.verified : true,
+        isVerified: user.verified !== undefined ? !!user.verified : true,
         role: user.role,
         user: {
           _id: user._id,
@@ -313,6 +321,8 @@ router.post('/google', async (req, res) => {
           role: user.role,
           isUserExist: isUserExist,
           isProfileComplete: !!user.isProfileComplete,
+          verified: user.verified !== undefined ? !!user.verified : true,
+          isVerified: user.verified !== undefined ? !!user.verified : true,
           ...fullData
         }
       }
@@ -347,6 +357,8 @@ router.post('/google', async (req, res) => {
           isUserExist: isUserExist,
           isProfileComplete: !!retryUser.isProfileComplete,
           isNewUser: !isUserExist,
+          verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+          isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
           message: isUserExist ? 'Login successful' : 'Registration successful',
           token,
           role: retryUser.role,
@@ -355,6 +367,8 @@ router.post('/google', async (req, res) => {
             isUserExist: isUserExist,
             isProfileComplete: !!retryUser.isProfileComplete,
             isNewUser: !isUserExist,
+            verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+            isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
             role: retryUser.role,
             user: {
               _id: retryUser._id,
@@ -364,6 +378,8 @@ router.post('/google', async (req, res) => {
               role: retryUser.role,
               isUserExist: isUserExist,
               isProfileComplete: !!retryUser.isProfileComplete,
+              verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+              isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
               ...fullData
             }
           }
@@ -411,7 +427,8 @@ router.post('/apple', async (req, res) => {
         name: appleName || 'Apple User',
         role: 'donor',
         fcmToken: fcmToken || null,
-        isProfileComplete: false
+        isProfileComplete: false,
+        verified: true
       });
       await user.save();
 
@@ -437,6 +454,10 @@ router.post('/apple', async (req, res) => {
         user.fcmToken = fcmToken;
         updated = true;
       }
+      if (!user.verified) {
+        user.verified = true;
+        updated = true;
+      }
       if (updated) await user.save();
     }
 
@@ -449,6 +470,8 @@ router.post('/apple', async (req, res) => {
       isUserExist: isUserExist,
       isProfileComplete: !!user.isProfileComplete,
       isNewUser: !isUserExist,
+      verified: user.verified !== undefined ? !!user.verified : true,
+      isVerified: user.verified !== undefined ? !!user.verified : true,
       message: isUserExist ? 'Login successful' : 'Registration successful',
       token,
       role: user.role,
@@ -457,6 +480,8 @@ router.post('/apple', async (req, res) => {
         isUserExist: isUserExist,
         isProfileComplete: !!user.isProfileComplete,
         isNewUser: !isUserExist,
+        verified: user.verified !== undefined ? !!user.verified : true,
+        isVerified: user.verified !== undefined ? !!user.verified : true,
         role: user.role,
         user: {
           _id: user._id,
@@ -466,6 +491,8 @@ router.post('/apple', async (req, res) => {
           role: user.role,
           isUserExist: isUserExist,
           isProfileComplete: !!user.isProfileComplete,
+          verified: user.verified !== undefined ? !!user.verified : true,
+          isVerified: user.verified !== undefined ? !!user.verified : true,
           ...fullData
         }
       }
