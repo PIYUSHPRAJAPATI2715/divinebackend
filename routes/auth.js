@@ -53,7 +53,8 @@ const constructFullUserData = async (user) => {
     ...extra,
     role: determinedRole,
     verified: isVer,
-    isVerified: isVer
+    isVerified: isVer,
+    is_verified: isVer
   };
 };
 
@@ -310,6 +311,7 @@ router.post('/google', async (req, res) => {
       isProfileComplete: isComplete,
       verified: user.verified !== undefined ? !!user.verified : true,
       isVerified: user.verified !== undefined ? !!user.verified : true,
+      is_verified: user.verified !== undefined ? !!user.verified : true,
       message: 'Login successful',
       token,
       role: user.role,
@@ -318,6 +320,7 @@ router.post('/google', async (req, res) => {
         isProfileComplete: isComplete,
         verified: user.verified !== undefined ? !!user.verified : true,
         isVerified: user.verified !== undefined ? !!user.verified : true,
+        is_verified: user.verified !== undefined ? !!user.verified : true,
         role: user.role,
         user: {
           _id: user._id,
@@ -328,6 +331,7 @@ router.post('/google', async (req, res) => {
           isProfileComplete: isComplete,
           verified: user.verified !== undefined ? !!user.verified : true,
           isVerified: user.verified !== undefined ? !!user.verified : true,
+          is_verified: user.verified !== undefined ? !!user.verified : true,
           ...fullData
         }
       }
@@ -363,6 +367,7 @@ router.post('/google', async (req, res) => {
           isProfileComplete: retryIsComplete,
           verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
           isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+          is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
           message: 'Login successful',
           token,
           role: retryUser.role,
@@ -371,6 +376,7 @@ router.post('/google', async (req, res) => {
             isProfileComplete: retryIsComplete,
             verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
             isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+            is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
             role: retryUser.role,
             user: {
               _id: retryUser._id,
@@ -381,6 +387,7 @@ router.post('/google', async (req, res) => {
               isProfileComplete: retryIsComplete,
               verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
               isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+              is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
               ...fullData
             }
           }
@@ -472,6 +479,7 @@ router.post('/apple', async (req, res) => {
       isProfileComplete: isComplete,
       verified: user.verified !== undefined ? !!user.verified : true,
       isVerified: user.verified !== undefined ? !!user.verified : true,
+      is_verified: user.verified !== undefined ? !!user.verified : true,
       message: 'Login successful',
       token,
       role: user.role,
@@ -480,6 +488,7 @@ router.post('/apple', async (req, res) => {
         isProfileComplete: isComplete,
         verified: user.verified !== undefined ? !!user.verified : true,
         isVerified: user.verified !== undefined ? !!user.verified : true,
+        is_verified: user.verified !== undefined ? !!user.verified : true,
         role: user.role,
         user: {
           _id: user._id,
@@ -490,6 +499,7 @@ router.post('/apple', async (req, res) => {
           isProfileComplete: isComplete,
           verified: user.verified !== undefined ? !!user.verified : true,
           isVerified: user.verified !== undefined ? !!user.verified : true,
+          is_verified: user.verified !== undefined ? !!user.verified : true,
           ...fullData
         }
       }
@@ -524,6 +534,7 @@ router.post('/apple', async (req, res) => {
           isProfileComplete: retryIsComplete,
           verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
           isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+          is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
           message: 'Login successful',
           token,
           role: retryUser.role,
@@ -532,6 +543,7 @@ router.post('/apple', async (req, res) => {
             isProfileComplete: retryIsComplete,
             verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
             isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+            is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
             role: retryUser.role,
             user: {
               _id: retryUser._id,
@@ -542,6 +554,7 @@ router.post('/apple', async (req, res) => {
               isProfileComplete: retryIsComplete,
               verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
               isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+              is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
               ...fullData
             }
           }
