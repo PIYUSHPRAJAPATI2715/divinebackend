@@ -46,7 +46,13 @@ const constructFullUserData = async (user) => {
   }
 
   const determinedRole = (extra.organizationType === 'Corporate' || user.role === 'corporate') ? 'corporate' : (user.role || 'donor');
-  const isVer = (user.verified !== undefined && user.verified !== null) ? !!user.verified : ((extra.verified !== undefined && extra.verified !== null) ? !!extra.verified : true);
+
+  let isVer = false;
+  if (determinedRole === 'corporate' || user.role === 'ngo' || user.role === 'corporate') {
+    isVer = (user.verified === true) || (extra.verified === true) || (extra.status === 'Verified') || (user.status === 'Verified');
+  } else {
+    isVer = (user.verified !== undefined && user.verified !== null) ? !!user.verified : ((extra.verified !== undefined && extra.verified !== null) ? !!extra.verified : true);
+  }
 
   return {
     ...userObj,
@@ -297,30 +303,30 @@ router.post('/google', async (req, res) => {
       if (displayName && (!user.name || user.name === 'User')) { user.name = displayName; updated = true; }
       if (photoUrl && !user.profilePhoto) { user.profilePhoto = photoUrl; updated = true; }
       if (fcmToken) { user.fcmToken = fcmToken; updated = true; }
-      if (!user.verified) { user.verified = true; updated = true; }
       if (updated) await user.save();
     }
 
-    const isComplete = !!(user.isProfileComplete || (user.name && user.name !== 'Google User' && user.phone));
     const token = jwt.sign({ id: user._id, role: user.role, email: user.email, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
     const fullData = await constructFullUserData(user);
+    const realVerified = !!fullData?.verified;
+    const isComplete = !!(user.isProfileComplete || (user.name && user.name !== 'Google User' && user.phone));
 
     return res.json({
       status: true,
       success: true,
       isProfileComplete: isComplete,
-      verified: user.verified !== undefined ? !!user.verified : true,
-      isVerified: user.verified !== undefined ? !!user.verified : true,
-      is_verified: user.verified !== undefined ? !!user.verified : true,
+      verified: realVerified,
+      isVerified: realVerified,
+      is_verified: realVerified,
       message: 'Login successful',
       token,
       role: user.role,
       data: {
         token,
         isProfileComplete: isComplete,
-        verified: user.verified !== undefined ? !!user.verified : true,
-        isVerified: user.verified !== undefined ? !!user.verified : true,
-        is_verified: user.verified !== undefined ? !!user.verified : true,
+        verified: realVerified,
+        isVerified: realVerified,
+        is_verified: realVerified,
         role: user.role,
         user: {
           _id: user._id,
@@ -329,9 +335,9 @@ router.post('/google', async (req, res) => {
           email: user.email,
           role: user.role,
           isProfileComplete: isComplete,
-          verified: user.verified !== undefined ? !!user.verified : true,
-          isVerified: user.verified !== undefined ? !!user.verified : true,
-          is_verified: user.verified !== undefined ? !!user.verified : true,
+          verified: realVerified,
+          isVerified: realVerified,
+          is_verified: realVerified,
           ...fullData
         }
       }
@@ -353,30 +359,30 @@ router.post('/google', async (req, res) => {
             profilePhoto: req.body.photoUrl || null,
             role: 'donor',
             fcmToken: req.body.fcmToken || null,
-            isProfileComplete: false,
-            verified: true
+            isProfileComplete: false
           });
           await retryUser.save();
         }
-        const retryIsComplete = !!(retryUser.isProfileComplete || (retryUser.name && retryUser.name !== 'Google User' && retryUser.phone));
         const token = jwt.sign({ id: retryUser._id, role: retryUser.role, email: retryUser.email }, JWT_SECRET, { expiresIn: '7d' });
         const fullData = await constructFullUserData(retryUser);
+        const retryRealVerified = !!fullData?.verified;
+        const retryIsComplete = !!(retryUser.isProfileComplete || (retryUser.name && retryUser.name !== 'Google User' && retryUser.phone));
         return res.json({
           status: true,
           success: true,
           isProfileComplete: retryIsComplete,
-          verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-          isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-          is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+          verified: retryRealVerified,
+          isVerified: retryRealVerified,
+          is_verified: retryRealVerified,
           message: 'Login successful',
           token,
           role: retryUser.role,
           data: {
             token,
             isProfileComplete: retryIsComplete,
-            verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-            isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-            is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+            verified: retryRealVerified,
+            isVerified: retryRealVerified,
+            is_verified: retryRealVerified,
             role: retryUser.role,
             user: {
               _id: retryUser._id,
@@ -385,9 +391,9 @@ router.post('/google', async (req, res) => {
               email: retryUser.email,
               role: retryUser.role,
               isProfileComplete: retryIsComplete,
-              verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-              isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-              is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+              verified: retryRealVerified,
+              isVerified: retryRealVerified,
+              is_verified: retryRealVerified,
               ...fullData
             }
           }
@@ -462,33 +468,30 @@ router.post('/apple', async (req, res) => {
         user.fcmToken = fcmToken;
         updated = true;
       }
-      if (!user.verified) {
-        user.verified = true;
-        updated = true;
-      }
       if (updated) await user.save();
     }
 
-    const isComplete = !!(user.isProfileComplete || (user.name && user.name !== 'Apple User' && user.phone));
     const token = jwt.sign({ id: user._id, role: user.role, email: user.email, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
     const fullData = await constructFullUserData(user);
+    const realVerified = !!fullData?.verified;
+    const isComplete = !!(user.isProfileComplete || (user.name && user.name !== 'Apple User' && user.phone));
 
     return res.json({
       status: true,
       success: true,
       isProfileComplete: isComplete,
-      verified: user.verified !== undefined ? !!user.verified : true,
-      isVerified: user.verified !== undefined ? !!user.verified : true,
-      is_verified: user.verified !== undefined ? !!user.verified : true,
+      verified: realVerified,
+      isVerified: realVerified,
+      is_verified: realVerified,
       message: 'Login successful',
       token,
       role: user.role,
       data: {
         token,
         isProfileComplete: isComplete,
-        verified: user.verified !== undefined ? !!user.verified : true,
-        isVerified: user.verified !== undefined ? !!user.verified : true,
-        is_verified: user.verified !== undefined ? !!user.verified : true,
+        verified: realVerified,
+        isVerified: realVerified,
+        is_verified: realVerified,
         role: user.role,
         user: {
           _id: user._id,
@@ -497,9 +500,9 @@ router.post('/apple', async (req, res) => {
           email: user.email,
           role: user.role,
           isProfileComplete: isComplete,
-          verified: user.verified !== undefined ? !!user.verified : true,
-          isVerified: user.verified !== undefined ? !!user.verified : true,
-          is_verified: user.verified !== undefined ? !!user.verified : true,
+          verified: realVerified,
+          isVerified: realVerified,
+          is_verified: realVerified,
           ...fullData
         }
       }
@@ -520,30 +523,30 @@ router.post('/apple', async (req, res) => {
             name: 'Apple User',
             role: 'donor',
             fcmToken: req.body.fcmToken || null,
-            isProfileComplete: false,
-            verified: true
+            isProfileComplete: false
           });
           await retryUser.save();
         }
-        const retryIsComplete = !!(retryUser.isProfileComplete || (retryUser.name && retryUser.name !== 'Apple User' && retryUser.phone));
         const token = jwt.sign({ id: retryUser._id, role: retryUser.role, email: retryUser.email }, JWT_SECRET, { expiresIn: '7d' });
         const fullData = await constructFullUserData(retryUser);
+        const retryRealVerified = !!fullData?.verified;
+        const retryIsComplete = !!(retryUser.isProfileComplete || (retryUser.name && retryUser.name !== 'Apple User' && retryUser.phone));
         return res.json({
           status: true,
           success: true,
           isProfileComplete: retryIsComplete,
-          verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-          isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-          is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+          verified: retryRealVerified,
+          isVerified: retryRealVerified,
+          is_verified: retryRealVerified,
           message: 'Login successful',
           token,
           role: retryUser.role,
           data: {
             token,
             isProfileComplete: retryIsComplete,
-            verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-            isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-            is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+            verified: retryRealVerified,
+            isVerified: retryRealVerified,
+            is_verified: retryRealVerified,
             role: retryUser.role,
             user: {
               _id: retryUser._id,
@@ -552,9 +555,9 @@ router.post('/apple', async (req, res) => {
               email: retryUser.email,
               role: retryUser.role,
               isProfileComplete: retryIsComplete,
-              verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-              isVerified: retryUser.verified !== undefined ? !!retryUser.verified : true,
-              is_verified: retryUser.verified !== undefined ? !!retryUser.verified : true,
+              verified: retryRealVerified,
+              isVerified: retryRealVerified,
+              is_verified: retryRealVerified,
               ...fullData
             }
           }
@@ -1196,6 +1199,8 @@ const registerHandler = async (req, res) => {
       user.name = organizationName;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
+      user.verified = false;
+      user.status = 'Pending';
     } else if (user.role === 'teacher') {
       const { name, expertise, experience, gender, profilePhoto } = req.body;
       if (!name || !expertise || !experience) {
