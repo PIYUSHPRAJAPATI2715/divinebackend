@@ -659,6 +659,73 @@ const handleDeviceTokenRemove = async (req, res) => {
   }
 };
 
+const handleTestNotification = async (req, res) => {
+  try {
+    const { title, body, message, type, screen, id, dataId, deviceToken } = req.body;
+
+    let targetUserId = req.user?.id || req.user?._id || req.body.userId || req.body.user_id;
+
+    if (!targetUserId) {
+      const authHeader = req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          targetUserId = decoded?.id || decoded?._id;
+        } catch (e) {}
+      }
+    }
+
+    let user = null;
+    if (targetUserId) user = await User.findById(targetUserId);
+    if (!user && deviceToken) user = await User.findOne({ $or: [{ fcmToken: deviceToken }, { deviceToken }] });
+
+    const finalTitle = title || 'Test Push Notification 🔔';
+    const finalBody = body || message || 'This is a test notification from Divine Platform backend!';
+    const finalType = type || 'campaign';
+    const finalScreen = screen || 'campaign_details';
+    const finalId = String(id || dataId || '123');
+    const targetToken = deviceToken || user?.fcmToken || user?.deviceToken || 'SAMPLE_FCM_TOKEN_123';
+
+    let notificationRecord = null;
+    if (user) {
+      const { createAndSendNotification } = require('../utils/notification');
+      notificationRecord = await createAndSendNotification({
+        userId: user._id,
+        title: finalTitle,
+        body: finalBody,
+        type: finalType,
+        screen: finalScreen,
+        dataId: finalId
+      });
+    }
+
+    const pushPayload = {
+      notification: {
+        title: finalTitle,
+        body: finalBody
+      },
+      data: {
+        type: finalType,
+        id: finalId,
+        screen: finalScreen
+      }
+    };
+
+    res.json({
+      status: true,
+      success: true,
+      message: 'Test push notification dispatched successfully',
+      targetUser: user ? { _id: user._id, name: user.name, email: user.email } : null,
+      deviceToken: targetToken,
+      payload: pushPayload,
+      notification: notificationRecord
+    });
+  } catch (err) {
+    res.status(400).json({ status: false, success: false, message: err.message });
+  }
+};
+
 const handleDeviceTokenInfo = (req, res) => {
   res.json({
     status: true,
@@ -666,7 +733,8 @@ const handleDeviceTokenInfo = (req, res) => {
     purpose: 'Used by mobile applications (Flutter/iOS/Android) to register or remove device push notification tokens (FCM/APNs) for sending push notifications to logged-in users.',
     endpoints: {
       register: 'POST /api/device-token',
-      remove: 'POST /api/device-token/remove'
+      remove: 'POST /api/device-token/remove',
+      testPush: 'POST /api/test-notification'
     },
     samplePayload: {
       deviceToken: 'FCM_OR_APNS_DEVICE_PUSH_TOKEN_HERE'
@@ -674,6 +742,8 @@ const handleDeviceTokenInfo = (req, res) => {
   });
 };
 
+router.post('/test-notification', handleTestNotification);
+router.post('/device-token/test-notification', handleTestNotification);
 router.post('/device-token/remove', handleDeviceTokenRemove);
 router.post('/fcm-token/remove', handleDeviceTokenRemove);
 router.post('/remove', handleDeviceTokenRemove);
@@ -1348,3 +1418,4 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
+module.exports.handleTestNotification = handleTestNotification;
