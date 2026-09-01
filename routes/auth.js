@@ -687,18 +687,16 @@ const handleTestNotification = async (req, res) => {
     const finalId = String(id || dataId || '123');
     const targetToken = deviceToken || user?.fcmToken || user?.deviceToken || 'SAMPLE_FCM_TOKEN_123';
 
-    let notificationRecord = null;
-    if (user) {
-      const { createAndSendNotification } = require('../utils/notification');
-      notificationRecord = await createAndSendNotification({
-        userId: user._id,
-        title: finalTitle,
-        body: finalBody,
-        type: finalType,
-        screen: finalScreen,
-        dataId: finalId
-      });
-    }
+    const { createAndSendNotification } = require('../utils/notification');
+    const dispatchResult = await createAndSendNotification({
+      userId: user?._id || null,
+      title: finalTitle,
+      body: finalBody,
+      type: finalType,
+      screen: finalScreen,
+      dataId: finalId,
+      fcmToken: targetToken
+    });
 
     const pushPayload = {
       notification: {
@@ -717,9 +715,8 @@ const handleTestNotification = async (req, res) => {
       success: true,
       message: 'Test push notification dispatched successfully',
       targetUser: user ? { _id: user._id, name: user.name, email: user.email } : null,
-      deviceToken: targetToken,
-      payload: pushPayload,
-      notification: notificationRecord
+      notification: dispatchResult?.notification || null,
+      fcmResult: dispatchResult?.fcmResult || null
     });
   } catch (err) {
     res.status(400).json({ status: false, success: false, message: err.message });
