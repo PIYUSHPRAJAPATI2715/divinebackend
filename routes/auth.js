@@ -617,18 +617,76 @@ const handleFcmTokenUpdate = async (req, res) => {
   }
 };
 
+const handleDeviceTokenRemove = async (req, res) => {
+  try {
+    const tokenVal = req.body.deviceToken || req.body.fcmToken || req.body.token || req.body.device_token || req.body.fcm_token;
+
+    let targetUserId = req.user?.id || req.user?._id || req.body.userId || req.body.user_id;
+
+    if (!targetUserId) {
+      const authHeader = req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          targetUserId = decoded?.id || decoded?._id;
+        } catch (e) {}
+      }
+    }
+
+    let user = null;
+    if (targetUserId) user = await User.findById(targetUserId);
+    if (!user && tokenVal) user = await User.findOne({ $or: [{ fcmToken: tokenVal }, { deviceToken: tokenVal }] });
+
+    if (user) {
+      user.fcmToken = null;
+      user.deviceToken = null;
+      await user.save();
+      return res.json({
+        status: true,
+        success: true,
+        message: 'Device token removed successfully'
+      });
+    }
+
+    if (tokenVal) {
+      await User.updateMany(
+        { $or: [{ fcmToken: tokenVal }, { deviceToken: tokenVal }] },
+        { $set: { fcmToken: null, deviceToken: null } }
+      );
+    }
+
+    res.json({
+      status: true,
+      success: true,
+      message: 'Device token removed successfully'
+    });
+  } catch (err) {
+    res.status(400).json({ status: false, success: false, message: err.message });
+  }
+};
+
 const handleDeviceTokenInfo = (req, res) => {
   res.json({
     status: true,
     message: 'Device Token Registration API',
-    purpose: 'Used by mobile applications (Flutter/iOS/Android) to register device push notification tokens (FCM/APNs) for sending push notifications to logged-in users.',
-    endpoint: 'POST /api/device-token or POST /api/auth/fcm-token',
+    purpose: 'Used by mobile applications (Flutter/iOS/Android) to register or remove device push notification tokens (FCM/APNs) for sending push notifications to logged-in users.',
+    endpoints: {
+      register: 'POST /api/device-token',
+      remove: 'POST /api/device-token/remove'
+    },
     samplePayload: {
-      deviceToken: 'FCM_OR_APNS_DEVICE_PUSH_TOKEN_HERE',
-      userId: 'OPTIONAL_USER_ID'
+      deviceToken: 'FCM_OR_APNS_DEVICE_PUSH_TOKEN_HERE'
     }
   });
 };
+
+router.post('/device-token/remove', handleDeviceTokenRemove);
+router.post('/fcm-token/remove', handleDeviceTokenRemove);
+router.post('/remove', handleDeviceTokenRemove);
+router.delete('/device-token', handleDeviceTokenRemove);
+router.delete('/fcm-token', handleDeviceTokenRemove);
+router.delete('/', handleDeviceTokenRemove);
 
 router.post('/device-token', handleFcmTokenUpdate);
 router.post('/fcm-token', handleFcmTokenUpdate);
