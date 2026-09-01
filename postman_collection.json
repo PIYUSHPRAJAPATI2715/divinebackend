@@ -7,6 +7,96 @@
   },
   "item": [
     {
+      "name": "🔑 Authentication & Social Auth",
+      "item": [
+        {
+          "name": "1. Google Sign-in / Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"GOOGLE_ID_TOKEN_EXAMPLE_123\",\n  \"email\": \"user@example.com\",\n  \"displayName\": \"User Name\",\n  \"photoUrl\": \"https://lh3.googleusercontent.com/a/default-user\",\n  \"fcmToken\": \"FCM_DEVICE_PUSH_TOKEN_EXAMPLE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Apple Sign-in / Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identityToken\": \"APPLE_IDENTITY_TOKEN_EXAMPLE_456\",\n  \"authorizationCode\": \"APPLE_AUTHORIZATION_CODE_EXAMPLE\",\n  \"email\": \"user@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"fcmToken\": \"FCM_DEVICE_PUSH_TOKEN_EXAMPLE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/apple",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "apple"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Register / Update FCM Push Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"FCM_DEVICE_PUSH_TOKEN_EXAMPLE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/fcm-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "fcm-token"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "🏛️ & 🏢 NGO (25 PDF FIELDS) & CORPORATE (21 PDF FIELDS) REGISTRATION APIS",
       "description": "Complete Postman Requests for Non-Profit NGO (25 Fields) & Corporate Company (21 Fields) Onboarding, Profile Fetch/Update, and Admin Dynamic Management.",
       "item": [
