@@ -3,10 +3,13 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   phone: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true,
     trim: true
   },
+  googleId: { type: String, default: null },
+  appleId: { type: String, default: null },
+  fcmToken: { type: String, default: null },
   role: {
     type: String,
     enum: ['donor', 'ngo', 'corporate', 'teacher', 'student'],

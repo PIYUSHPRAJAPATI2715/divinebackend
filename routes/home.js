@@ -39,12 +39,15 @@ router.get('/', optionalAuth, async (req, res) => {
         const unreadCount = await Notification.countDocuments({ user: req.user.id, isRead: false });
         isRead = unreadCount === 0;
 
+        const userSearchHistory = dbUser.searchHistory || [];
         userProfile = {
           id: dbUser._id,
           phone: dbUser.phone,
           name: dbUser.name || dbUser.organizationName || 'User',
           role: dbUser.role,
           walletBalance: dbUser.walletBalance || 0,
+          searchHistory: userSearchHistory,
+          recentSearches: userSearchHistory,
           isRead // attached to user profile
         };
       }
@@ -64,13 +67,14 @@ router.get('/', optionalAuth, async (req, res) => {
       .select('name logo rating impactStats about email phone')
       .limit(10);
 
-    // 6. Fetch recent successful donations on the platform (limited to 5)
+    // 6. Fetch recent successful donations on the platform (last 10 recent donation transactions, excluding wallet topups)
     const recentTx = await Transaction.find({
       type: 'Donation',
-      status: 'Success'
+      status: 'Success',
+      item: { $not: /wallet|top-up|topup|recharge|cashback|refund/i }
     })
     .sort({ date: -1 })
-    .limit(5);
+    .limit(10);
 
     const donationHistory = recentTx.map(tx => ({
       transactionId: tx.transactionId,
@@ -78,9 +82,10 @@ router.get('/', optionalAuth, async (req, res) => {
       donor: tx.user,
       item: tx.item,
       amount: tx.amount,
+      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
       status: tx.status,
-      date: tx.date,
-      createdAt: tx.createdAt
+      date: tx.date || tx.createdAt,
+      createdAt: tx.date || tx.createdAt
     }));
 
     // Calculate total donate amount for the currently logged in user

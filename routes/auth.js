@@ -240,6 +240,194 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 /**
+ * @route   POST /api/auth/google
+ * @desc    Google Sign-in / Signup endpoint
+ * @access  Public
+ */
+router.post('/google', async (req, res) => {
+  try {
+    const { idToken, email, displayName, photoUrl, fcmToken } = req.body;
+    if (!email && !idToken) {
+      return res.status(400).json({ status: false, success: false, message: 'Google ID token or email is required' });
+    }
+
+    let user = null;
+    if (email) user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user && idToken) user = await User.findOne({ googleId: idToken });
+
+    if (!user) {
+      user = new User({
+        email: email ? String(email).toLowerCase().trim() : undefined,
+        googleId: idToken || null,
+        name: displayName || 'Google User',
+        profilePhoto: photoUrl || null,
+        role: 'donor',
+        fcmToken: fcmToken || null,
+        isProfileComplete: true
+      });
+      await user.save();
+
+      const { createAndSendNotification } = require('../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Welcome to Divine Platform! 🙏',
+        body: `Welcome ${user.name}! Your Google account has been registered successfully.`,
+        type: 'registration',
+        screen: 'home'
+      });
+    } else {
+      let updated = false;
+      if (!user.googleId && idToken) { user.googleId = idToken; updated = true; }
+      if (displayName && (!user.name || user.name === 'User')) { user.name = displayName; updated = true; }
+      if (photoUrl && !user.profilePhoto) { user.profilePhoto = photoUrl; updated = true; }
+      if (fcmToken) { user.fcmToken = fcmToken; updated = true; }
+      if (updated) await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+    const fullData = await constructFullUserData(user);
+
+    return res.json({
+      status: true,
+      success: true,
+      message: 'Login successful',
+      token,
+      data: {
+        token,
+        user: {
+          _id: user._id,
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          ...fullData
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    res.status(400).json({ status: false, success: false, message: err.message || 'Google authentication failed' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/apple
+ * @desc    Apple Sign-in / Signup endpoint
+ * @access  Public
+ */
+router.post('/apple', async (req, res) => {
+  try {
+    const { identityToken, authorizationCode, email, firstName, lastName, fcmToken } = req.body;
+    if (!identityToken && !authorizationCode && !email) {
+      return res.status(400).json({ status: false, success: false, message: 'Apple identity token or authorization code is required' });
+    }
+
+    const cleanFirstName = (firstName && typeof firstName === 'string') ? firstName.trim() : '';
+    const cleanLastName = (lastName && typeof lastName === 'string') ? lastName.trim() : '';
+    const appleName = `${cleanFirstName} ${cleanLastName}`.trim() || null;
+
+    let user = null;
+    if (email && typeof email === 'string' && email.trim() !== '') {
+      user = await User.findOne({ email: email.trim().toLowerCase() });
+    }
+    if (!user && identityToken) {
+      user = await User.findOne({ appleId: identityToken });
+    }
+
+    if (!user) {
+      user = new User({
+        email: (email && typeof email === 'string' && email.trim() !== '') ? email.trim().toLowerCase() : undefined,
+        appleId: identityToken || authorizationCode || null,
+        name: appleName || 'Apple User',
+        role: 'donor',
+        fcmToken: fcmToken || null,
+        isProfileComplete: true
+      });
+      await user.save();
+
+      const { createAndSendNotification } = require('../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Welcome to Divine Platform! 🙏',
+        body: `Welcome ${user.name}! Your Apple account has been registered successfully.`,
+        type: 'registration',
+        screen: 'home'
+      });
+    } else {
+      let updated = false;
+      if (!user.appleId && (identityToken || authorizationCode)) {
+        user.appleId = identityToken || authorizationCode;
+        updated = true;
+      }
+      if (appleName && (!user.name || user.name === 'User')) {
+        user.name = appleName;
+        updated = true;
+      }
+      if (fcmToken) {
+        user.fcmToken = fcmToken;
+        updated = true;
+      }
+      if (updated) await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+    const fullData = await constructFullUserData(user);
+
+    return res.json({
+      status: true,
+      success: true,
+      message: 'Login successful',
+      token,
+      data: {
+        token,
+        user: {
+          _id: user._id,
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          ...fullData
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Apple Auth Error:', err);
+    res.status(400).json({ status: false, success: false, message: err.message || 'Apple authentication failed' });
+  }
+});
+
+/**
+ * @route   POST /api/auth/fcm-token
+ * @desc    Update FCM Push Notification token
+ * @access  Public / Private
+ */
+const handleFcmTokenUpdate = async (req, res) => {
+  try {
+    const { fcmToken, userId, phone } = req.body;
+    if (!fcmToken) {
+      return res.status(400).json({ status: false, message: 'fcmToken is required' });
+    }
+
+    let targetUserId = req.user?.id || req.user?._id || userId;
+    let user = null;
+    if (targetUserId) user = await User.findById(targetUserId);
+    if (!user && phone) user = await User.findOne({ phone });
+
+    if (user) {
+      user.fcmToken = fcmToken;
+      await user.save();
+      return res.json({ status: true, message: 'FCM push token registered successfully', fcmToken });
+    }
+
+    res.json({ status: true, message: 'FCM token received', fcmToken });
+  } catch (err) {
+    res.status(400).json({ status: false, message: err.message });
+  }
+};
+
+router.post('/fcm-token', handleFcmTokenUpdate);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Get currently logged-in user full profile
  * @access  Private
