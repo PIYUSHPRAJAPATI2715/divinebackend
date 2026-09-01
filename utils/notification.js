@@ -4,14 +4,93 @@ const { sendWelcomeEmail, sendDonationReceiptEmail } = require('./mailer');
 
 const VAPID_KEY = process.env.VAPID_KEY || 'BBwDEVstNGP3C1QqSjKF1vw-mPWp5sI7fSsx9vwx-SvuJHZDhTS-a7pnWVlkqral_y6c6x2fZb4BK30gFKWi_YA';
 
+let initializeApp = null;
+let cert = null;
+let getApps = null;
+let getMessaging = null;
+
+try {
+  const firebaseAppModule = require('firebase-admin/app');
+  const firebaseMessagingModule = require('firebase-admin/messaging');
+  initializeApp = firebaseAppModule.initializeApp;
+  cert = firebaseAppModule.cert;
+  getApps = firebaseAppModule.getApps;
+  getMessaging = firebaseMessagingModule.getMessaging;
+} catch (e) {
+  console.log('[FIREBASE ADMIN NOTICE] firebase-admin submodules not loaded:', e.message);
+}
+
+// Initialize Firebase Admin SDK
+try {
+  let serviceAccount = null;
+  const path = require('path');
+  const fs = require('fs');
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(__dirname, '../firebase-service-account.json');
+  
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try { serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON); } catch (e) {}
+  }
+  if (!serviceAccount && fs.existsSync(serviceAccountPath)) {
+    try { serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8')); } catch (e) {}
+  }
+
+  if (serviceAccount && initializeApp && cert && getApps && getApps().length === 0) {
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+    console.log('[FIREBASE ADMIN SDK] Successfully initialized for project:', serviceAccount.project_id);
+  }
+} catch (err) {
+  console.error('[FIREBASE ADMIN INIT ERROR]', err.message);
+}
+
 const sendFcmPushNotification = async (targetToken, pushPayload) => {
   if (!targetToken) return null;
 
-  const fcmServerKey = process.env.FCM_SERVER_KEY || process.env.FIREBASE_SERVER_KEY;
   console.log(`[FCM PUSH DISPATCHED] Token: ${targetToken.slice(0, 20)}... | Payload:`, JSON.stringify(pushPayload));
 
+  if (getApps && getMessaging && getApps().length > 0) {
+    try {
+      const messaging = getMessaging();
+      const message = {
+        token: targetToken,
+        notification: {
+          title: pushPayload.notification.title,
+          body: pushPayload.notification.body
+        },
+        data: {
+          type: String(pushPayload.data?.type || 'general'),
+          id: String(pushPayload.data?.id || ''),
+          screen: String(pushPayload.data?.screen || 'home')
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default'
+            }
+          }
+        }
+      };
+
+      const response = await messaging.send(message);
+      console.log('[FCM FIREBASE ADMIN PUSH SUCCESS]', response);
+      return { success: true, messageId: response };
+    } catch (fcmErr) {
+      console.error('[FCM FIREBASE ADMIN PUSH ERROR]', fcmErr.message);
+      return { success: false, error: fcmErr.message };
+    }
+  }
+
+  const fcmServerKey = process.env.FCM_SERVER_KEY || process.env.FIREBASE_SERVER_KEY;
   if (!fcmServerKey) {
-    console.log('[FCM PUSH NOTICE] FCM_SERVER_KEY is not set in environment variables. Add FCM_SERVER_KEY in .env to deliver to physical devices.');
+    console.log('[FCM PUSH NOTICE] FCM_SERVER_KEY missing in .env and Firebase Admin SDK not initialized.');
     return { status: 'logged_only', note: 'FCM_SERVER_KEY missing in .env' };
   }
 
