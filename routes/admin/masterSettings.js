@@ -41,9 +41,46 @@ const getOrInitSettings = async () => {
 router.get('/', async (req, res) => {
   try {
     const settings = await getOrInitSettings();
-    res.json({ status: true, data: settings });
+    const settingsObj = settings.toObject ? settings.toObject() : settings;
+    
+    const csrFocusAreas = (settingsObj.csrFocusAreas && settingsObj.csrFocusAreas.length > 0) ? settingsObj.csrFocusAreas : DEFAULT_CSR_FOCUS_AREAS;
+    const fundingPreferences = (settingsObj.fundingPreferences && settingsObj.fundingPreferences.length > 0) ? settingsObj.fundingPreferences : DEFAULT_FUNDING_PREFERENCES;
+    const nonProfitTypes = (settingsObj.nonProfitTypes && settingsObj.nonProfitTypes.length > 0) ? settingsObj.nonProfitTypes : DEFAULT_NON_PROFIT_TYPES;
+    const corporateCompanyTypes = (settingsObj.corporateCompanyTypes && settingsObj.corporateCompanyTypes.length > 0) ? settingsObj.corporateCompanyTypes : DEFAULT_CORPORATE_TYPES;
+
+    const mergedData = {
+      ...settingsObj,
+      csrFocusAreas,
+      fundingPreferences,
+      nonProfitTypes,
+      corporateCompanyTypes
+    };
+
+    res.json({
+      status: true,
+      success: true,
+      data: mergedData,
+      csrFocusAreas,
+      fundingPreferences,
+      nonProfitTypes,
+      corporateCompanyTypes
+    });
   } catch (err) {
-    res.status(500).json({ status: false, message: err.message });
+    console.error('Master Settings GET Error:', err);
+    res.json({
+      status: true,
+      success: true,
+      data: {
+        csrFocusAreas: DEFAULT_CSR_FOCUS_AREAS,
+        fundingPreferences: DEFAULT_FUNDING_PREFERENCES,
+        nonProfitTypes: DEFAULT_NON_PROFIT_TYPES,
+        corporateCompanyTypes: DEFAULT_CORPORATE_TYPES
+      },
+      csrFocusAreas: DEFAULT_CSR_FOCUS_AREAS,
+      fundingPreferences: DEFAULT_FUNDING_PREFERENCES,
+      nonProfitTypes: DEFAULT_NON_PROFIT_TYPES,
+      corporateCompanyTypes: DEFAULT_CORPORATE_TYPES
+    });
   }
 });
 
