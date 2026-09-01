@@ -305,6 +305,49 @@ router.post('/google', async (req, res) => {
       }
     });
   } catch (err) {
+    if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+      console.log('E11000 duplicate key error detected during Google auth, auto-cleaning legacy null phone index...');
+      try {
+        await User.updateMany({ $or: [{ phone: null }, { phone: "" }] }, { $unset: { phone: "" } });
+        try { await User.collection.dropIndex('phone_1'); } catch (e) {}
+        let retryUser = null;
+        if (req.body.email) retryUser = await User.findOne({ email: String(req.body.email).toLowerCase().trim() });
+        if (!retryUser && req.body.idToken) retryUser = await User.findOne({ googleId: req.body.idToken });
+        if (!retryUser) {
+          retryUser = new User({
+            email: req.body.email ? String(req.body.email).toLowerCase().trim() : undefined,
+            googleId: req.body.idToken || null,
+            name: req.body.displayName || 'Google User',
+            profilePhoto: req.body.photoUrl || null,
+            role: 'donor',
+            fcmToken: req.body.fcmToken || null,
+            isProfileComplete: true
+          });
+          await retryUser.save();
+        }
+        const token = jwt.sign({ id: retryUser._id, role: retryUser.role, email: retryUser.email }, JWT_SECRET, { expiresIn: '7d' });
+        const fullData = await constructFullUserData(retryUser);
+        return res.json({
+          status: true,
+          success: true,
+          message: 'Login successful',
+          token,
+          data: {
+            token,
+            user: {
+              _id: retryUser._id,
+              id: retryUser._id,
+              name: retryUser.name,
+              email: retryUser.email,
+              role: retryUser.role,
+              ...fullData
+            }
+          }
+        });
+      } catch (retryErr) {
+        console.error('Google Auth Retry Error:', retryErr);
+      }
+    }
     console.error('Google Auth Error:', err);
     res.status(400).json({ status: false, success: false, message: err.message || 'Google authentication failed' });
   }
@@ -391,6 +434,48 @@ router.post('/apple', async (req, res) => {
       }
     });
   } catch (err) {
+    if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+      console.log('E11000 duplicate key error detected during Apple auth, auto-cleaning legacy null phone index...');
+      try {
+        await User.updateMany({ $or: [{ phone: null }, { phone: "" }] }, { $unset: { phone: "" } });
+        try { await User.collection.dropIndex('phone_1'); } catch (e) {}
+        let retryUser = null;
+        if (req.body.email) retryUser = await User.findOne({ email: String(req.body.email).toLowerCase().trim() });
+        if (!retryUser && req.body.identityToken) retryUser = await User.findOne({ appleId: req.body.identityToken });
+        if (!retryUser) {
+          retryUser = new User({
+            email: req.body.email ? String(req.body.email).toLowerCase().trim() : undefined,
+            appleId: req.body.identityToken || req.body.authorizationCode || null,
+            name: 'Apple User',
+            role: 'donor',
+            fcmToken: req.body.fcmToken || null,
+            isProfileComplete: true
+          });
+          await retryUser.save();
+        }
+        const token = jwt.sign({ id: retryUser._id, role: retryUser.role, email: retryUser.email }, JWT_SECRET, { expiresIn: '7d' });
+        const fullData = await constructFullUserData(retryUser);
+        return res.json({
+          status: true,
+          success: true,
+          message: 'Login successful',
+          token,
+          data: {
+            token,
+            user: {
+              _id: retryUser._id,
+              id: retryUser._id,
+              name: retryUser.name,
+              email: retryUser.email,
+              role: retryUser.role,
+              ...fullData
+            }
+          }
+        });
+      } catch (retryErr) {
+        console.error('Apple Auth Retry Error:', retryErr);
+      }
+    }
     console.error('Apple Auth Error:', err);
     res.status(400).json({ status: false, success: false, message: err.message || 'Apple authentication failed' });
   }

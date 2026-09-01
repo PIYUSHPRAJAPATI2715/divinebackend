@@ -32,34 +32,29 @@ async function connectDB() {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
     console.log('Successfully connected to MongoDB.');
     
-    // Auto-sync indexes to fix existing non-sparse unique indexes (e.g. email_1 on Atlas)
+    // Auto-sync indexes to fix existing non-sparse unique indexes (e.g. email_1 & phone_1 on Atlas)
     const User = require('./models/User');
     try {
-      // 1. Cleanup any null or empty string emails by unsetting them
-      const cleanResult = await User.updateMany(
-        { $or: [ { email: null }, { email: "" } ] },
+      // 1. Cleanup any null or empty string emails and phone numbers by unsetting them
+      await User.updateMany(
+        { $or: [{ email: null }, { email: "" }] },
         { $unset: { email: "" } }
       );
-      console.log(`Cleaned up email fields (unset null/empty values) for users.`);
-      
-      // 2. Sync database schema indexes
+      await User.updateMany(
+        { $or: [{ phone: null }, { phone: "" }] },
+        { $unset: { phone: "" } }
+      );
+      console.log('Cleaned up email and phone fields (unset null/empty values) for users.');
+
+      // 2. Drop legacy non-sparse indexes if they exist
+      try { await User.collection.dropIndex('email_1'); } catch (e) {}
+      try { await User.collection.dropIndex('phone_1'); } catch (e) {}
+
+      // 3. Sync database schema indexes (with sparse: true)
       await User.syncIndexes();
-      console.log('Successfully synced database schema indexes.');
+      console.log('Successfully synced database schema sparse indexes.');
     } catch (err) {
-      console.log('Failed to sync indexes directly, attempting manual cleanup of email_1 index...', err.message);
-      try {
-        await User.collection.dropIndex('email_1');
-        console.log('Successfully dropped old email_1 index.');
-        // Unset email fields again just in case before re-syncing
-        await User.updateMany(
-          { $or: [ { email: null }, { email: "" } ] },
-          { $unset: { email: "" } }
-        );
-        await User.syncIndexes();
-        console.log('Re-synced database schema indexes successfully.');
-      } catch (dropErr) {
-        console.log('Error rebuilding indexes:', dropErr.message);
-      }
+      console.log('Index sync note:', err.message);
     }
     
     // Auto-seed cloud database if it is empty or missing Daan categories!
