@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String, default: null },
   appleId: { type: String, default: null },
   fcmToken: { type: String, default: null },
+  deviceToken: { type: String, default: null },
+  platform: { type: String, default: 'android' },
   role: {
     type: String,
     enum: ['donor', 'ngo', 'corporate', 'teacher', 'student'],

@@ -564,11 +564,26 @@ router.post('/apple', async (req, res) => {
 const handleFcmTokenUpdate = async (req, res) => {
   try {
     const tokenVal = req.body.fcmToken || req.body.deviceToken || req.body.token || req.body.device_token || req.body.fcm_token;
+    const platform = req.body.platform || 'android';
+
     if (!tokenVal) {
-      return res.status(400).json({ status: false, message: 'deviceToken or fcmToken is required in request body' });
+      return res.status(400).json({ status: false, success: false, message: 'deviceToken or fcmToken is required in request body' });
     }
 
     let targetUserId = req.user?.id || req.user?._id || req.body.userId || req.body.user_id;
+
+    // If req.user wasn't attached by authMiddleware, attempt token decoding manually
+    if (!targetUserId) {
+      const authHeader = req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          targetUserId = decoded?.id || decoded?._id;
+        } catch (e) {}
+      }
+    }
+
     let user = null;
     if (targetUserId) user = await User.findById(targetUserId);
     if (!user && req.body.phone) user = await User.findOne({ phone: req.body.phone });
@@ -576,13 +591,16 @@ const handleFcmTokenUpdate = async (req, res) => {
 
     if (user) {
       user.fcmToken = tokenVal;
+      user.deviceToken = tokenVal;
+      user.platform = platform;
       await user.save();
       return res.json({
         status: true,
         success: true,
-        message: 'Device push token registered successfully',
+        message: 'Device token saved successfully',
         deviceToken: tokenVal,
-        fcmToken: tokenVal
+        fcmToken: tokenVal,
+        platform
       });
     }
 
@@ -591,7 +609,8 @@ const handleFcmTokenUpdate = async (req, res) => {
       success: true,
       message: 'Device token received successfully',
       deviceToken: tokenVal,
-      fcmToken: tokenVal
+      fcmToken: tokenVal,
+      platform
     });
   } catch (err) {
     res.status(400).json({ status: false, success: false, message: err.message });
