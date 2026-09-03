@@ -39,6 +39,8 @@ try {
       credential: cert(serviceAccount)
     });
     console.log('[FIREBASE ADMIN SDK] Successfully initialized for project:', serviceAccount.project_id);
+  } else if (!serviceAccount) {
+    console.warn('[FIREBASE ADMIN WARNING] No Firebase service account JSON found! Place firebase-service-account.json in project root or set FIREBASE_SERVICE_ACCOUNT_JSON env variable on server.');
   }
 } catch (err) {
   console.error('[FIREBASE ADMIN INIT ERROR]', err.message);
@@ -179,6 +181,8 @@ const createAndSendNotification = async ({
 
     const targetToken = fcmToken || user?.fcmToken || user?.deviceToken;
 
+    console.log(`[CREATE & SEND NOTIFICATION] userId: ${userId || 'N/A'} | title: "${title}" | targetToken: ${targetToken ? targetToken.slice(0, 25) + '...' : 'NONE'}`);
+
     // 1. Save in MongoDB Notification collection if user exists
     let notification = null;
     if (userId) {
@@ -193,6 +197,7 @@ const createAndSendNotification = async ({
         imageUrl
       });
       await notification.save();
+      console.log(`[NOTIFICATION DB SAVED] Notification ID: ${notification._id}`);
     }
 
     // 2. Build structured push payload
@@ -211,7 +216,11 @@ const createAndSendNotification = async ({
     // 3. Dispatch to FCM Google Push Gateway
     let fcmResult = null;
     if (targetToken) {
+      console.log(`[FCM DISPATCHING PUSH] Sending to token: ${targetToken.slice(0, 25)}...`);
       fcmResult = await sendFcmPushNotification(targetToken, pushPayload);
+      console.log(`[FCM DISPATCH RESULT] Result:`, JSON.stringify(fcmResult));
+    } else {
+      console.log(`[FCM DISPATCH SKIPPED] No fcmToken/deviceToken found for user ${userId}`);
     }
 
     // 4. Email trigger hooks for system events
@@ -225,7 +234,7 @@ const createAndSendNotification = async ({
 
     return { notification, fcmResult };
   } catch (err) {
-    console.error('Notification dispatch error:', err);
+    console.error('[NOTIFICATION DISPATCH EXCEPTION]', err);
     return null;
   }
 };
