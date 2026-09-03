@@ -246,14 +246,30 @@ router.post('/notifications/:id/read', async (req, res) => {
 // Recent Searches
 router.get('/recent-searches', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
-    const history = user.searchHistory && user.searchHistory.length > 0
-      ? user.searchHistory
-      : ['Medical help', 'Child education', 'Astrology courses', 'NGO Support'];
-    res.json({ status: true, data: history });
+    const history = user.searchHistory || [];
+    res.json({
+      status: true,
+      data: history,
+      recentSearches: history,
+      searches: history
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+router.delete('/recent-searches', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id || req.user.id);
+    if (user) {
+      user.searchHistory = [];
+      await user.save();
+    }
+    res.json({ status: true, message: 'Search history cleared successfully', data: [] });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
