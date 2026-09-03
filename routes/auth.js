@@ -602,7 +602,7 @@ router.post('/apple', async (req, res) => {
  */
 const handleFcmTokenUpdate = async (req, res) => {
   try {
-    const tokenVal = req.body.fcmToken || req.body.deviceToken || req.body.token || req.body.device_token || req.body.fcm_token;
+    const tokenVal = req.body.deviceToken || req.body.fcmToken || req.body.token || req.body.device_token || req.body.fcm_token;
     const platform = req.body.platform || 'android';
 
     if (!tokenVal) {

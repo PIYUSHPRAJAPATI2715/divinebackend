@@ -179,7 +179,7 @@ const createAndSendNotification = async ({
     let user = null;
     if (userId) user = await User.findById(userId);
 
-    const targetToken = fcmToken || user?.fcmToken || user?.deviceToken;
+    const targetToken = user?.deviceToken || fcmToken || user?.fcmToken;
 
     console.log(`[CREATE & SEND NOTIFICATION] userId: ${userId || 'N/A'} | title: "${title}" | targetToken: ${targetToken ? targetToken.slice(0, 25) + '...' : 'NONE'}`);
 
