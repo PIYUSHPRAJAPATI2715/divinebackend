@@ -79,7 +79,32 @@ const resolveCampaignCreator = async (campaign) => {
   };
 };
 
-const enrichCampaign = async (campaignDoc) => {
+const normalizeImageUrl = (urlStr, req) => {
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
+    return 'https://files.catbox.moe/q4i0t0.jpg';
+  }
+  let clean = urlStr.trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    if (req && (clean.includes('localhost:') || clean.includes('127.0.0.1:'))) {
+      const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const host = req.get('host');
+      const parts = clean.split('/uploads/');
+      if (parts.length > 1) {
+        return `${protocol}://${host}/uploads/${parts[1]}`;
+      }
+    }
+    return clean;
+  }
+  if (req) {
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const pathPart = clean.startsWith('/') ? clean : `/${clean}`;
+    return `${protocol}://${host}${pathPart}`;
+  }
+  return clean;
+};
+
+const enrichCampaign = async (campaignDoc, req = null) => {
   const c = campaignDoc.toObject ? campaignDoc.toObject() : campaignDoc;
   const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
 
@@ -92,8 +117,22 @@ const enrichCampaign = async (campaignDoc) => {
     days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   }
 
+  const rawImages = (Array.isArray(c.images) && c.images.length > 0)
+    ? c.images
+    : [c.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+
+  const normalizedImages = rawImages
+    .filter(img => typeof img === 'string' && img.trim() !== '')
+    .map(img => normalizeImageUrl(img, req));
+
+  const primaryImage = normalizedImages.length > 0
+    ? normalizedImages[0]
+    : normalizeImageUrl(c.imageUrl, req);
+
   return {
     ...c,
+    imageUrl: primaryImage,
+    images: normalizedImages,
     user: creatorName,
     userName: creatorName,
     user_name: creatorName,

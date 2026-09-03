@@ -6,6 +6,34 @@ const User = require('../../models/User');
 const NGO = require('../../models/NGO');
 const Transaction = require('../../models/Transaction');
 
+const normalizeImageUrl = (urlStr, req) => {
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
+    return 'https://files.catbox.moe/q4i0t0.jpg';
+  }
+  let clean = urlStr.trim();
+  if (clean.startsWith('data:image/')) {
+    return saveBase64Image(clean, req) || clean;
+  }
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    if (req && (clean.includes('localhost:') || clean.includes('127.0.0.1:'))) {
+      const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const host = req.get('host');
+      const parts = clean.split('/uploads/');
+      if (parts.length > 1) {
+        return `${protocol}://${host}/uploads/${parts[1]}`;
+      }
+    }
+    return clean;
+  }
+  if (req) {
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const pathPart = clean.startsWith('/') ? clean : `/${clean}`;
+    return `${protocol}://${host}${pathPart}`;
+  }
+  return clean;
+};
+
 // Dynamic Creator Resolver Helper
 const resolveCampaignCreator = async (campaign) => {
   let creatorUser = null;
@@ -125,21 +153,17 @@ router.get('/campaigns', async (req, res) => {
         const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
         days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       }
-      let finalImage = '';
-      if (Array.isArray(c.images)) {
-        const uploadedImg = c.images.find(img => typeof img === 'string' && img.trim() !== '' && !img.includes('unsplash.com'));
-        if (uploadedImg) finalImage = uploadedImg;
-      }
-      if (!finalImage && c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '' && !c.imageUrl.includes('unsplash.com')) {
-        finalImage = c.imageUrl.trim();
-      }
-      if (!finalImage && Array.isArray(c.images)) {
-        const anyImg = c.images.find(img => typeof img === 'string' && img.trim() !== '');
-        if (anyImg) finalImage = anyImg.trim();
-      }
-      if (!finalImage) {
-        finalImage = (c.imageUrl && typeof c.imageUrl === 'string') ? c.imageUrl.trim() : '';
-      }
+      const rawImages = (Array.isArray(c.images) && c.images.length > 0)
+        ? c.images
+        : [c.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+
+      const normalizedImages = rawImages
+        .filter(img => typeof img === 'string' && img.trim() !== '')
+        .map(img => normalizeImageUrl(img, req));
+
+      const finalImage = normalizedImages.length > 0
+        ? normalizedImages[0]
+        : normalizeImageUrl(c.imageUrl, req);
 
       const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
 
@@ -147,6 +171,7 @@ router.get('/campaigns', async (req, res) => {
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = finalImage;
+      obj.images = normalizedImages;
       obj.user = creatorName;
       obj.userName = creatorName;
       obj.user_name = creatorName;
@@ -229,21 +254,20 @@ router.get('/campaigns/:id', async (req, res) => {
       days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
 
-    let finalImage = '';
-    if (Array.isArray(campaignObj.images)) {
-      const uploadedImg = campaignObj.images.find(img => typeof img === 'string' && img.trim() !== '' && !img.includes('unsplash.com'));
-      if (uploadedImg) finalImage = uploadedImg;
-    }
-    if (!finalImage && campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string' && campaignObj.imageUrl.trim() !== '' && !campaignObj.imageUrl.includes('unsplash.com')) {
-      finalImage = campaignObj.imageUrl.trim();
-    }
-    if (!finalImage && Array.isArray(campaignObj.images)) {
-      const anyImg = campaignObj.images.find(img => typeof img === 'string' && img.trim() !== '');
-      if (anyImg) finalImage = anyImg.trim();
-    }
-    if (!finalImage) {
-      finalImage = (campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string') ? campaignObj.imageUrl.trim() : '';
-    }
+    const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
+      ? campaignObj.images
+      : [campaignObj.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+
+    const normalizedImages = rawImages
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    const finalImage = normalizedImages.length > 0
+      ? normalizedImages[0]
+      : normalizeImageUrl(campaignObj.imageUrl, req);
+
+    campaignObj.imageUrl = finalImage;
+    campaignObj.images = normalizedImages;
 
     campaignObj.user = creatorName;
     campaignObj.userName = creatorName;
