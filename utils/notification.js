@@ -61,19 +61,37 @@ const sendFcmPushNotification = async (targetToken, pushPayload) => {
         data: {
           type: String(pushPayload.data?.type || 'general'),
           id: String(pushPayload.data?.id || ''),
-          screen: String(pushPayload.data?.screen || 'home')
+          screen: String(pushPayload.data?.screen || 'home'),
+          title: String(pushPayload.notification.title || ''),
+          body: String(pushPayload.notification.body || ''),
+          message: String(pushPayload.notification.body || ''),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
         },
         android: {
           priority: 'high',
           notification: {
+            title: pushPayload.notification.title,
+            body: pushPayload.notification.body,
             sound: 'default',
-            clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+            channelId: 'high_importance_channel',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+            defaultSound: true,
+            defaultVibrateTimings: true
           }
         },
         apns: {
+          headers: {
+            'apns-priority': '10'
+          },
           payload: {
             aps: {
-              sound: 'default'
+              alert: {
+                title: pushPayload.notification.title,
+                body: pushPayload.notification.body
+              },
+              sound: 'default',
+              badge: 1,
+              'content-available': 1
             }
           }
         }
