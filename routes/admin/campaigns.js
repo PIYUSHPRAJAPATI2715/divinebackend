@@ -49,11 +49,6 @@ const resolveCampaignCreator = async (campaign) => {
     });
   }
 
-  if (!creatorUser && !creatorNGO) {
-    creatorNGO = await NGO.findOne({ status: 'Verified' });
-    if (!creatorNGO) creatorUser = await User.findOne({ role: 'ngo' }) || await User.findOne();
-  }
-
   const name = (campaign.user && campaign.user !== 'Divine Donor' && campaign.user !== 'Divine Owner' && campaign.user.trim() !== '') 
     ? campaign.user 
     : (creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer');

@@ -56,13 +56,11 @@ const resolveCampaignCreator = async (campaign) => {
     });
   }
 
-  // 4. Fallback if campaign was created under a legacy placeholder name
-  if (!creatorUser && !creatorNGO) {
-    creatorNGO = await NGO.findOne({ status: 'Verified' });
-    if (!creatorNGO) creatorUser = await User.findOne({ role: 'ngo' }) || await User.findOne();
-  }
+  // 4. Fallback: Use stored campaign.user or creator models
+  const name = (campaign.user && campaign.user !== 'Divine Donor' && campaign.user !== 'Divine Owner' && campaign.user.trim() !== '') 
+    ? campaign.user 
+    : (creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer');
 
-  const name = creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer';
   const photo = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
   const phone = creatorNGO?.phone || creatorUser?.phone || '';
   const email = creatorNGO?.email || creatorUser?.email || '';
