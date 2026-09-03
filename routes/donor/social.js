@@ -332,6 +332,20 @@ router.post('/follow/:id', async (req, res) => {
       } else {
         me.followingUsers.push(targetId);
         targetUser.followers.push(me._id);
+
+        try {
+          const { createAndSendNotification } = require('../../utils/notification');
+          await createAndSendNotification({
+            userId: targetUser._id,
+            title: 'New Follower Alert! 👤',
+            body: `${me.name || 'Someone'} started following you on Divine Platform.`,
+            type: 'social',
+            screen: 'profile',
+            dataId: String(me._id)
+          });
+        } catch (notifErr) {
+          console.error('Follow notification error:', notifErr.message);
+        }
       }
       await me.save();
       await targetUser.save();

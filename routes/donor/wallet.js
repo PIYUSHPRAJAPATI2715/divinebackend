@@ -208,6 +208,20 @@ router.post('/wallet/topup', async (req, res) => {
     });
     await newTx.save();
 
+    try {
+      const { createAndSendNotification } = require('../../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Wallet Recharged Successfully! 💳',
+        body: `₹${rechargeAmount} added to your wallet! New balance: ₹${user.walletBalance}.`,
+        type: 'wallet',
+        screen: 'wallet',
+        dataId: String(user._id)
+      });
+    } catch (notifErr) {
+      console.error('Wallet recharge notification error:', notifErr.message);
+    }
+
     res.json({
       status: true,
       message: `Top-up successful! Added ₹${rechargeAmount} to wallet. Earned ₹${cashbackEarned} Cashback (expires in 15 days) & ${coinsEarned} Divine Coins.`,

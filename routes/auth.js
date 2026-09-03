@@ -1118,6 +1118,21 @@ router.post('/wallet/topup', authMiddleware, async (req, res) => {
       date: new Date(), item: 'Wallet Top-up'
     });
     await newTx.save();
+
+    try {
+      const { createAndSendNotification } = require('../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Wallet Recharged Successfully! 💳',
+        body: `₹${amount} added to your wallet! New balance: ₹${user.walletBalance}.`,
+        type: 'wallet',
+        screen: 'wallet',
+        dataId: String(user._id)
+      });
+    } catch (notifErr) {
+      console.error('Wallet topup notification error:', notifErr.message);
+    }
+
     res.json({ status: true, message: 'Wallet topped up successfully', data: user });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -1178,7 +1193,7 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
         donorPhone: user.phone || '',
         donorEmail: user.email || '',
         items: [{
-          itemId: user._id, // use donorId as placeholder for direct donation item
+          itemId: user._id,
           name: 'Direct Donation',
           price: Number(amount),
           quantity: 1,
@@ -1191,6 +1206,20 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
         transactionId
       });
       await danDonation.save();
+
+      try {
+        const { createAndSendNotification } = require('../utils/notification');
+        await createAndSendNotification({
+          userId: user._id,
+          title: 'Donation Successful! 🎁',
+          body: `Thank you ${user.name || 'Donor'}! Your direct donation of ₹${amount} to "${ngo.name}" was successful.`,
+          type: 'donation',
+          screen: 'my_donations',
+          dataId: String(danDonation._id)
+        });
+      } catch (notifErr) {
+        console.error('Direct donation notification error:', notifErr.message);
+      }
 
       return res.json({
         status: true,
@@ -1230,6 +1259,20 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
         date: new Date(), item: campaign.title
       });
       await newTx.save();
+
+      try {
+        const { createAndSendNotification } = require('../utils/notification');
+        await createAndSendNotification({
+          userId: user._id,
+          title: 'Donation Successful! 🎁',
+          body: `Thank you ${user.name || 'Donor'}! Your donation of ₹${amount} to "${campaign.title}" was successful.`,
+          type: 'donation',
+          screen: 'my_donations',
+          dataId: String(campaign._id)
+        });
+      } catch (notifErr) {
+        console.error('Campaign donation notification error:', notifErr.message);
+      }
 
       return res.json({ status: true, message: `Successfully donated ₹${amount} to "${campaign.title}"`, data: user, campaign });
     }
@@ -1421,6 +1464,20 @@ const registerHandler = async (req, res) => {
     }
 
     const fullData = await constructFullUserData(user);
+
+    try {
+      const { createAndSendNotification } = require('../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Welcome to Divine Platform! 🙏',
+        body: `Welcome ${user.name || 'User'}! Your profile registration as ${user.role || 'donor'} has been completed successfully.`,
+        type: 'registration',
+        screen: 'home'
+      });
+    } catch (notifErr) {
+      console.error('Registration notification error:', notifErr.message);
+    }
+
     res.json({
       status: true,
       success: true,

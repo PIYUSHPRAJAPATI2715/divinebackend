@@ -597,6 +597,22 @@ router.post('/donate', async (req, res) => {
     });
     await danDonation.save();
 
+    try {
+      const { createAndSendNotification } = require('../utils/notification');
+      if (donorId) {
+        await createAndSendNotification({
+          userId: donorId,
+          title: 'Donation Successful! 🎁',
+          body: `Thank you ${finalDonorName}! Your donation of ₹${totalAmount} has been processed successfully.`,
+          type: 'donation',
+          screen: 'my_donations',
+          dataId: String(danDonation._id)
+        });
+      }
+    } catch (notifErr) {
+      console.error('Dan donation notification error:', notifErr.message);
+    }
+
     res.json({
       status: true,
       message: 'Donation completed successfully!',
@@ -864,6 +880,20 @@ router.post('/cart/checkout', requireAuth, async (req, res) => {
     cart.eventName = '';
     cart.eventDate = null;
     await cart.save();
+
+    try {
+      const { createAndSendNotification } = require('../utils/notification');
+      await createAndSendNotification({
+        userId: user._id,
+        title: 'Donation Successful! 🎁',
+        body: `Thank you ${user.name || 'Donor'}! Your cart donation of ₹${totalAmount} has been processed successfully.`,
+        type: 'donation',
+        screen: 'my_donations',
+        dataId: String(danDonation._id)
+      });
+    } catch (notifErr) {
+      console.error('Cart donation notification error:', notifErr.message);
+    }
 
     res.json({
       status: true,

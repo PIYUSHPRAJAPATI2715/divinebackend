@@ -456,12 +456,19 @@ router.post('/campaigns', async (req, res) => {
     
     await newCampaign.save();
     
-    const notification = new Notification({
-      user: req.user._id,
-      title: 'Campaign Raised',
-      message: `Your fundraising campaign "${title}" has been successfully launched!`
-    });
-    await notification.save();
+    try {
+      const { createAndSendNotification } = require('../../utils/notification');
+      await createAndSendNotification({
+        userId: req.user._id || req.user.id,
+        title: 'Campaign Created Successfully! 📢',
+        body: `Your fundraising campaign "${title}" has been created and is now live!`,
+        type: 'campaign',
+        screen: 'campaign_details',
+        dataId: String(newCampaign._id)
+      });
+    } catch (notifErr) {
+      console.error('Campaign creation notification error:', notifErr.message);
+    }
     
     res.status(201).json({ status: true, message: 'Campaign raised successfully', data: newCampaign });
   } catch (err) {
