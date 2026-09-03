@@ -53,8 +53,20 @@ router.get('/profile', async (req, res) => {
       ? (Math.round((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length) * 10) / 10) 
       : 0.0;
 
+    const userObj = user.toObject();
+
+    const name = user.name || 'Donor';
+    const email = user.email || '';
+    const phone = user.phone || '';
+
     const enrichedData = {
       ...userObj,
+      _id: user._id,
+      id: user._id,
+      name,
+      email,
+      phone,
+      role: user.role || 'donor',
       rating: computedRating,
       reviewCount: reviews.length,
       reviews: formattedReviews,
@@ -62,15 +74,22 @@ router.get('/profile', async (req, res) => {
       followers: userObj.followers || [],
       impact: userObj.impactStats || 'Active community contributor & donor.',
       impactStats: userObj.impactStats || 'Active community contributor & donor.',
-      years: userObj.years || '3 Years'
+      years: userObj.years || '3 Years',
+      pushNotification: user.pushNotification !== false,
+      emailNotification: user.emailNotification !== false,
+      smsNotification: user.smsNotification !== false,
+      user: userObj
     };
 
     res.json({
       status: true,
       data: enrichedData,
+      donor: enrichedData,
+      user: userObj,
       ...enrichedData
     });
   } catch (err) {
+    console.error('[DONOR PROFILE ERROR]', err);
     res.status(500).json({ status: false, message: err.message });
   }
 });

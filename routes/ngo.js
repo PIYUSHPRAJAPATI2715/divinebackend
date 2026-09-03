@@ -21,7 +21,11 @@ const getOrCreateNGOProfile = async (req) => {
 
   if (!ngo) {
     // Dynamically create an NGO record if it doesn't exist
-    const name = req.user.organizationName || req.user.name || 'My NGO';
+    const name = (req.user.organizationName && req.user.organizationName.trim() !== '')
+      ? req.user.organizationName
+      : (req.user.name && req.user.name.trim() !== '' && req.user.name !== 'Google User' && req.user.name !== 'User')
+        ? req.user.name
+        : (req.user.phone || 'Divine Partner');
     const email = req.user.email || 'ngo@example.com';
     const phone = req.user.phone || '';
     
