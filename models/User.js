@@ -8,7 +8,9 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   googleId: { type: String, default: null },
+  googleEmail: { type: String, default: null },
   appleId: { type: String, default: null },
+  appleEmail: { type: String, default: null },
   fcmToken: { type: String, default: null },
   deviceToken: { type: String, default: null },
   platform: { type: String, default: 'android' },

@@ -46,7 +46,13 @@ const constructFullUserData = async (user) => {
   }
 
   const determinedRole = (extra.organizationType === 'Corporate' || user.role === 'corporate') ? 'corporate' : (user.role || 'donor');
-  const isProfileComplete = !!(user.isProfileComplete || (user.name && user.name !== 'Google User' && user.name !== 'Apple User' && user.phone));
+  const hasExtraProfile = !!(extra && extra._id);
+  const isProfileComplete = !!(
+    user.isProfileComplete === true ||
+    extra.isProfileComplete === true ||
+    (hasExtraProfile && (user.role === 'corporate' || user.role === 'ngo' || user.role === 'teacher' || user.role === 'student')) ||
+    (user.name && user.name !== 'Google User' && user.name !== 'Apple User' && (user.phone || extra.phone))
+  );
 
   let isVer = false;
   if (!isProfileComplete) {
@@ -269,17 +275,44 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ status: false, success: false, message: 'Google ID token or email is required' });
     }
 
-    let existingUser = null;
-    if (email) existingUser = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (!existingUser && idToken) existingUser = await User.findOne({ googleId: idToken });
+    let googleSub = idToken;
+    if (idToken && typeof idToken === 'string' && idToken.includes('.')) {
+      try {
+        const parts = idToken.split('.');
+        if (parts.length === 3) {
+          const payloadJson = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+          if (payloadJson.sub || payloadJson.user_id) {
+            googleSub = payloadJson.sub || payloadJson.user_id;
+          }
+        }
+      } catch (e) {}
+    }
 
-    const isUserExist = !!existingUser;
+    const cleanEmail = email ? String(email).toLowerCase().trim() : null;
+    let existingUser = null;
+
+    if (cleanEmail) {
+      existingUser = await User.findOne({
+        $or: [
+          { email: cleanEmail },
+          { googleEmail: cleanEmail }
+        ]
+      });
+    }
+    if (!existingUser && googleSub) {
+      existingUser = await User.findOne({ googleId: googleSub });
+    }
+    if (!existingUser && idToken && idToken !== googleSub) {
+      existingUser = await User.findOne({ googleId: idToken });
+    }
+
     let user = existingUser;
 
     if (!user) {
       user = new User({
-        email: email ? String(email).toLowerCase().trim() : undefined,
-        googleId: idToken || null,
+        email: cleanEmail || undefined,
+        googleEmail: cleanEmail || undefined,
+        googleId: googleSub || idToken || null,
         name: displayName || 'Google User',
         profilePhoto: photoUrl || null,
         role: 'donor',
@@ -299,10 +332,11 @@ router.post('/google', async (req, res) => {
       });
     } else {
       let updated = false;
-      if (!user.googleId && idToken) { user.googleId = idToken; updated = true; }
-      if (displayName && (!user.name || user.name === 'User')) { user.name = displayName; updated = true; }
+      if (googleSub && user.googleId !== googleSub) { user.googleId = googleSub; updated = true; }
+      if (cleanEmail && !user.googleEmail) { user.googleEmail = cleanEmail; updated = true; }
+      if (displayName && (!user.name || user.name === 'Google User' || user.name === 'User')) { user.name = displayName; updated = true; }
       if (photoUrl && !user.profilePhoto) { user.profilePhoto = photoUrl; updated = true; }
-      if (fcmToken) { user.fcmToken = fcmToken; updated = true; }
+      if (fcmToken && user.fcmToken !== fcmToken) { user.fcmToken = fcmToken; updated = true; }
       if (updated) await user.save();
     }
 
@@ -1385,7 +1419,10 @@ const registerHandler = async (req, res) => {
     const fullData = await constructFullUserData(user);
     res.json({
       status: true,
+      success: true,
       message: 'Registration completed successfully',
+      isProfileComplete: !!fullData?.isProfileComplete,
+      verified: !!fullData?.verified,
       data: fullData
     });
 
