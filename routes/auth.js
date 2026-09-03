@@ -60,7 +60,7 @@ const constructFullUserData = async (user) => {
   } else if (determinedRole === 'corporate' || user.role === 'ngo' || user.role === 'corporate') {
     isVer = (user.verified === true) || (extra.verified === true) || (extra.status === 'Verified') || (user.status === 'Verified');
   } else {
-    isVer = user.verified !== undefined ? !!user.verified : true;
+    isVer = user.verified === false ? false : (extra.status === 'Suspended' ? false : true);
   }
 
   return {
@@ -1288,12 +1288,16 @@ const registerHandler = async (req, res) => {
       user.name = name;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
+      user.verified = true;
+      user.status = 'Active';
     } else {
       const { name, gender, profilePhoto } = req.body;
       if (!name) return res.status(400).json({ status: false, message: 'Name is required.' });
       user.name = name;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
+      user.verified = true;
+      user.status = 'Active';
     }
 
     user.isProfileComplete = true;
