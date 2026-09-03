@@ -213,9 +213,11 @@ const createAndSendNotification = async ({
       }
     };
 
-    // 3. Dispatch to FCM Google Push Gateway
+    // 3. Dispatch to FCM Google Push Gateway if user enabled push notifications
     let fcmResult = null;
-    if (targetToken) {
+    if (user && user.pushNotification === false) {
+      console.log(`[FCM PUSH SKIPPED] User ${userId} has pushNotification turned OFF (pushNotification: false)`);
+    } else if (targetToken) {
       console.log(`[FCM DISPATCHING PUSH] Sending to token: ${targetToken.slice(0, 25)}...`);
       fcmResult = await sendFcmPushNotification(targetToken, pushPayload);
       console.log(`[FCM DISPATCH RESULT] Result:`, JSON.stringify(fcmResult));
@@ -223,13 +225,15 @@ const createAndSendNotification = async ({
       console.log(`[FCM DISPATCH SKIPPED] No fcmToken/deviceToken found for user ${userId}`);
     }
 
-    // 4. Email trigger hooks for system events
-    if (user) {
+    // 4. Email trigger hooks for system events if user enabled email notifications
+    if (user && user.emailNotification !== false) {
       if (type === 'registration' || type === 'welcome') {
         if (user.email) sendWelcomeEmail(user.email, user.name);
       } else if (type === 'donation') {
         if (user.email) sendDonationReceiptEmail(user.email, user.name, dataId || '0', 'General Support', 'TXN-DISPATCH');
       }
+    } else if (user) {
+      console.log(`[EMAIL SKIPPED] User ${userId} has emailNotification turned OFF (emailNotification: false)`);
     }
 
     return { notification, fcmResult };

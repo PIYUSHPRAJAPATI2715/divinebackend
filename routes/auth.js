@@ -68,7 +68,10 @@ const constructFullUserData = async (user) => {
     ...extra,
     role: determinedRole,
     isProfileComplete,
-    verified: isVer
+    verified: isVer,
+    pushNotification: user.pushNotification !== false,
+    emailNotification: user.emailNotification !== false,
+    smsNotification: user.smsNotification !== false
   };
 };
 
@@ -1076,6 +1079,10 @@ router.put('/profile', authMiddleware, async (req, res) => {
       if (gender !== undefined) user.gender = gender;
       if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
     }
+
+    if (req.body.pushNotification !== undefined) user.pushNotification = Boolean(req.body.pushNotification);
+    if (req.body.emailNotification !== undefined) user.emailNotification = Boolean(req.body.emailNotification);
+    if (req.body.smsNotification !== undefined) user.smsNotification = Boolean(req.body.smsNotification);
 
     await user.save();
 

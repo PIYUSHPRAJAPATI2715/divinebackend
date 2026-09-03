@@ -14,6 +14,9 @@ const userSchema = new mongoose.Schema({
   fcmToken: { type: String, default: null },
   deviceToken: { type: String, default: null },
   platform: { type: String, default: 'android' },
+  pushNotification: { type: Boolean, default: true },
+  emailNotification: { type: Boolean, default: true },
+  smsNotification: { type: Boolean, default: true },
   role: {
     type: String,
     enum: ['donor', 'ngo', 'corporate', 'teacher', 'student'],

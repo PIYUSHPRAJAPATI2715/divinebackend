@@ -175,6 +175,10 @@ const handleUpdateDonorProfile = async (req, res) => {
       user.isProfileComplete = true;
     }
 
+    if (req.body.pushNotification !== undefined) user.pushNotification = Boolean(req.body.pushNotification);
+    if (req.body.emailNotification !== undefined) user.emailNotification = Boolean(req.body.emailNotification);
+    if (req.body.smsNotification !== undefined) user.smsNotification = Boolean(req.body.smsNotification);
+
     await user.save();
 
     // If linked NGO user, update NGO collection item as well
