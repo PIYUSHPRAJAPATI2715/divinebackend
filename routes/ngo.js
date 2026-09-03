@@ -101,7 +101,15 @@ router.get('/profile', async (req, res) => {
       impact: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
       impactStats: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
       verified: true,
-      user: userObj
+      pushNotification: user ? user.pushNotification !== false : true,
+      emailNotification: user ? user.emailNotification !== false : true,
+      smsNotification: user ? user.smsNotification !== false : true,
+      user: {
+        ...userObj,
+        pushNotification: user ? user.pushNotification !== false : true,
+        emailNotification: user ? user.emailNotification !== false : true,
+        smsNotification: user ? user.smsNotification !== false : true
+      }
     };
 
     res.json({
@@ -149,14 +157,26 @@ router.put('/profile', async (req, res) => {
       if (req.body.organizationName !== undefined) user.name = req.body.organizationName;
       if (req.body.email !== undefined) user.email = req.body.email;
       if (req.body.gender !== undefined) user.gender = req.body.gender;
+      if (req.body.pushNotification !== undefined) user.pushNotification = Boolean(req.body.pushNotification);
+      if (req.body.emailNotification !== undefined) user.emailNotification = Boolean(req.body.emailNotification);
+      if (req.body.smsNotification !== undefined) user.smsNotification = Boolean(req.body.smsNotification);
       await user.save();
     }
+
+    const updatedUserObj = user ? user.toObject() : {};
 
     res.json({
       status: true,
       message: 'Organization profile updated successfully',
       ngo,
-      user
+      user: updatedUserObj,
+      data: {
+        ...ngo.toObject(),
+        ...updatedUserObj,
+        pushNotification: user ? user.pushNotification !== false : true,
+        emailNotification: user ? user.emailNotification !== false : true,
+        smsNotification: user ? user.smsNotification !== false : true
+      }
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
