@@ -270,7 +270,9 @@ router.post('/verify-otp', async (req, res) => {
  */
 router.post('/google', async (req, res) => {
   try {
-    const { idToken, email, displayName, photoUrl, fcmToken } = req.body;
+    const { idToken, email, displayName, photoUrl, fcmToken, deviceToken, platform } = req.body;
+    const tokenVal = fcmToken || deviceToken || req.body.token || req.body.device_token || req.body.fcm_token;
+
     if (!email && !idToken) {
       return res.status(400).json({ status: false, success: false, message: 'Google ID token or email is required' });
     }
@@ -316,7 +318,9 @@ router.post('/google', async (req, res) => {
         name: displayName || 'Google User',
         profilePhoto: photoUrl || null,
         role: 'donor',
-        fcmToken: fcmToken || null,
+        fcmToken: tokenVal || null,
+        deviceToken: tokenVal || null,
+        platform: platform || 'android',
         isProfileComplete: false,
         verified: false
       });
@@ -336,7 +340,12 @@ router.post('/google', async (req, res) => {
       if (cleanEmail && !user.googleEmail) { user.googleEmail = cleanEmail; updated = true; }
       if (displayName && (!user.name || user.name === 'Google User' || user.name === 'User')) { user.name = displayName; updated = true; }
       if (photoUrl && !user.profilePhoto) { user.profilePhoto = photoUrl; updated = true; }
-      if (fcmToken && user.fcmToken !== fcmToken) { user.fcmToken = fcmToken; updated = true; }
+      if (tokenVal && (user.fcmToken !== tokenVal || user.deviceToken !== tokenVal)) {
+        user.fcmToken = tokenVal;
+        user.deviceToken = tokenVal;
+        updated = true;
+      }
+      if (platform && user.platform !== platform) { user.platform = platform; updated = true; }
       if (updated) await user.save();
     }
 
@@ -624,20 +633,18 @@ const handleFcmTokenUpdate = async (req, res) => {
       return res.json({
         status: true,
         success: true,
-        message: 'Device token saved successfully',
+        message: 'Device token linked and saved successfully to user profile',
+        userId: user._id,
         deviceToken: tokenVal,
         fcmToken: tokenVal,
         platform
       });
     }
 
-    res.json({
-      status: true,
-      success: true,
-      message: 'Device token received successfully',
-      deviceToken: tokenVal,
-      fcmToken: tokenVal,
-      platform
+    return res.status(401).json({
+      status: false,
+      success: false,
+      message: 'Authentication required. Please include Authorization: Bearer <token> header to link deviceToken to logged-in user profile.'
     });
   } catch (err) {
     res.status(400).json({ status: false, success: false, message: err.message });
