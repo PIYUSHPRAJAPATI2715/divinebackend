@@ -214,16 +214,26 @@ router.post('/', async (req, res) => {
 // Update a campaign
 router.put('/:id', async (req, res) => {
   try {
-    const updatedCampaign = await Campaign.findByIdAndUpdate(
-      req.params.id, 
-      req.body,
-      { new: true }
-    );
-    if (!updatedCampaign) return res.status(404).json({ message: 'Campaign not found' });
-    const enriched = await enrichCampaign(updatedCampaign);
-    res.json(enriched);
+    let campaign = await Campaign.findById(req.params.id).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId: req.params.id });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    Object.assign(campaign, req.body);
+    await campaign.save();
+
+    const enriched = await enrichCampaign(campaign, req);
+    res.json({
+      status: true,
+      message: 'Campaign updated successfully',
+      data: enriched,
+      ...enriched
+    });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 });
 

@@ -498,7 +498,111 @@ router.post('/campaigns', async (req, res) => {
   }
 });
 
+// Update campaign route handler
+const handleUpdateCampaign = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    const dbUser = userId ? await User.findById(userId) : null;
+
+    if (dbUser && campaign.userId && campaign.userId.toString() !== dbUser._id.toString()) {
+      if (dbUser.role !== 'admin') {
+        return res.status(403).json({ status: false, message: 'Access denied: You are not authorized to update this campaign' });
+      }
+    }
+
+    const {
+      title, category, description, goal, imageUrl, oneTimeOrMonthly,
+      endDate, images, video, documents, bankDetails, status
+    } = req.body;
+
+    if (title !== undefined) campaign.title = title;
+    if (category !== undefined) campaign.category = category;
+    if (description !== undefined) campaign.description = description;
+    if (goal !== undefined) {
+      const numGoal = typeof goal === 'number' ? goal : Number(String(goal).replace(/[^0-9]/g, ''));
+      if (!isNaN(numGoal) && numGoal > 0) {
+        campaign.goal = `₹${numGoal.toLocaleString('en-IN')}`;
+      } else {
+        campaign.goal = String(goal);
+      }
+    }
+    if (oneTimeOrMonthly !== undefined) campaign.oneTimeOrMonthly = oneTimeOrMonthly;
+    if (endDate !== undefined) campaign.endDate = endDate;
+    if (status !== undefined) campaign.status = status;
+    if (video !== undefined) campaign.video = video;
+    if (documents !== undefined) campaign.documents = documents;
+    if (bankDetails !== undefined) campaign.bankDetails = bankDetails;
+
+    let validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
+      campaign.imageUrl = imageUrl.trim();
+      if (validImages.length === 0) validImages.push(imageUrl.trim());
+    }
+    if (validImages.length > 0) {
+      campaign.images = validImages;
+      if (!campaign.imageUrl) campaign.imageUrl = validImages[0];
+    }
+
+    await campaign.save();
+
+    const campaignObj = campaign.toObject();
+    const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
+      ? campaignObj.images
+      : [campaignObj.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+
+    const normalizedImages = rawImages
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    const finalImage = normalizedImages.length > 0
+      ? normalizedImages[0]
+      : normalizeImageUrl(campaignObj.imageUrl, req);
+
+    const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campaignObj);
+
+    let days = campaignObj.daysLeft || 30;
+    if (campaignObj.endDate) {
+      const diffTime = new Date(campaignObj.endDate) - new Date();
+      days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    }
+
+    campaignObj.imageUrl = finalImage;
+    campaignObj.images = normalizedImages;
+    campaignObj.user = creatorName;
+    campaignObj.userName = creatorName;
+    campaignObj.creatorName = creatorName;
+    campaignObj.fundraiserName = creatorName;
+    campaignObj.userImage = creatorPhoto;
+    campaignObj.userProfile = creatorProfile;
+    campaignObj.daysLeft = days;
+
+    res.json({
+      status: true,
+      message: 'Campaign updated successfully',
+      data: campaignObj,
+      ...campaignObj
+    });
+  } catch (err) {
+    res.status(400).json({ status: false, message: err.message });
+  }
+};
+
+router.put('/campaigns/:id', handleUpdateCampaign);
+router.put('/campaigns/update/:id', handleUpdateCampaign);
+router.put('/campaigns/edit/:id', handleUpdateCampaign);
+
 router.handleMyCampaigns = handleMyCampaigns;
+router.handleUpdateCampaign = handleUpdateCampaign;
 
 module.exports = router;
 module.exports.handleMyCampaigns = handleMyCampaigns;
+module.exports.handleUpdateCampaign = handleUpdateCampaign;
