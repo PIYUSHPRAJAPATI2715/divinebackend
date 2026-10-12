@@ -69,6 +69,10 @@ const constructFullUserData = async (user) => {
     role: determinedRole,
     isProfileComplete,
     verified: isVer,
+    walletBalance: user.walletBalance || 0,
+    cashbackBalance: user.cashbackBalance || 0,
+    totalCoins: user.totalCoins || 0,
+    coinsValueInRupees: Math.round(((user.totalCoins || 0) / 10) * 100) / 100,
     pushNotification: user.pushNotification !== false,
     emailNotification: user.emailNotification !== false,
     smsNotification: user.smsNotification !== false
@@ -1117,37 +1121,25 @@ const Transaction = require('../models/Transaction');
  */
 router.post('/wallet/topup', authMiddleware, async (req, res) => {
   try {
-    const { amount } = req.body;
-    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+    const { amount, tierId } = req.body;
+    const rechargeAmount = Number(amount);
+    if (!rechargeAmount || isNaN(rechargeAmount) || rechargeAmount <= 0) {
       return res.status(400).json({ status: false, message: 'Invalid top-up amount' });
     }
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id || req.user._id);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
-    user.walletBalance = (user.walletBalance || 0) + Number(amount);
-    await user.save();
-    const transactionId = `TXN-${Date.now().toString().slice(-6)}`;
-    const newTx = new Transaction({
-      transactionId, type: 'Donation', user: user.name || user.phone,
-      mobile: user.phone || '', amount: Number(amount), status: 'Success',
-      date: new Date(), item: 'Wallet Top-up'
+
+    const { processWalletRecharge } = require('./donor/wallet');
+    const result = await processWalletRecharge(user, rechargeAmount, tierId);
+
+    const fullData = await constructFullUserData(result.user);
+
+    res.json({
+      status: true,
+      message: `Wallet topped up successfully! Added ₹${rechargeAmount}. Earned ₹${result.cashbackEarned} Cashback & ${result.coinsEarned} Coins.`,
+      data: fullData,
+      ...fullData
     });
-    await newTx.save();
-
-    try {
-      const { createAndSendNotification } = require('../utils/notification');
-      await createAndSendNotification({
-        userId: user._id,
-        title: 'Wallet Recharged Successfully! 💳',
-        body: `₹${amount} added to your wallet! New balance: ₹${user.walletBalance}.`,
-        type: 'wallet',
-        screen: 'wallet',
-        dataId: String(user._id)
-      });
-    } catch (notifErr) {
-      console.error('Wallet topup notification error:', notifErr.message);
-    }
-
-    res.json({ status: true, message: 'Wallet topped up successfully', data: user });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }

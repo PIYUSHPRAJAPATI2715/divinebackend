@@ -41,8 +41,34 @@ router.get('/social', async (req, res) => {
       isFollowing: followingSet.has(d._id.toString())
     }));
 
-    const rawTopNgos = await NGO.find({ status: 'Verified' })
-      .sort({ verifiedCampaignsCount: -1 })
+    let selfNgoId = null;
+    if (me) {
+      const myNgo = await NGO.findOne({
+        $or: [
+          { phone: me.phone },
+          { email: me.email }
+        ]
+      });
+      if (myNgo) selfNgoId = myNgo._id;
+    }
+
+    const ngoQuery = {
+      status: 'Verified',
+      organizationType: { $ne: 'Corporate' },
+      isRegisteredCompany: { $ne: 'Yes' }
+    };
+    if (selfNgoId) {
+      ngoQuery._id = { $ne: selfNgoId };
+    }
+    if (me && me.phone && me.phone.trim()) {
+      ngoQuery.phone = { $ne: me.phone.trim() };
+    }
+    if (me && me.email && me.email.trim()) {
+      ngoQuery.email = { $ne: me.email.trim() };
+    }
+
+    const rawTopNgos = await NGO.find(ngoQuery)
+      .sort({ verifiedCampaignsCount: -1, rating: -1 })
       .limit(10);
 
     const topNgos = rawTopNgos.map(n => ({
@@ -225,7 +251,27 @@ router.get('/discover', async (req, res) => {
     }
     const followingSet = getUserFollowingIds(me);
 
-    const ngos = await NGO.find({ status: 'Verified' }).sort({ verifiedCampaignsCount: -1 });
+    let selfNgoId = null;
+    if (me) {
+      const myNgo = await NGO.findOne({
+        $or: [
+          { phone: me.phone },
+          { email: me.email }
+        ]
+      });
+      if (myNgo) selfNgoId = myNgo._id;
+    }
+
+    const discoverNgoQuery = {
+      status: 'Verified',
+      organizationType: { $ne: 'Corporate' },
+      isRegisteredCompany: { $ne: 'Yes' }
+    };
+    if (selfNgoId) discoverNgoQuery._id = { $ne: selfNgoId };
+    if (me && me.phone && me.phone.trim()) discoverNgoQuery.phone = { $ne: me.phone.trim() };
+    if (me && me.email && me.email.trim()) discoverNgoQuery.email = { $ne: me.email.trim() };
+
+    const ngos = await NGO.find(discoverNgoQuery).sort({ verifiedCampaignsCount: -1, rating: -1 });
     const formattedNgos = ngos.map(n => ({
       _id: n._id,
       id: n._id,

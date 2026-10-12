@@ -4,6 +4,7 @@ const transactionSchema = new mongoose.Schema({
   transactionId: { type: String, required: true, unique: true },
   type: { type: String, enum: ['Donation', 'Course', 'Seminar', 'Wallet Top-up', 'Wallet Payment'], default: 'Donation' },
   user: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   mobile: { type: String, default: '' },
   fundCategory: { type: String, default: '' },
   item: { type: String, required: true },

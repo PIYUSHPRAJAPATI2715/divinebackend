@@ -596,13 +596,157 @@ const handleUpdateCampaign = async (req, res) => {
   }
 };
 
+// Get reviews for a specific campaign
+const handleGetCampaignReviews = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+
+    const targetName = campaign ? campaign.title : campaignId;
+    const Review = require('../../models/Review');
+
+    const queryFilter = {
+      type: 'Campaign',
+      status: 'Approved'
+    };
+
+    if (campaign) {
+      queryFilter.$or = [
+        { campaignId: campaign._id },
+        { targetName: { $regex: new RegExp(`^${campaign.title.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+      ];
+    } else {
+      queryFilter.targetName = { $regex: new RegExp(`^${campaignId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+    }
+
+    const reviews = await Review.find(queryFilter).sort({ createdAt: -1 });
+
+    const total = reviews.length;
+    let averageRating = 0;
+    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+    if (total > 0) {
+      const sum = reviews.reduce((acc, r) => {
+        const star = Math.min(5, Math.max(1, Math.round(r.rating)));
+        distribution[star] = (distribution[star] || 0) + 1;
+        return acc + r.rating;
+      }, 0);
+      averageRating = Math.round((sum / total) * 10) / 10;
+    }
+
+    res.json({
+      status: true,
+      campaignId: campaign ? campaign._id : campaignId,
+      campaignTitle: campaign ? campaign.title : targetName,
+      averageRating,
+      totalReviews: total,
+      ratingDistribution: distribution,
+      reviews,
+      data: reviews
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+// Post a review for a specific campaign
+const handlePostCampaignReview = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    const { rating, comment, videoUrl, video, userName, userRole } = req.body;
+    if (!rating || (!comment && !videoUrl && !video)) {
+      return res.status(400).json({ status: false, message: 'Rating (1-5) and comment or video are required' });
+    }
+
+    const numRating = Number(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+      return res.status(400).json({ status: false, message: 'Rating must be a number between 1 and 5' });
+    }
+
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    const dbUser = userId ? await User.findById(userId) : null;
+
+    const finalUserName = dbUser ? (dbUser.name || dbUser.organizationName || 'Verified User') : (userName || 'Anonymous Supporter');
+    const finalUserRole = dbUser ? (dbUser.role === 'donor' ? 'Donor' : dbUser.role === 'student' ? 'Student' : 'User') : (userRole || 'User');
+
+    const Review = require('../../models/Review');
+    const newReview = new Review({
+      reviewId: `REV-${Date.now().toString().slice(-6)}`,
+      userName: finalUserName,
+      userRole: finalUserRole,
+      type: 'Campaign',
+      targetName: campaign.title,
+      campaignId: campaign._id,
+      campaign: campaign.title,
+      userId: dbUser ? dbUser._id : null,
+      rating: numRating,
+      comment: comment || 'Great campaign!',
+      videoUrl: videoUrl || video || '',
+      status: 'Approved'
+    });
+
+    const savedReview = await newReview.save();
+
+    const allCampaignReviews = await Review.find({
+      $or: [
+        { campaignId: campaign._id },
+        { targetName: { $regex: new RegExp(`^${campaign.title.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+      ],
+      type: 'Campaign',
+      status: 'Approved'
+    });
+
+    const count = allCampaignReviews.length;
+    let avg = 0;
+    if (count > 0) {
+      avg = Math.round((allCampaignReviews.reduce((sum, r) => sum + r.rating, 0) / count) * 10) / 10;
+    }
+
+    campaign.rating = avg;
+    campaign.reviewsCount = count;
+    await campaign.save();
+
+    res.status(201).json({
+      status: true,
+      message: 'Review submitted successfully for campaign',
+      campaignRating: avg,
+      campaignReviewsCount: count,
+      data: savedReview,
+      review: savedReview
+    });
+  } catch (err) {
+    res.status(400).json({ status: false, message: err.message });
+  }
+};
+
 router.put('/campaigns/:id', handleUpdateCampaign);
 router.put('/campaigns/update/:id', handleUpdateCampaign);
 router.put('/campaigns/edit/:id', handleUpdateCampaign);
 
+router.get('/campaigns/:id/reviews', handleGetCampaignReviews);
+router.get('/:id/reviews', handleGetCampaignReviews);
+
+router.post('/campaigns/:id/reviews', handlePostCampaignReview);
+router.post('/:id/reviews', handlePostCampaignReview);
+
 router.handleMyCampaigns = handleMyCampaigns;
 router.handleUpdateCampaign = handleUpdateCampaign;
+router.handleGetCampaignReviews = handleGetCampaignReviews;
+router.handlePostCampaignReview = handlePostCampaignReview;
 
 module.exports = router;
 module.exports.handleMyCampaigns = handleMyCampaigns;
 module.exports.handleUpdateCampaign = handleUpdateCampaign;
+module.exports.handleGetCampaignReviews = handleGetCampaignReviews;
+module.exports.handlePostCampaignReview = handlePostCampaignReview;

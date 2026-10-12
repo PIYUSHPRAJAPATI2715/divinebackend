@@ -63,6 +63,103 @@ const enrichTransactions = (transactions) => {
   });
 };
 
+// Helper to execute complete wallet topup with tier bonuses
+const processWalletRecharge = async (user, rechargeAmount, tierId) => {
+  const settings = await getWalletSettings();
+  cleanAndCalculateUserCashback(user);
+
+  let matchingTier = null;
+  if (tierId) {
+    matchingTier = settings.predefinedRechargeTiers.find(t => t.tierId === tierId || String(t._id) === tierId);
+  }
+  if (!matchingTier) {
+    matchingTier = settings.predefinedRechargeTiers.find(t => t.isActive && Number(t.amount) === Number(rechargeAmount));
+  }
+
+  let cashbackEarned = 0;
+  let coinsEarned = 0;
+
+  if (matchingTier) {
+    cashbackEarned = Number(matchingTier.cashback) || 0;
+    coinsEarned = Number(matchingTier.bonusCoins) || Number(rechargeAmount);
+  } else {
+    cashbackEarned = Math.floor(rechargeAmount * 0.1);
+    coinsEarned = Number(rechargeAmount);
+  }
+
+  // 1. Credit main wallet balance
+  user.walletBalance = (user.walletBalance || 0) + rechargeAmount;
+
+  // 2. Credit cashback with 15 days expiry
+  const expiryDays = settings.cashbackExpiryDays || 15;
+  const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
+  if (!user.cashbackLedger) user.cashbackLedger = [];
+  if (cashbackEarned > 0) {
+    user.cashbackLedger.push({
+      amount: cashbackEarned,
+      remainingAmount: cashbackEarned,
+      creditedAt: new Date(),
+      expiresAt,
+      source: `Recharge ₹${rechargeAmount} Tier`,
+      isExpired: false
+    });
+    user.cashbackBalance = (user.cashbackBalance || 0) + cashbackEarned;
+  }
+
+  // 3. Credit Divine Coins
+  if (!user.coinsLedger) user.coinsLedger = [];
+  if (coinsEarned > 0) {
+    user.totalCoins = (user.totalCoins || 0) + coinsEarned;
+    user.coinsLedger.push({
+      coins: coinsEarned,
+      type: 'Earned',
+      description: `Recharge Bonus ₹${rechargeAmount}`,
+      createdAt: new Date()
+    });
+  }
+
+  await user.save();
+
+  // 4. Log Transaction
+  const transactionId = `TXN-${Date.now().toString().slice(-6)}`;
+  const newTx = new Transaction({
+    transactionId,
+    userId: user._id,
+    type: 'Wallet Top-up',
+    user: user.name || user.phone || 'User',
+    mobile: user.phone || '',
+    item: `Wallet Recharge ₹${rechargeAmount}`,
+    amount: rechargeAmount,
+    status: 'Success',
+    date: new Date()
+  });
+  await newTx.save();
+
+  try {
+    const { createAndSendNotification } = require('../../utils/notification');
+    await createAndSendNotification({
+      userId: user._id,
+      title: 'Wallet Recharged Successfully! 💳',
+      body: `₹${rechargeAmount} added to your wallet! New balance: ₹${user.walletBalance}. Earned ₹${cashbackEarned} Cashback & ${coinsEarned} Coins.`,
+      type: 'wallet',
+      screen: 'wallet',
+      dataId: String(user._id)
+    });
+  } catch (notifErr) {
+    console.error('Wallet recharge notification error:', notifErr.message);
+  }
+
+  return {
+    user,
+    rechargeAmount,
+    cashbackEarned,
+    cashbackExpiresAt: expiresAt,
+    coinsEarned,
+    transaction: newTx
+  };
+};
+
 // 1. GET Wallet Summary (Main Balance, 15-day Cashback, 2500 Coins Lot Status, Tiers)
 router.get('/wallet', async (req, res) => {
   try {
@@ -75,14 +172,19 @@ router.get('/wallet', async (req, res) => {
     cleanAndCalculateUserCashback(user);
     await user.save();
 
-    const transactions = await Transaction.find({
-      $or: [
-        { user: user.name },
-        { user: user.phone },
-        { mobile: user.phone },
-        { mobile: `+91 ${user.phone}` }
-      ]
-    }).sort({ createdAt: -1 });
+    // Specific user transactions lookup without matching empty mobile/name
+    const txConditions = [{ userId: user._id }];
+    if (user.phone && typeof user.phone === 'string' && user.phone.trim().length > 5) {
+      const cleanPhone = user.phone.trim().replace('+91', '').trim();
+      txConditions.push({ mobile: user.phone.trim() });
+      if (cleanPhone) {
+        txConditions.push({ mobile: cleanPhone });
+        txConditions.push({ mobile: `+91 ${cleanPhone}` });
+        txConditions.push({ mobile: `+91${cleanPhone}` });
+      }
+    }
+
+    const transactions = await Transaction.find({ $or: txConditions }).sort({ createdAt: -1 });
 
     const enrichedTx = enrichTransactions(transactions);
     const totalCredit = enrichedTx.reduce((sum, tx) => sum + tx.credit_amount, 0);
@@ -93,6 +195,7 @@ router.get('/wallet', async (req, res) => {
     const totalCoins = user.totalCoins || 0;
     const isCoinRedeemable = totalCoins >= lotSize;
     const lotValueInRupees = lotSize / coinsPerRupee; // 2500 / 10 = ₹250
+    const coinsValueInRupees = Math.round((totalCoins / coinsPerRupee) * 100) / 100;
 
     const activeTiers = settings.predefinedRechargeTiers.filter(t => t.isActive);
 
@@ -102,7 +205,7 @@ router.get('/wallet', async (req, res) => {
         walletBalance: user.walletBalance || 0,
         cashbackBalance: user.cashbackBalance || 0,
         totalCoins: totalCoins,
-        coinsValueInRupees: (totalCoins / coinsPerRupee),
+        coinsValueInRupees: coinsValueInRupees,
         
         // Coins redemption rules
         coinRedeemRules: {
@@ -136,8 +239,8 @@ router.get('/wallet', async (req, res) => {
   }
 });
 
-// 2. POST Wallet Top-up with Pre-defined Cashback Tiers & 15-day Expiry
-router.post('/wallet/topup', async (req, res) => {
+// Top-up handler function
+const handleTopup = async (req, res) => {
   try {
     const { amount, tierId } = req.body;
     const rechargeAmount = Number(amount);
@@ -150,95 +253,34 @@ router.post('/wallet/topup', async (req, res) => {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
 
-    const settings = await getWalletSettings();
-    cleanAndCalculateUserCashback(user);
+    const result = await processWalletRecharge(user, rechargeAmount, tierId);
 
-    // Find matching predefined tier or check exact tierId
-    let matchingTier = null;
-    if (tierId) {
-      matchingTier = settings.predefinedRechargeTiers.find(t => t.tierId === tierId || String(t._id) === tierId);
-    }
-    if (!matchingTier) {
-      matchingTier = settings.predefinedRechargeTiers.find(t => t.isActive && t.amount === rechargeAmount);
-    }
-
-    const cashbackEarned = matchingTier ? matchingTier.cashback : 0;
-    const coinsEarned = matchingTier ? (matchingTier.bonusCoins || rechargeAmount) : rechargeAmount;
-
-    // Credit main wallet balance
-    user.walletBalance = (user.walletBalance || 0) + rechargeAmount;
-
-    // Credit cashback with 15 days expiry
-    const expiryDays = settings.cashbackExpiryDays || 15;
-    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
-
-    if (cashbackEarned > 0) {
-      user.cashbackLedger.push({
-        amount: cashbackEarned,
-        remainingAmount: cashbackEarned,
-        creditedAt: new Date(),
-        expiresAt,
-        source: `Recharge ₹${rechargeAmount} Tier`,
-        isExpired: false
-      });
-      user.cashbackBalance = (user.cashbackBalance || 0) + cashbackEarned;
-    }
-
-    // Credit Divine Coins (No Expiry)
-    if (coinsEarned > 0) {
-      user.totalCoins = (user.totalCoins || 0) + coinsEarned;
-      user.coinsLedger.push({
-        coins: coinsEarned,
-        type: 'Earned',
-        description: `Recharge Bonus ₹${rechargeAmount}`,
-        createdAt: new Date()
-      });
-    }
-
-    await user.save();
-
-    // Log Transaction
-    const newTx = new Transaction({
-      transactionId: `TXN-${Date.now().toString().slice(-6)}`,
-      user: user.name || user.phone,
-      mobile: user.phone,
-      item: `Wallet Recharge ₹${rechargeAmount}`,
-      amount: rechargeAmount,
-      status: 'Success'
-    });
-    await newTx.save();
-
-    try {
-      const { createAndSendNotification } = require('../../utils/notification');
-      await createAndSendNotification({
-        userId: user._id,
-        title: 'Wallet Recharged Successfully! 💳',
-        body: `₹${rechargeAmount} added to your wallet! New balance: ₹${user.walletBalance}.`,
-        type: 'wallet',
-        screen: 'wallet',
-        dataId: String(user._id)
-      });
-    } catch (notifErr) {
-      console.error('Wallet recharge notification error:', notifErr.message);
-    }
+    const coinsPerRupee = 10;
+    const coinsValueInRupees = Math.round(((result.user.totalCoins || 0) / coinsPerRupee) * 100) / 100;
 
     res.json({
       status: true,
-      message: `Top-up successful! Added ₹${rechargeAmount} to wallet. Earned ₹${cashbackEarned} Cashback (expires in 15 days) & ${coinsEarned} Divine Coins.`,
+      message: `Top-up successful! Added ₹${rechargeAmount} to wallet. Earned ₹${result.cashbackEarned} Cashback (expires in 15 days) & ${result.coinsEarned} Divine Coins.`,
       data: {
-        walletBalance: user.walletBalance,
-        cashbackBalance: user.cashbackBalance,
-        totalCoins: user.totalCoins,
+        walletBalance: result.user.walletBalance,
+        cashbackBalance: result.user.cashbackBalance,
+        totalCoins: result.user.totalCoins,
+        coinsValueInRupees: coinsValueInRupees,
         rechargeAmount,
-        cashbackEarned,
-        cashbackExpiresAt: expiresAt,
-        coinsEarned
+        cashbackEarned: result.cashbackEarned,
+        cashbackExpiresAt: result.cashbackExpiresAt,
+        coinsEarned: result.coinsEarned
       }
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
-});
+};
+
+// 2. POST Wallet Top-up with Pre-defined Cashback Tiers & 15-day Expiry
+router.post('/wallet/topup', handleTopup);
+router.post('/topup', handleTopup);
+router.post('/recharge', handleTopup);
 
 // 3. POST Wallet Payment / Donation Checkout (Applies 20% Cashback Limit & 2500 Coins Lot Rule)
 router.post('/wallet/pay', async (req, res) => {
@@ -354,13 +396,17 @@ router.get('/transactions', async (req, res) => {
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
     }
-    const transactions = await Transaction.find({
-      $or: [
-        { user: user.name },
-        { user: user.phone },
-        { user: `+91 ${user.phone}` }
-      ]
-    }).sort({ createdAt: -1 });
+    const txConditions = [{ userId: user._id }];
+    if (user.phone && typeof user.phone === 'string' && user.phone.trim().length > 5) {
+      const cleanPhone = user.phone.trim().replace('+91', '').trim();
+      txConditions.push({ mobile: user.phone.trim() });
+      if (cleanPhone) {
+        txConditions.push({ mobile: cleanPhone });
+        txConditions.push({ mobile: `+91 ${cleanPhone}` });
+        txConditions.push({ mobile: `+91${cleanPhone}` });
+      }
+    }
+    const transactions = await Transaction.find({ $or: txConditions }).sort({ createdAt: -1 });
     
     res.json({ status: true, data: enrichTransactions(transactions) });
   } catch (err) {
@@ -368,4 +414,6 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
+router.processWalletRecharge = processWalletRecharge;
 module.exports = router;
+module.exports.processWalletRecharge = processWalletRecharge;

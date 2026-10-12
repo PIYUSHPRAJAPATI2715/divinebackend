@@ -290,19 +290,24 @@ const handleDonationHistory = async (req, res) => {
 
     const userId = req.user._id || req.user.id;
     const dbUser = await User.findById(userId);
-    const userPhone = dbUser?.phone || req.user.phone || '';
-    const userEmail = dbUser?.email || req.user.email || '';
-    const userName = dbUser?.name || dbUser?.organizationName || req.user.name || '';
+    const userPhone = (dbUser?.phone || req.user.phone || '').trim();
+    const userEmail = (dbUser?.email || req.user.email || '').trim().toLowerCase();
+    const userName = (dbUser?.name || dbUser?.organizationName || req.user.name || '').trim();
 
-    const txConditions = [];
-    if (userPhone) {
+    const txConditions = [{ userId: dbUser._id }];
+    if (userPhone && userPhone.length > 5) {
       const cleanPhone = userPhone.replace('+91', '').trim();
       txConditions.push({ mobile: userPhone });
-      txConditions.push({ mobile: cleanPhone });
-      txConditions.push({ mobile: `+91 ${cleanPhone}` });
+      if (cleanPhone) {
+        txConditions.push({ mobile: cleanPhone });
+        txConditions.push({ mobile: `+91 ${cleanPhone}` });
+        txConditions.push({ mobile: `+91${cleanPhone}` });
+      }
     }
-    if (userName) {
-      txConditions.push({ user: { $regex: new RegExp(`^${userName.trim()}$`, 'i') } });
+
+    const genericNames = ['', 'user', 'google user', 'donor', 'ngo', 'null', 'undefined', 'test'];
+    if (userName && userName.length > 2 && !genericNames.includes(userName.toLowerCase())) {
+      txConditions.push({ user: userName });
     }
 
     let transactions = [];
@@ -314,8 +319,12 @@ const handleDonationHistory = async (req, res) => {
     }
 
     const danConditions = [{ donorId: userId }];
-    if (userPhone) danConditions.push({ donorPhone: userPhone });
-    if (userEmail) danConditions.push({ donorEmail: userEmail });
+    if (userPhone && userPhone.length > 5) {
+      danConditions.push({ donorPhone: userPhone });
+    }
+    if (userEmail && userEmail.length > 3 && !userEmail.endsWith('@example.com')) {
+      danConditions.push({ donorEmail: userEmail });
+    }
 
     const danDonations = await DanDonation.find({
       $or: danConditions

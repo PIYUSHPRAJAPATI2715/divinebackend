@@ -623,4 +623,300 @@ router.get('/dan/donations', async (req, res) => {
   }
 });
 
+// NGO / Organization Dashboard for Donation Tracking (Issue no. 13)
+router.get('/dashboard', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const Transaction = require('../models/Transaction');
+
+    // 1. Fetch campaigns for this NGO
+    const campaigns = await Campaign.find({
+      $or: [
+        { ngoId: ngo._id },
+        { user: ngo.name },
+        { user: ngo.organizationName },
+        { userPhone: ngo.phone }
+      ]
+    }).sort({ createdAt: -1 });
+
+    const campaignTitles = campaigns.map(c => c.title ? c.title.trim() : '').filter(Boolean);
+
+    // 2. Fetch campaign donations from Transaction collection
+    let campaignTx = [];
+    if (campaignTitles.length > 0 || ngo.name) {
+      campaignTx = await Transaction.find({
+        type: 'Donation',
+        status: 'Success',
+        $or: [
+          { item: { $in: campaignTitles } },
+          { fundCategory: { $in: [ngo.name, ngo.organizationName].filter(Boolean) } },
+          { item: { $regex: new RegExp(`^${(ngo.name || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i') } }
+        ]
+      }).sort({ date: -1, createdAt: -1 });
+    }
+
+    // 3. Fetch direct Daan donations for this NGO
+    const danDonations = await DanDonation.find({
+      $or: [
+        { ngoId: ngo._id },
+        { ngoId: String(ngo._id) }
+      ],
+      paymentStatus: 'Success'
+    }).sort({ createdAt: -1 });
+
+    // Format all donations into unified list
+    const formattedCampaignDonations = campaignTx.map(tx => ({
+      _id: tx._id,
+      donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
+      donorName: tx.user || 'Anonymous Donor',
+      donorPhone: tx.mobile || '',
+      amount: tx.amount || 0,
+      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+      type: 'Campaign Donation',
+      item: tx.item || 'Campaign',
+      campaignTitle: tx.item || 'Campaign',
+      status: tx.status || 'Success',
+      date: tx.date || tx.createdAt,
+      createdAt: tx.date || tx.createdAt
+    }));
+
+    const formattedDanDonations = danDonations.map(d => ({
+      _id: d._id,
+      donationId: d.donationId || `DON-${d._id.toString().slice(-4)}`,
+      donorName: d.donorName || 'Anonymous Donor',
+      donorPhone: d.donorPhone || '',
+      donorEmail: d.donorEmail || '',
+      amount: d.totalAmount || 0,
+      formattedAmount: `₹${(d.totalAmount || 0).toLocaleString('en-IN')}`,
+      type: 'Dan Donation',
+      item: d.items && d.items.length > 0 ? d.items.map(i => i.name).join(', ') : 'Daan Seva',
+      campaignTitle: d.eventName || 'Daan Seva',
+      items: d.items || [],
+      status: d.paymentStatus || 'Success',
+      date: d.createdAt,
+      createdAt: d.createdAt
+    }));
+
+    const allDonations = [...formattedCampaignDonations, ...formattedDanDonations].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const campaignTotal = formattedCampaignDonations.reduce((sum, d) => sum + d.amount, 0);
+    const danTotal = formattedDanDonations.reduce((sum, d) => sum + d.amount, 0);
+    const totalDonationsReceived = campaignTotal + danTotal;
+
+    const uniqueDonors = new Set();
+    allDonations.forEach(d => {
+      const key = d.donorPhone || d.donorEmail || d.donorName;
+      if (key && key !== 'Anonymous Donor') uniqueDonors.add(key);
+    });
+    const uniqueDonorsCount = uniqueDonors.size || allDonations.length;
+
+    const activeCampaigns = campaigns.filter(c => c.status === 'Live');
+
+    const campaignsSummary = campaigns.map(c => {
+      const numGoal = typeof c.goal === 'number' ? c.goal : Number(String(c.goal || 0).replace(/[^0-9]/g, '')) || 0;
+      const numRaised = typeof c.raised === 'number' ? c.raised : Number(String(c.raised || 0).replace(/[^0-9]/g, '')) || 0;
+      const percentage = numGoal > 0 ? Math.min(100, Math.round((numRaised / numGoal) * 100)) : 0;
+      return {
+        _id: c._id,
+        campaignId: c.campaignId,
+        title: c.title,
+        category: c.category,
+        goal: c.goal,
+        goalAmount: numGoal,
+        raised: c.raised,
+        raisedAmount: numRaised,
+        percentage,
+        donorsCount: c.donorsCount || 0,
+        status: c.status,
+        imageUrl: c.imageUrl
+      };
+    });
+
+    const summary = {
+      totalDonationsReceived,
+      formattedTotalDonations: `₹${totalDonationsReceived.toLocaleString('en-IN')}`,
+      totalDonationCount: allDonations.length,
+      totalDonorsCount: uniqueDonorsCount,
+      campaignDonationsTotal: campaignTotal,
+      danDonationsTotal: danTotal,
+      activeCampaignsCount: activeCampaigns.length,
+      totalCampaignsCount: campaigns.length
+    };
+
+    res.json({
+      status: true,
+      ngo: {
+        _id: ngo._id,
+        id: ngo._id,
+        name: ngo.name,
+        organizationName: ngo.organizationName || ngo.name,
+        logo: ngo.logo,
+        rating: ngo.rating || 4.5,
+        email: ngo.email,
+        phone: ngo.phone,
+        status: ngo.status
+      },
+      summary,
+      campaigns: campaignsSummary,
+      recentDonations: allDonations.slice(0, 20),
+      donations: allDonations,
+      data: {
+        summary,
+        campaigns: campaignsSummary,
+        recentDonations: allDonations.slice(0, 20),
+        donations: allDonations
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Donation Tracking Endpoint
+router.get('/donations', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const Transaction = require('../models/Transaction');
+
+    const campaigns = await Campaign.find({
+      $or: [
+        { ngoId: ngo._id },
+        { user: ngo.name },
+        { userPhone: ngo.phone }
+      ]
+    });
+    const campaignTitles = campaigns.map(c => c.title ? c.title.trim() : '').filter(Boolean);
+
+    let campaignTx = [];
+    if (campaignTitles.length > 0 || ngo.name) {
+      campaignTx = await Transaction.find({
+        type: 'Donation',
+        status: 'Success',
+        $or: [
+          { item: { $in: campaignTitles } },
+          { fundCategory: ngo.name }
+        ]
+      }).sort({ date: -1, createdAt: -1 });
+    }
+
+    const danDonations = await DanDonation.find({
+      $or: [{ ngoId: ngo._id }, { ngoId: String(ngo._id) }]
+    }).sort({ createdAt: -1 });
+
+    const formattedCampaignDonations = campaignTx.map(tx => ({
+      _id: tx._id,
+      donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
+      donorName: tx.user || 'Anonymous Donor',
+      donorPhone: tx.mobile || '',
+      amount: tx.amount || 0,
+      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+      type: 'Campaign Donation',
+      item: tx.item || 'Campaign',
+      status: tx.status || 'Success',
+      date: tx.date || tx.createdAt
+    }));
+
+    const formattedDanDonations = danDonations.map(d => ({
+      _id: d._id,
+      donationId: d.donationId || `DON-${d._id.toString().slice(-4)}`,
+      donorName: d.donorName || 'Anonymous Donor',
+      donorPhone: d.donorPhone || '',
+      donorEmail: d.donorEmail || '',
+      amount: d.totalAmount || 0,
+      formattedAmount: `₹${(d.totalAmount || 0).toLocaleString('en-IN')}`,
+      type: 'Dan Donation',
+      item: d.items && d.items.length > 0 ? d.items.map(i => i.name).join(', ') : 'Daan',
+      status: d.paymentStatus || 'Success',
+      date: d.createdAt
+    }));
+
+    const all = [...formattedCampaignDonations, ...formattedDanDonations].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const total = all.reduce((sum, d) => sum + d.amount, 0);
+
+    res.json({
+      status: true,
+      count: all.length,
+      totalReceived: `₹${total.toLocaleString('en-IN')}`,
+      totalReceivedAmount: total,
+      donations: all,
+      data: all
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+router.get('/donations/tracking', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const Transaction = require('../models/Transaction');
+
+    const campaigns = await Campaign.find({
+      $or: [
+        { ngoId: ngo._id },
+        { user: ngo.name },
+        { userPhone: ngo.phone }
+      ]
+    });
+    const campaignTitles = campaigns.map(c => c.title ? c.title.trim() : '').filter(Boolean);
+
+    let campaignTx = [];
+    if (campaignTitles.length > 0 || ngo.name) {
+      campaignTx = await Transaction.find({
+        type: 'Donation',
+        status: 'Success',
+        $or: [
+          { item: { $in: campaignTitles } },
+          { fundCategory: ngo.name }
+        ]
+      }).sort({ date: -1, createdAt: -1 });
+    }
+
+    const danDonations = await DanDonation.find({
+      $or: [{ ngoId: ngo._id }, { ngoId: String(ngo._id) }]
+    }).sort({ createdAt: -1 });
+
+    const formattedCampaignDonations = campaignTx.map(tx => ({
+      _id: tx._id,
+      donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
+      donorName: tx.user || 'Anonymous Donor',
+      donorPhone: tx.mobile || '',
+      amount: tx.amount || 0,
+      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+      type: 'Campaign Donation',
+      item: tx.item || 'Campaign',
+      status: tx.status || 'Success',
+      date: tx.date || tx.createdAt
+    }));
+
+    const formattedDanDonations = danDonations.map(d => ({
+      _id: d._id,
+      donationId: d.donationId || `DON-${d._id.toString().slice(-4)}`,
+      donorName: d.donorName || 'Anonymous Donor',
+      donorPhone: d.donorPhone || '',
+      donorEmail: d.donorEmail || '',
+      amount: d.totalAmount || 0,
+      formattedAmount: `₹${(d.totalAmount || 0).toLocaleString('en-IN')}`,
+      type: 'Dan Donation',
+      item: d.items && d.items.length > 0 ? d.items.map(i => i.name).join(', ') : 'Daan',
+      status: d.paymentStatus || 'Success',
+      date: d.createdAt
+    }));
+
+    const all = [...formattedCampaignDonations, ...formattedDanDonations].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const total = all.reduce((sum, d) => sum + d.amount, 0);
+
+    res.json({
+      status: true,
+      count: all.length,
+      totalReceived: `₹${total.toLocaleString('en-IN')}`,
+      totalReceivedAmount: total,
+      donations: all,
+      data: all
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
 module.exports = router;

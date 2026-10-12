@@ -7,6 +7,7 @@ const CampaignCategory = require('../models/CampaignCategory');
 const Campaign = require('../models/Campaign');
 const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
+const NewsMedia = require('../models/NewsMedia');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -62,10 +63,64 @@ router.get('/', optionalAuth, async (req, res) => {
     // 4. Fetch ongoing campaigns (status = 'Live')
     const campaigns = await Campaign.find({ status: 'Live' }).sort({ createdAt: -1 });
 
-    // 5. Fetch top NGOs (verified NGOs from NGO collection)
-    const topNGOs = await NGO.find({ status: 'Verified' })
-      .select('name logo rating impactStats about email phone')
+    // 5. Fetch top NGOs (verified NGOs, excluding corporate profiles and self-NGO profile)
+    let selfNgoId = null;
+    let selfNgoPhone = null;
+    let selfNgoEmail = null;
+    if (req.user && (req.user.id || req.user._id)) {
+      const currentUserId = req.user.id || req.user._id;
+      const currentUser = await User.findById(currentUserId);
+      if (currentUser) {
+        selfNgoPhone = currentUser.phone;
+        selfNgoEmail = currentUser.email;
+        const myNgo = await NGO.findOne({
+          $or: [
+            { phone: currentUser.phone },
+            { email: currentUser.email }
+          ]
+        });
+        if (myNgo) selfNgoId = myNgo._id;
+      }
+    }
+
+    const ngoFilter = {
+      status: 'Verified',
+      organizationType: { $ne: 'Corporate' },
+      isRegisteredCompany: { $ne: 'Yes' }
+    };
+
+    if (selfNgoId) {
+      ngoFilter._id = { $ne: selfNgoId };
+    }
+    if (selfNgoPhone && selfNgoPhone.trim()) {
+      ngoFilter.phone = { $ne: selfNgoPhone.trim() };
+    }
+    if (selfNgoEmail && selfNgoEmail.trim()) {
+      ngoFilter.email = { $ne: selfNgoEmail.trim() };
+    }
+
+    const topNGOs = await NGO.find(ngoFilter)
+      .select('name organizationName logo rating impactStats about email phone')
+      .sort({ rating: -1 })
       .limit(10);
+
+    // 5b. Fetch Press & Media (Published articles)
+    const pressAndMediaDocs = await NewsMedia.find({ status: 'Published' })
+      .sort({ publishedDate: -1, createdAt: -1 })
+      .limit(10);
+
+    const pressAndMedia = pressAndMediaDocs.map(item => ({
+      _id: item._id,
+      id: item._id,
+      newsId: item.newsId,
+      title: item.title,
+      source: item.source,
+      content: item.content,
+      imageUrl: item.imageUrl || '',
+      publishedDate: item.publishedDate,
+      date: item.publishedDate,
+      status: item.status
+    }));
 
     // 6. Fetch recent successful donations on the platform (last 10 recent donation transactions, excluding wallet topups)
     const recentTx = await Transaction.find({
@@ -243,12 +298,21 @@ router.get('/', optionalAuth, async (req, res) => {
         })),
         ngos: topNGOs.map(ngo => ({
           id: ngo._id,
-          name: ngo.name,
+          _id: ngo._id,
+          name: ngo.name || ngo.organizationName || 'NGO',
+          organizationName: ngo.organizationName || ngo.name || 'NGO',
           logo: ngo.logo,
+          profilePhoto: ngo.logo,
           rating: ngo.rating || 4.5,
           impactStats: ngo.impactStats || '',
           description: ngo.about || ''
         })),
+        pressAndMedia,
+        pressMedia: pressAndMedia,
+        newsAndMedia: pressAndMedia,
+        newsMedia: pressAndMedia,
+        press: pressAndMedia,
+        news: pressAndMedia,
         donationHistory,
         appVersion: 'v1.0.5_onboarding_role_fix'
       }

@@ -86,7 +86,26 @@ const recalculateTargetRating = async (targetType, targetName) => {
 router.get('/ngos', async (req, res) => {
   try {
     const { search } = req.query;
-    let query = { status: 'Verified' };
+    let query = {
+      status: 'Verified',
+      organizationType: { $ne: 'Corporate' },
+      isRegisteredCompany: { $ne: 'Yes' }
+    };
+
+    if (req.user && (req.user._id || req.user.id)) {
+      const currentUser = await User.findById(req.user._id || req.user.id);
+      if (currentUser) {
+        const myNgo = await NGO.findOne({
+          $or: [
+            { phone: currentUser.phone },
+            { email: currentUser.email }
+          ]
+        });
+        if (myNgo) query._id = { $ne: myNgo._id };
+        if (currentUser.phone && currentUser.phone.trim()) query.phone = { $ne: currentUser.phone.trim() };
+        if (currentUser.email && currentUser.email.trim()) query.email = { $ne: currentUser.email.trim() };
+      }
+    }
     
     if (search && search.trim()) {
       const trimmedSearch = search.trim();

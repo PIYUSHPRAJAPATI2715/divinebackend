@@ -247,4 +247,9 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Campaign Reviews Endpoints
+const donorCampaignsRoutes = require('../donor/campaigns');
+router.get('/:id/reviews', donorCampaignsRoutes.handleGetCampaignReviews);
+router.post('/:id/reviews', donorCampaignsRoutes.handlePostCampaignReview);
+
 module.exports = router;
