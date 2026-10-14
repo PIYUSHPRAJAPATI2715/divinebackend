@@ -11,4 +11,8 @@ const danSubcategorySchema = new mongoose.Schema({
   ngoId: { type: mongoose.Schema.Types.ObjectId, ref: 'NGO', default: null }
 }, { timestamps: true });
 
+danSubcategorySchema.index({ categoryId: 1, status: 1 });
+danSubcategorySchema.index({ status: 1 });
+danSubcategorySchema.index({ name: 1 });
+
 module.exports = mongoose.model('DanSubcategory', danSubcategorySchema);

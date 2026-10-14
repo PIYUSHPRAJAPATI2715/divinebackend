@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const DanCategory = require('../models/DanCategory');
 const DanSubcategory = require('../models/DanSubcategory');
 const DanItem = require('../models/DanItem');
@@ -10,52 +12,67 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const DanCart = require('../models/DanCart');
 const Admin = require('../models/Admin');
+const Banner = require('../models/Banner');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
-// Helper middleware to extract user context optionally
+// Helper to save base64 data URLs as lightweight physical files
+const processImageUpload = (imageStr, req) => {
+  if (!imageStr || typeof imageStr !== 'string') return imageStr;
+  const trimmed = imageStr.trim();
+  if (trimmed.startsWith('data:image/')) {
+    try {
+      const matches = trimmed.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1].replace('svg+xml', 'svg');
+        const buffer = Buffer.from(matches[2], 'base64');
+        const filename = `dan_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+        const uploadsDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+        const protocol = req && (req.secure || req.headers['x-forwarded-proto'] === 'https') ? 'https' : 'http';
+        const host = req ? (req.get('host') || '195.35.20.150:8000') : '195.35.20.150:8000';
+        return `${protocol}://${host}/uploads/${filename}`;
+      }
+    } catch (e) {
+      console.error('Failed to save base64 image in Daan:', e.message);
+    }
+  }
+  return trimmed;
+};
+
+// High-Speed In-Memory Cache for Daan APIs (60s TTL)
+const danCache = {
+  categories: null,
+  categoriesExpiresAt: 0,
+  subcategories: new Map(),
+  items: new Map()
+};
+
+const invalidateDanCache = () => {
+  danCache.categories = null;
+  danCache.categoriesExpiresAt = 0;
+  danCache.subcategories.clear();
+  danCache.items.clear();
+};
+
+// Helper middleware to extract user context optionally (non-blocking for public routes)
 const extractUser = async (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      const userId = decoded.id || decoded._id;
-      if (decoded.role === 'admin') {
-        const dbAdmin = await Admin.findById(userId);
-        if (dbAdmin) {
-          req.user = {
-            ...decoded,
-            id: userId,
-            _id: userId,
-            role: 'admin',
-            name: 'Admin',
-            email: dbAdmin.email
-          };
-        }
-      } else {
-        const dbUser = await User.findById(userId);
-        if (dbUser) {
-          req.user = {
-            ...decoded,
-            id: userId,
-            _id: userId,
-            role: dbUser.role,
-            name: dbUser.name || dbUser.organizationName || 'User',
-            phone: dbUser.phone,
-            email: dbUser.email
-          };
-        }
-      }
-    } catch (err) {
-      console.log('Extract user token failed:', err.message);
-    }
+      req.user = decoded;
+    } catch (err) {}
   }
   next();
 };
 
 // Required authentication check for management actions
-const requireNGOOrAdmin = (req, res, next) => {
+const requireNGOOrAdmin = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
   }
@@ -65,7 +82,7 @@ const requireNGOOrAdmin = (req, res, next) => {
   next();
 };
 
-const requireAdmin = (req, res, next) => {
+const requireAdmin = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
   }
@@ -90,26 +107,73 @@ const checkOwnership = async (req, resource) => {
 // Apply extractUser middleware to all routes
 router.use(extractUser);
 
+// Image Dimension & Standards Guide API
+router.get('/image-standards', (req, res) => {
+  res.json({
+    status: true,
+    data: {
+      category: {
+        title: 'Daan Category Image',
+        aspectRatio: '1:1',
+        recommendedWidth: 500,
+        recommendedHeight: 500,
+        minWidth: 200,
+        minHeight: 200,
+        guidance: 'Recommended: 500 × 500 px (Square 1:1) or 600 × 450 px (4:3). Use clean, center-aligned images without borders.'
+      },
+      subcategory: {
+        title: 'Daan Sub-Category (Group) Image',
+        aspectRatio: '16:9',
+        recommendedWidth: 800,
+        recommendedHeight: 450,
+        minWidth: 400,
+        minHeight: 225,
+        guidance: 'Recommended: 800 × 450 px (Landscape 16:9) or 600 × 400 px (3:2). Perfect for card/banner displays in the app.'
+      },
+      item: {
+        title: 'Daan Item Image',
+        aspectRatio: '1:1',
+        recommendedWidth: 500,
+        recommendedHeight: 500,
+        minWidth: 250,
+        minHeight: 250,
+        guidance: 'Recommended: 500 × 500 px (Square 1:1) or 600 × 450 px (4:3). Clear product/service photo for smooth mobile display.'
+      }
+    }
+  });
+});
+
 // ----------------------------------------------------
 // 1. Categories APIs
 // ----------------------------------------------------
 
-// List active categories
+// List active categories (high performance with parallel queries and in-memory cache)
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await DanCategory.find({ status: 'Active' }).populate('ngoId', 'name logo');
-    const Banner = require('../models/Banner');
-    const topBanners = await Banner.find({ placement: 'DaanTop', status: 'Active' });
-    const bottomBanners = await Banner.find({ placement: 'DaanBottom', status: 'Active' });
+    const now = Date.now();
+    if (danCache.categories && danCache.categoriesExpiresAt > now) {
+      return res.json(danCache.categories);
+    }
+
+    const [categories, topBanners, bottomBanners] = await Promise.all([
+      DanCategory.find({ status: 'Active' }).populate('ngoId', 'name logo').lean(),
+      Banner.find({ placement: 'DaanTop', status: 'Active' }).lean(),
+      Banner.find({ placement: 'DaanBottom', status: 'Active' }).lean()
+    ]);
     
-    res.json({ 
+    const responsePayload = { 
       status: true, 
       banners: {
         top: topBanners,
         bottom: bottomBanners
       },
       data: categories 
-    });
+    };
+
+    danCache.categories = responsePayload;
+    danCache.categoriesExpiresAt = now + 60000; // 60s TTL
+    
+    res.json(responsePayload);
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -135,16 +199,18 @@ router.post('/categories', requireAdmin, async (req, res) => {
     }
 
     const categoryId = `CAT-DAN-${Date.now().toString().slice(-4)}`;
+    const finalImageUrl = processImageUpload(imageUrl, req);
     const newCategory = new DanCategory({
       categoryId,
       name,
       icon,
-      imageUrl,
+      imageUrl: finalImageUrl,
       description,
       creatorType,
       ngoId
     });
     await newCategory.save();
+    invalidateDanCache();
     res.status(201).json({ status: true, message: 'Dan Category created successfully', data: newCategory });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -163,7 +229,12 @@ router.put('/categories/:id', requireAdmin, async (req, res) => {
       return res.status(403).json({ status: false, message: 'Access denied: You do not own this category' });
     }
 
+    if (req.body.imageUrl) {
+      req.body.imageUrl = processImageUpload(req.body.imageUrl, req);
+    }
+
     const updated = await DanCategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    invalidateDanCache();
     res.json({ status: true, message: 'Category updated successfully', data: updated });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -183,6 +254,7 @@ router.delete('/categories/:id', requireAdmin, async (req, res) => {
     }
 
     await DanCategory.findByIdAndDelete(req.params.id);
+    invalidateDanCache();
     res.json({ status: true, message: 'Category deleted successfully' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -193,11 +265,18 @@ router.delete('/categories/:id', requireAdmin, async (req, res) => {
 // 2. Subcategories APIs
 // ----------------------------------------------------
 
-// List subcategories (filtered by categoryId, category, daanType, etc.)
+// List subcategories (filtered by categoryId, category, daanType, etc. with in-memory caching and .lean())
 router.get('/subcategories', async (req, res) => {
   try {
     const { category, categoryId, category_id, id, daanType, type, parentCategoryId, parentId } = req.query;
     const catQuery = category || categoryId || category_id || id || daanType || type || parentCategoryId || parentId;
+    const cacheKey = catQuery ? catQuery.trim() : 'all';
+
+    const now = Date.now();
+    const cached = danCache.subcategories.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return res.json({ status: true, data: cached.data });
+    }
 
     let filter = { status: 'Active' };
 
@@ -211,7 +290,7 @@ router.get('/subcategories', async (req, res) => {
           { name: { $regex: new RegExp(`^${trimmedCat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
           ...(isObjectId ? [{ _id: trimmedCat }] : [])
         ]
-      });
+      }).select('_id').lean();
 
       if (foundCategory) {
         filter.categoryId = foundCategory._id;
@@ -224,7 +303,10 @@ router.get('/subcategories', async (req, res) => {
 
     const subcategories = await DanSubcategory.find(filter)
       .populate('categoryId', 'name categoryId')
-      .populate('ngoId', 'name logo');
+      .populate('ngoId', 'name logo')
+      .lean();
+
+    danCache.subcategories.set(cacheKey, { data: subcategories, expiresAt: now + 60000 });
 
     res.json({ status: true, data: subcategories });
   } catch (err) {
@@ -257,16 +339,18 @@ router.post('/subcategories', requireAdmin, async (req, res) => {
     }
 
     const subcategoryId = `SUB-DAN-${Date.now().toString().slice(-4)}`;
+    const finalImageUrl = processImageUpload(imageUrl, req);
     const newSubcategory = new DanSubcategory({
       subcategoryId,
       categoryId,
       name,
-      imageUrl,
+      imageUrl: finalImageUrl,
       description,
       creatorType,
       ngoId
     });
     await newSubcategory.save();
+    invalidateDanCache();
     res.status(201).json({ status: true, message: 'Dan Subcategory created successfully', data: newSubcategory });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -285,7 +369,12 @@ router.put('/subcategories/:id', requireAdmin, async (req, res) => {
       return res.status(403).json({ status: false, message: 'Access denied: You do not own this subcategory' });
     }
 
+    if (req.body.imageUrl) {
+      req.body.imageUrl = processImageUpload(req.body.imageUrl, req);
+    }
+
     const updated = await DanSubcategory.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    invalidateDanCache();
     res.json({ status: true, message: 'Subcategory updated successfully', data: updated });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -305,6 +394,7 @@ router.delete('/subcategories/:id', requireAdmin, async (req, res) => {
     }
 
     await DanSubcategory.findByIdAndDelete(req.params.id);
+    invalidateDanCache();
     res.json({ status: true, message: 'Subcategory deleted successfully' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -315,7 +405,7 @@ router.delete('/subcategories/:id', requireAdmin, async (req, res) => {
 // 3. Items APIs
 // ----------------------------------------------------
 
-// List items (filtered by subcategory or category)
+// List items (filtered by subcategory or category with in-memory caching and .lean())
 router.get('/items', async (req, res) => {
   try {
     const { 
@@ -323,10 +413,17 @@ router.get('/items', async (req, res) => {
       category, categoryId, category_id, daanType, type, id 
     } = req.query;
 
-    let filter = { status: 'Active' };
-
     const targetSubcat = subcategory || subcategoryId || subcategory_id || subCategory || subCategoryId;
     const targetCat = category || categoryId || category_id || daanType || type || (targetSubcat ? null : id);
+    const cacheKey = `${targetSubcat || ''}_${targetCat || ''}`;
+
+    const now = Date.now();
+    const cached = danCache.items.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return res.json({ status: true, data: cached.data });
+    }
+
+    let filter = { status: 'Active' };
 
     if (targetSubcat && targetSubcat.trim() !== '') {
       const trimmedSub = targetSubcat.trim();
@@ -338,7 +435,7 @@ router.get('/items', async (req, res) => {
           { name: { $regex: new RegExp(`^${trimmedSub.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
           ...(isObjectId ? [{ _id: trimmedSub }] : [])
         ]
-      });
+      }).select('_id').lean();
 
       if (foundSubcat) {
         filter.subcategoryId = foundSubcat._id;
@@ -357,10 +454,10 @@ router.get('/items', async (req, res) => {
           { name: { $regex: new RegExp(`^${trimmedCat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
           ...(isObjectId ? [{ _id: trimmedCat }] : [])
         ]
-      });
+      }).select('_id').lean();
 
       if (foundCat) {
-        const subcats = await DanSubcategory.find({ categoryId: foundCat._id });
+        const subcats = await DanSubcategory.find({ categoryId: foundCat._id }).select('_id').lean();
         const subcatObjectIds = subcats.map(s => s._id);
         filter.subcategoryId = { $in: subcatObjectIds };
       } else {
@@ -374,7 +471,11 @@ router.get('/items', async (req, res) => {
         select: 'name categoryId',
         populate: { path: 'categoryId', select: 'name' }
       })
-      .populate('ngoId', 'name logo');
+      .populate('ngoId', 'name logo')
+      .lean();
+
+    danCache.items.set(cacheKey, { data: items, expiresAt: now + 60000 });
+
     res.json({ status: true, data: items });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -406,6 +507,7 @@ router.post('/items', requireNGOOrAdmin, async (req, res) => {
     }
 
     const itemId = `ITM-DAN-${Date.now().toString().slice(-4)}`;
+    const finalImageUrl = processImageUpload(imageUrl, req);
     const newItem = new DanItem({
       itemId,
       subcategoryId,
@@ -413,11 +515,12 @@ router.post('/items', requireNGOOrAdmin, async (req, res) => {
       description,
       price: Number(price),
       unit: unit || 'Unit',
-      imageUrl,
+      imageUrl: finalImageUrl,
       creatorType,
       ngoId
     });
     await newItem.save();
+    invalidateDanCache();
     res.status(201).json({ status: true, message: 'Dan Item created successfully', data: newItem });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -436,7 +539,12 @@ router.put('/items/:id', requireNGOOrAdmin, async (req, res) => {
       return res.status(403).json({ status: false, message: 'Access denied: You do not own this item' });
     }
 
+    if (req.body.imageUrl) {
+      req.body.imageUrl = processImageUpload(req.body.imageUrl, req);
+    }
+
     const updated = await DanItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    invalidateDanCache();
     res.json({ status: true, message: 'Item updated successfully', data: updated });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -456,6 +564,7 @@ router.delete('/items/:id', requireNGOOrAdmin, async (req, res) => {
     }
 
     await DanItem.findByIdAndDelete(req.params.id);
+    invalidateDanCache();
     res.json({ status: true, message: 'Item deleted successfully' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -567,6 +676,7 @@ router.post('/donate', async (req, res) => {
     const newTx = new Transaction({
       transactionId,
       type: 'Donation',
+      userId: donorId || null,
       user: finalDonorName,
       mobile: finalDonorPhone || '',
       fundCategory,

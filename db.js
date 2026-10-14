@@ -53,6 +53,65 @@ async function connectDB() {
       // 3. Sync database schema indexes (with sparse: true)
       await User.syncIndexes();
       console.log('Successfully synced database schema sparse indexes.');
+
+      // 4. Sync Daan collection indexes and sanitize any heavy base64 images
+      const DanCategory = require('./models/DanCategory');
+      const DanSubcategory = require('./models/DanSubcategory');
+      const DanItem = require('./models/DanItem');
+      await Promise.allSettled([
+        DanCategory.syncIndexes(),
+        DanSubcategory.syncIndexes(),
+        DanItem.syncIndexes()
+      ]);
+      console.log('Successfully synced Daan collection indexes.');
+
+      // Sanitize legacy base64 images in Daan collections to drastically reduce payload sizes and speed up queries
+      const fs = require('fs');
+      const path = require('path');
+      const uploadsDir = path.join(__dirname, 'uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+      const saveBase64ToFile = (base64Str, prefix = 'dan') => {
+        if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image/')) return null;
+        try {
+          const matches = base64Str.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+          if (!matches || matches.length !== 3) return null;
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1].replace('svg+xml', 'svg');
+          const buffer = Buffer.from(matches[2], 'base64');
+          const filename = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+          fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+          return `http://195.35.20.150:8000/uploads/${filename}`;
+        } catch (e) {
+          return null;
+        }
+      };
+
+      const base64Cats = await DanCategory.find({ imageUrl: { $regex: /^data:image\// } });
+      for (const cat of base64Cats) {
+        const fileUrl = saveBase64ToFile(cat.imageUrl, 'cat');
+        if (fileUrl) {
+          cat.imageUrl = fileUrl;
+          await cat.save();
+        }
+      }
+
+      const base64Subs = await DanSubcategory.find({ imageUrl: { $regex: /^data:image\// } });
+      for (const sub of base64Subs) {
+        const fileUrl = saveBase64ToFile(sub.imageUrl, 'sub');
+        if (fileUrl) {
+          sub.imageUrl = fileUrl;
+          await sub.save();
+        }
+      }
+
+      const base64Items = await DanItem.find({ imageUrl: { $regex: /^data:image\// } });
+      for (const it of base64Items) {
+        const fileUrl = saveBase64ToFile(it.imageUrl, 'item');
+        if (fileUrl) {
+          it.imageUrl = fileUrl;
+          await it.save();
+        }
+      }
     } catch (err) {
       console.log('Index sync note:', err.message);
     }

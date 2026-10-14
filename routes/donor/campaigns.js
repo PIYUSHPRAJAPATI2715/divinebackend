@@ -322,25 +322,35 @@ const handleMyCampaigns = async (req, res) => {
     if (req.user && (req.user._id || req.user.id)) {
       dbUser = await User.findById(req.user._id || req.user.id);
     }
-    const dbNGO = dbUser ? await NGO.findOne({
-      $or: [
-        { phone: dbUser?.phone },
-        { email: dbUser?.email }
-      ]
-    }) : null;
 
-    const userPhone = dbUser?.phone || '';
-    const userId = dbUser?._id;
+    const cleanPhone = (dbUser?.phone || req.user?.phone || '').trim();
+    const cleanEmail = (dbUser?.email || req.user?.email || '').trim().toLowerCase();
+    let dbNGO = null;
+    const ngoOr = [];
+    if (cleanPhone && cleanPhone.length > 5) {
+      ngoOr.push({ phone: cleanPhone });
+    }
+    if (cleanEmail && cleanEmail.length > 3 && !cleanEmail.endsWith('@example.com')) {
+      ngoOr.push({ email: cleanEmail });
+    }
+    if (ngoOr.length > 0) {
+      dbNGO = await NGO.findOne({ $or: ngoOr });
+    }
+
+    const userId = dbUser?._id || req.user?._id || req.user?.id;
     const ngoId = dbNGO?._id;
-    const userName = dbUser?.name || dbNGO?.name || '';
 
     const queryConditions = [];
     if (userId) queryConditions.push({ userId });
     if (ngoId) queryConditions.push({ ngoId });
-    if (userPhone) queryConditions.push({ userPhone });
-    if (userName) queryConditions.push({ user: { $regex: new RegExp(`^${userName.trim()}$`, 'i') } });
 
-    let query = queryConditions.length > 0 ? { $or: queryConditions } : { userId: req.user?._id };
+    let query = queryConditions.length > 0 ? { $or: queryConditions } : { userId };
+
+    if (req.query.status && req.query.status.trim() !== '' && req.query.status !== 'All') {
+      const targetStatus = req.query.status.trim();
+      query = { $and: [query, { status: { $regex: new RegExp(`^${targetStatus}$`, 'i') } }] };
+    }
+
     const myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
 
     let totalRaisedNum = 0;

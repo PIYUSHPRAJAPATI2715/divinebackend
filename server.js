@@ -167,6 +167,8 @@ const donorProfileRoutes = require('./routes/donor/profile');
 app.use('/api/user', authMiddleware, donorProfileRoutes);
 app.use('/api/profile', authMiddleware, donorProfileRoutes);
 
+app.get('/api/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
+app.get('/api/campaigns/user', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);

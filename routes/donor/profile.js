@@ -305,17 +305,12 @@ const handleDonationHistory = async (req, res) => {
       }
     }
 
-    const genericNames = ['', 'user', 'google user', 'donor', 'ngo', 'null', 'undefined', 'test'];
-    if (userName && userName.length > 2 && !genericNames.includes(userName.toLowerCase())) {
-      txConditions.push({ user: userName });
-    }
-
     let transactions = [];
     if (txConditions.length > 0) {
       transactions = await Transaction.find({
         type: 'Donation',
         $or: txConditions
-      }).sort({ date: -1 });
+      }).sort({ date: -1, createdAt: -1, _id: -1 });
     }
 
     const danConditions = [{ donorId: userId }];
@@ -328,7 +323,9 @@ const handleDonationHistory = async (req, res) => {
 
     const danDonations = await DanDonation.find({
       $or: danConditions
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1, _id: -1 });
+
+    const displayName = userName || dbUser?.name || 'You';
 
     const formattedFromTx = transactions
       .filter(tx => !isTopupOrRecharge(tx.item, tx.fundCategory, tx.type))
@@ -343,6 +340,15 @@ const handleDonationHistory = async (req, res) => {
         formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
         status: tx.status || 'Success',
         paymentMethod: tx.paymentMethod || 'UPI',
+        user: tx.user || displayName,
+        userName: tx.user || displayName,
+        user_name: tx.user || displayName,
+        donor: tx.user || displayName,
+        donorName: tx.user || displayName,
+        donor_name: tx.user || displayName,
+        donatedBy: tx.user || displayName,
+        donated_by: tx.user || displayName,
+        name: tx.user || displayName,
         date: tx.date || tx.createdAt,
         createdAt: tx.date || tx.createdAt
       }));
@@ -359,6 +365,15 @@ const handleDonationHistory = async (req, res) => {
       status: d.paymentStatus || 'Success',
       paymentMethod: d.paymentMethod || 'UPI',
       items: d.items || [],
+      user: d.donorName || displayName,
+      userName: d.donorName || displayName,
+      user_name: d.donorName || displayName,
+      donor: d.donorName || displayName,
+      donorName: d.donorName || displayName,
+      donor_name: d.donorName || displayName,
+      donatedBy: d.donorName || displayName,
+      donated_by: d.donorName || displayName,
+      name: d.donorName || displayName,
       date: d.createdAt,
       createdAt: d.createdAt
     }));

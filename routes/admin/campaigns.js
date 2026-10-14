@@ -162,7 +162,19 @@ const enrichCampaign = async (campaignDoc, req = null) => {
 // Get all campaigns
 router.get('/', async (req, res) => {
   try {
-    const campaigns = await Campaign.find().sort({ createdAt: -1 });
+    const filter = {};
+    if (req.query.status && req.query.status !== 'All') {
+      filter.status = req.query.status;
+    }
+    if (req.query.my === 'true' || req.query.user === 'me') {
+      const userId = req.user ? (req.user._id || req.user.id) : null;
+      if (userId) {
+        filter.userId = userId;
+      }
+    } else if (req.query.userId) {
+      filter.userId = req.query.userId;
+    }
+    const campaigns = await Campaign.find(filter).sort({ createdAt: -1 });
     const enriched = await Promise.all(campaigns.map(enrichCampaign));
     res.json(enriched);
   } catch (err) {

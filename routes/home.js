@@ -128,20 +128,46 @@ router.get('/', optionalAuth, async (req, res) => {
       status: 'Success',
       item: { $not: /wallet|top-up|topup|recharge|cashback|refund/i }
     })
-    .sort({ date: -1 })
+    .sort({ date: -1, createdAt: -1, _id: -1 })
     .limit(10);
 
-    const donationHistory = recentTx.map(tx => ({
-      transactionId: tx.transactionId,
-      user: tx.user,
-      donor: tx.user,
-      item: tx.item,
-      amount: tx.amount,
-      formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
-      status: tx.status,
-      date: tx.date || tx.createdAt,
-      createdAt: tx.date || tx.createdAt
+    const recentDonationsList = await Promise.all(recentTx.map(async tx => {
+      let donorPhoto = 'https://files.catbox.moe/q4i0t0.jpg';
+      let donorName = (tx.user && tx.user.trim() !== '' && tx.user !== 'User') ? tx.user.trim() : 'Anonymous Donor';
+      if (tx.userId) {
+        const u = await User.findById(tx.userId).select('name profilePhoto logo');
+        if (u) {
+          if (!tx.user || tx.user === 'User' || tx.user === 'Anonymous Donor') donorName = u.name || donorName;
+          donorPhoto = u.profilePhoto || u.logo || donorPhoto;
+        }
+      }
+      return {
+        _id: tx._id,
+        id: tx._id,
+        transactionId: tx.transactionId,
+        user: donorName,
+        userName: donorName,
+        user_name: donorName,
+        donor: donorName,
+        donorName: donorName,
+        donor_name: donorName,
+        donatedBy: donorName,
+        donated_by: donorName,
+        name: donorName,
+        item: tx.item,
+        amount: tx.amount,
+        formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+        status: tx.status,
+        date: tx.date || tx.createdAt,
+        createdAt: tx.date || tx.createdAt,
+        image: donorPhoto,
+        donorImage: donorPhoto,
+        userImage: donorPhoto,
+        profilePhoto: donorPhoto
+      };
     }));
+
+    const donationHistory = recentDonationsList;
 
     // Calculate total donate amount for the currently logged in user
     let userTotalDonateAmount = 0;
@@ -312,9 +338,12 @@ router.get('/', optionalAuth, async (req, res) => {
         newsAndMedia: pressAndMedia,
         newsMedia: pressAndMedia,
         press: pressAndMedia,
-        news: pressAndMedia,
         donationHistory,
-        appVersion: 'v1.0.5_onboarding_role_fix'
+        recentDonorTransactions: donationHistory,
+        recentDonations: donationHistory,
+        recentTransactions: donationHistory,
+        donorTransactions: donationHistory,
+        recentDonors: donationHistory,
       }
     });
 

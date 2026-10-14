@@ -191,8 +191,9 @@ router.put('/profile', async (req, res) => {
 router.get('/campaigns', async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
-    // Find campaigns where user matches the NGO name
-    const campaigns = await Campaign.find({ user: ngo.name }).sort({ createdAt: -1 });
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    const query = userId ? { $or: [{ ngoId: ngo._id }, { userId }] } : { ngoId: ngo._id };
+    const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
     const enriched = campaigns.map(c => {
       let days = c.daysLeft || 30;
       if (c.endDate) {
