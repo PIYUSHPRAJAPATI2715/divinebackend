@@ -157,8 +157,8 @@ router.get('/categories', async (req, res) => {
 
     const [categories, topBanners, bottomBanners] = await Promise.all([
       DanCategory.find({ status: 'Active' }).populate('ngoId', 'name logo').lean(),
-      Banner.find({ placement: 'DaanTop', status: 'Active' }).lean(),
-      Banner.find({ placement: 'DaanBottom', status: 'Active' }).lean()
+      Banner.find({ placement: { $in: ['DaanTop', 'daan_category_top'] }, status: 'Active' }, { _id: 1, title: 1, imageUrl: 1, mediaUrl: 1, linkUrl: 1, targetRoute: 1, placement: 1 }).lean(),
+      Banner.find({ placement: { $in: ['DaanBottom', 'daan_category_bottom'] }, status: 'Active' }, { _id: 1, title: 1, imageUrl: 1, mediaUrl: 1, linkUrl: 1, targetRoute: 1, placement: 1 }).lean()
     ]);
     
     const responsePayload = { 
@@ -755,7 +755,8 @@ router.get('/donations', requireNGOOrAdmin, async (req, res) => {
           populate: { path: 'categoryId', select: 'name' }
         }
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ status: true, data: donations });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });

@@ -1,3 +1,7 @@
+const dns = require('dns');
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
 const mongoose = require('mongoose');
 const { seedDatabase } = require('./seeder');
 
@@ -110,6 +114,33 @@ async function connectDB() {
         if (fileUrl) {
           it.imageUrl = fileUrl;
           await it.save();
+        }
+      }
+
+      const Banner = require('./models/Banner');
+      const base64Banners = await Banner.find({
+        $or: [
+          { imageUrl: { $regex: /^data:/ } },
+          { image: { $regex: /^data:/ } },
+          { mediaUrl: { $regex: /^data:/ } }
+        ]
+      });
+      for (const b of base64Banners) {
+        let modified = false;
+        if (b.imageUrl && b.imageUrl.startsWith('data:')) {
+          const fileUrl = saveBase64ToFile(b.imageUrl, 'bnr');
+          if (fileUrl) { b.imageUrl = fileUrl; modified = true; }
+        }
+        if (b.image && b.image.startsWith('data:')) {
+          const fileUrl = saveBase64ToFile(b.image, 'bnr');
+          if (fileUrl) { b.image = fileUrl; modified = true; }
+        }
+        if (b.mediaUrl && b.mediaUrl.startsWith('data:')) {
+          const fileUrl = saveBase64ToFile(b.mediaUrl, 'bnr');
+          if (fileUrl) { b.mediaUrl = fileUrl; modified = true; }
+        }
+        if (modified) {
+          await b.save();
         }
       }
     } catch (err) {

@@ -3,6 +3,10 @@ const Banner = require('../../models/Banner');
 const path = require('path');
 const fs = require('fs');
 
+// In-Memory Fast Cache for Banner Queries (60s TTL)
+const bannerCache = new Map();
+const invalidateBannerCache = () => bannerCache.clear();
+
 // 8 Designated Locations Metadata Dictionary
 const LOCATION_METADATA = {
   'home_top': {
@@ -207,7 +211,7 @@ const enrichBanner = (b, req = null) => {
 // 1. Get 8 Designated Locations Dictionary
 router.get('/locations', async (req, res) => {
   try {
-    const banners = await Banner.find();
+    const banners = await Banner.find({}, { location: 1, placement: 1, status: 1 }).lean();
     const locationsArray = Object.keys(LOCATION_METADATA).map(locKey => {
       const meta = LOCATION_METADATA[locKey];
       const locBanners = banners.filter(b => normalizeLocation(b.location || b.placement) === locKey);
@@ -229,7 +233,14 @@ router.get('/locations', async (req, res) => {
 router.get('/screen/:screenName', async (req, res) => {
   try {
     const screenInfo = getScreenBannerLocations(req.params.screenName);
-    const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
+    const cacheKey = `screen_${screenInfo.screen}`;
+    const now = Date.now();
+    const cached = bannerCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return res.json(cached.data);
+    }
+
+    const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 }).lean();
     const enriched = banners
       .map(b => enrichBanner(b, req))
       .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
@@ -240,7 +251,7 @@ router.get('/screen/:screenName', async (req, res) => {
     const topBanner = topBanners.length > 0 ? topBanners[0] : null;
     const bottomBanner = bottomBanners.length > 0 ? bottomBanners[0] : null;
 
-    res.json({
+    const resPayload = {
       status: true,
       screen: screenInfo.screen,
       page: screenInfo.page,
@@ -256,7 +267,10 @@ router.get('/screen/:screenName', async (req, res) => {
         topBanner: topBanner,
         bottomBanner: bottomBanner
       }
-    });
+    };
+
+    bannerCache.set(cacheKey, { data: resPayload, expiresAt: now + 60000 });
+    res.json(resPayload);
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -266,7 +280,13 @@ router.get('/screen/:screenName', async (req, res) => {
 // Route: GET /api/banners/screens
 router.get('/screens', async (req, res) => {
   try {
-    const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
+    const now = Date.now();
+    const cached = bannerCache.get('all_screens');
+    if (cached && cached.expiresAt > now) {
+      return res.json(cached.data);
+    }
+
+    const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 }).lean();
     const enriched = banners
       .map(b => enrichBanner(b, req))
       .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
@@ -288,7 +308,9 @@ router.get('/screens', async (req, res) => {
       };
     });
 
-    res.json({ status: true, data: screenMap, screens: screenMap });
+    const resPayload = { status: true, data: screenMap, screens: screenMap };
+    bannerCache.set('all_screens', { data: resPayload, expiresAt: now + 60000 });
+    res.json(resPayload);
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -301,7 +323,7 @@ router.get('/', async (req, res) => {
 
     if (screen) {
       const screenInfo = getScreenBannerLocations(screen);
-      const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 });
+      const banners = await Banner.find().sort({ displayOrder: 1, createdAt: -1 }).lean();
       const enriched = banners
         .map(b => enrichBanner(b, req))
         .filter(b => b.status === 'Active' && b.timelineStatus === 'Live');
@@ -327,7 +349,7 @@ router.get('/', async (req, res) => {
     let query = {};
     if (status) query.status = status;
 
-    const banners = await Banner.find(query).sort({ displayOrder: 1, createdAt: -1 });
+    const banners = await Banner.find(query).sort({ displayOrder: 1, createdAt: -1 }).lean();
     let enriched = banners.map(b => enrichBanner(b, req));
 
     if (location) {
@@ -406,6 +428,7 @@ router.post('/', async (req, res) => {
 
     const newBanner = new Banner(bannerData);
     const savedBanner = await newBanner.save();
+    invalidateBannerCache();
     const enriched = enrichBanner(savedBanner, req);
 
     res.status(201).json({
@@ -457,6 +480,7 @@ router.put('/:id', async (req, res) => {
       { new: true }
     );
 
+    invalidateBannerCache();
     const enriched = enrichBanner(updatedBanner, req);
     res.json({
       status: true,
@@ -474,6 +498,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const banner = await Banner.findByIdAndDelete(req.params.id);
     if (!banner) return res.status(404).json({ status: false, message: 'Banner not found' });
+    invalidateBannerCache();
     res.json({ status: true, message: 'Banner deleted successfully' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
