@@ -167,31 +167,107 @@ router.get('/', optionalAuth, async (req, res) => {
       };
     }));
 
+const DanDonation = require('../models/DanDonation');
+
     const donationHistory = recentDonationsList;
 
-    // Calculate total donate amount for the currently logged in user
+    // Calculate total donate amount and personal donations for the currently logged in user
     let userTotalDonateAmount = 0;
-    if (req.user && req.user.id) {
-      const dbUser = await User.findById(req.user.id);
+    let userPersonalDonations = [];
+    if (req.user && (req.user._id || req.user.id)) {
+      const userId = req.user._id || req.user.id;
+      const dbUser = await User.findById(userId);
       if (dbUser) {
         const userTxResults = await Transaction.aggregate([
           {
             $match: {
               type: 'Donation',
               status: 'Success',
-              item: { $ne: 'Wallet Top-up' },
-              $or: [
-                { mobile: dbUser.phone },
-                { mobile: `+91 ${dbUser.phone}` },
-                { user: dbUser.name }
-              ]
+              item: { $not: /wallet|top-up|topup|recharge|cashback|refund/i },
+              userId: dbUser._id
             }
           },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
-        if (userTxResults.length > 0 && typeof userTxResults[0].total === 'number' && !isNaN(userTxResults[0].total)) {
-          userTotalDonateAmount = userTxResults[0].total;
-        }
+        const userDanResults = await DanDonation.aggregate([
+          {
+            $match: {
+              paymentStatus: 'Success',
+              donorId: dbUser._id
+            }
+          },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+        ]);
+
+        const txTotal = (userTxResults.length > 0 && typeof userTxResults[0].total === 'number') ? userTxResults[0].total : 0;
+        const danTotal = (userDanResults.length > 0 && typeof userDanResults[0].total === 'number') ? userDanResults[0].total : 0;
+        userTotalDonateAmount = txTotal + danTotal;
+
+        const myTx = await Transaction.find({
+          type: 'Donation',
+          status: 'Success',
+          userId: dbUser._id,
+          item: { $not: /wallet|top-up|topup|recharge|cashback|refund/i }
+        }).sort({ date: -1, createdAt: -1 }).limit(5).lean();
+
+        const myDan = await DanDonation.find({
+          donorId: dbUser._id,
+          paymentStatus: 'Success'
+        }).sort({ createdAt: -1 }).limit(5).lean();
+
+        const userDisplayName = dbUser.name || 'You';
+        const userPhoto = dbUser.profilePhoto || dbUser.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+
+        userPersonalDonations = [
+          ...myTx.map(tx => ({
+            _id: tx._id,
+            id: tx._id,
+            transactionId: tx.transactionId || '',
+            user: userDisplayName,
+            userName: userDisplayName,
+            user_name: userDisplayName,
+            donor: userDisplayName,
+            donorName: userDisplayName,
+            donor_name: userDisplayName,
+            donatedBy: userDisplayName,
+            donated_by: userDisplayName,
+            name: userDisplayName,
+            item: tx.item || 'Donation',
+            amount: tx.amount || 0,
+            formattedAmount: `₹${(tx.amount || 0).toLocaleString('en-IN')}`,
+            status: tx.status || 'Success',
+            date: tx.date || tx.createdAt,
+            createdAt: tx.date || tx.createdAt,
+            image: userPhoto,
+            donorImage: userPhoto,
+            userImage: userPhoto,
+            profilePhoto: userPhoto
+          })),
+          ...myDan.map(d => ({
+            _id: d._id,
+            id: d._id,
+            transactionId: d.transactionId || d.receiptNumber || '',
+            user: userDisplayName,
+            userName: userDisplayName,
+            user_name: userDisplayName,
+            donor: userDisplayName,
+            donorName: userDisplayName,
+            donor_name: userDisplayName,
+            donatedBy: userDisplayName,
+            donated_by: userDisplayName,
+            name: userDisplayName,
+            item: (d.items && d.items[0]?.name) || 'Daan Contribution',
+            amount: d.totalAmount || 0,
+            formattedAmount: `₹${(d.totalAmount || 0).toLocaleString('en-IN')}`,
+            status: d.paymentStatus || 'Success',
+            date: d.createdAt,
+            createdAt: d.createdAt,
+            image: userPhoto,
+            donorImage: userPhoto,
+            userImage: userPhoto,
+            profilePhoto: userPhoto
+          }))
+        ].sort((a, b) => new Date(b.date) - new Date(a.date));
       }
     }
 
@@ -338,12 +414,20 @@ router.get('/', optionalAuth, async (req, res) => {
         newsAndMedia: pressAndMedia,
         newsMedia: pressAndMedia,
         press: pressAndMedia,
-        donationHistory,
-        recentDonorTransactions: donationHistory,
-        recentDonations: donationHistory,
-        recentTransactions: donationHistory,
-        donorTransactions: donationHistory,
-        recentDonors: donationHistory,
+        // Platform Recent Public Donors (Home Page Widget)
+        recentDonors: recentDonationsList,
+        recentDonorTransactions: recentDonationsList,
+        recentDonations: recentDonationsList,
+        recentTransactions: recentDonationsList,
+        donorTransactions: recentDonationsList,
+        platformRecentDonations: recentDonationsList,
+        platformDonations: recentDonationsList,
+        recentDonorsList: recentDonationsList,
+        donationHistory: recentDonationsList,
+        // User's Personal Donations (Empty for new accounts)
+        myDonations: userPersonalDonations,
+        myDonationHistory: userPersonalDonations,
+        userDonationHistory: userPersonalDonations
       }
     });
 

@@ -118,6 +118,9 @@ const resolveCampaignCreator = async (campaign) => {
 // Get active campaigns
 router.get('/campaigns', async (req, res) => {
   try {
+    if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
+      return handleMyCampaigns(req, res);
+    }
     const { search } = req.query;
     let query = { status: 'Live' };
     
@@ -318,33 +321,65 @@ router.get('/campaigns/:id', async (req, res) => {
 // My Campaigns API (Campaigns created by the authenticated logged-in user or NGO)
 const handleMyCampaigns = async (req, res) => {
   try {
-    let dbUser = null;
-    if (req.user && (req.user._id || req.user.id)) {
-      dbUser = await User.findById(req.user._id || req.user.id);
+    if (!req.user || (!req.user._id && !req.user.id)) {
+      return res.json({
+        status: true,
+        count: 0,
+        totalCampaigns: 0,
+        totalRaised: '₹0',
+        totalRaisedAmount: 0,
+        totalGetAmount: 0,
+        totalReceivedAmount: 0,
+        totalGoal: '₹0',
+        totalGoalAmount: 0,
+        totalTargetAmount: 0,
+        totalDonorsCount: 0,
+        myCampaigns: [],
+        campaigns: [],
+        data: []
+      });
     }
 
-    const cleanPhone = (dbUser?.phone || req.user?.phone || '').trim();
-    const cleanEmail = (dbUser?.email || req.user?.email || '').trim().toLowerCase();
-    let dbNGO = null;
-    const ngoOr = [];
-    if (cleanPhone && cleanPhone.length > 5) {
-      ngoOr.push({ phone: cleanPhone });
-    }
-    if (cleanEmail && cleanEmail.length > 3 && !cleanEmail.endsWith('@example.com')) {
-      ngoOr.push({ email: cleanEmail });
-    }
-    if (ngoOr.length > 0) {
-      dbNGO = await NGO.findOne({ $or: ngoOr });
+    const userId = req.user._id || req.user.id;
+    const dbUser = await User.findById(userId);
+    if (!dbUser) {
+      return res.json({
+        status: true,
+        count: 0,
+        totalCampaigns: 0,
+        totalRaised: '₹0',
+        totalRaisedAmount: 0,
+        totalGetAmount: 0,
+        totalReceivedAmount: 0,
+        totalGoal: '₹0',
+        totalGoalAmount: 0,
+        totalTargetAmount: 0,
+        totalDonorsCount: 0,
+        myCampaigns: [],
+        campaigns: [],
+        data: []
+      });
     }
 
-    const userId = dbUser?._id || req.user?._id || req.user?.id;
-    const ngoId = dbNGO?._id;
+    // Query strictly for campaigns where userId equals the authenticated user's _id
+    const queryConditions = [{ userId: dbUser._id }];
+    if (dbUser.ngoId) {
+      queryConditions.push({ ngoId: dbUser.ngoId });
+    } else if (dbUser.role === 'ngo') {
+      const cleanPhone = (dbUser.phone || '').trim();
+      const cleanEmail = (dbUser.email || '').trim().toLowerCase();
+      const ngoOr = [];
+      if (cleanPhone && cleanPhone.length > 5) ngoOr.push({ phone: cleanPhone });
+      if (cleanEmail && cleanEmail.length > 3 && !cleanEmail.endsWith('@example.com')) ngoOr.push({ email: cleanEmail });
+      if (ngoOr.length > 0) {
+        const dbNGO = await NGO.findOne({ $or: ngoOr });
+        if (dbNGO) {
+          queryConditions.push({ ngoId: dbNGO._id });
+        }
+      }
+    }
 
-    const queryConditions = [];
-    if (userId) queryConditions.push({ userId });
-    if (ngoId) queryConditions.push({ ngoId });
-
-    let query = queryConditions.length > 0 ? { $or: queryConditions } : { userId };
+    let query = { $or: queryConditions };
 
     if (req.query.status && req.query.status.trim() !== '' && req.query.status !== 'All') {
       const targetStatus = req.query.status.trim();

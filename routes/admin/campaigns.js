@@ -166,11 +166,12 @@ router.get('/', async (req, res) => {
     if (req.query.status && req.query.status !== 'All') {
       filter.status = req.query.status;
     }
-    if (req.query.my === 'true' || req.query.user === 'me') {
+    if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       const userId = req.user ? (req.user._id || req.user.id) : null;
-      if (userId) {
-        filter.userId = userId;
+      if (!userId) {
+        return res.json([]);
       }
+      filter.userId = userId;
     } else if (req.query.userId) {
       filter.userId = req.query.userId;
     }

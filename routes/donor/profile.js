@@ -290,47 +290,48 @@ const handleDonationHistory = async (req, res) => {
 
     const userId = req.user._id || req.user.id;
     const dbUser = await User.findById(userId);
-    const userPhone = (dbUser?.phone || req.user.phone || '').trim();
-    const userEmail = (dbUser?.email || req.user.email || '').trim().toLowerCase();
-    const userName = (dbUser?.name || dbUser?.organizationName || req.user.name || '').trim();
-
-    const txConditions = [{ userId: dbUser._id }];
-    if (userPhone && userPhone.length > 5) {
-      const cleanPhone = userPhone.replace('+91', '').trim();
-      txConditions.push({ mobile: userPhone });
-      if (cleanPhone) {
-        txConditions.push({ mobile: cleanPhone });
-        txConditions.push({ mobile: `+91 ${cleanPhone}` });
-        txConditions.push({ mobile: `+91${cleanPhone}` });
-      }
+    if (!dbUser) {
+      return res.json({
+        status: true,
+        count: 0,
+        totalDonated: '₹0',
+        totalDonatedAmount: 0,
+        donations: [],
+        donationHistory: [],
+        myDonations: [],
+        myDonationHistory: [],
+        userDonationHistory: [],
+        history: [],
+        data: []
+      });
     }
 
-    let transactions = [];
-    if (txConditions.length > 0) {
-      transactions = await Transaction.find({
-        type: 'Donation',
-        $or: txConditions
-      }).sort({ date: -1, createdAt: -1, _id: -1 });
-    }
+    const userName = (dbUser.name || dbUser.organizationName || req.user.name || '').trim();
+    const userPhoto = dbUser.profilePhoto || dbUser.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+    const displayName = userName || 'You';
 
-    const danConditions = [{ donorId: userId }];
-    if (userPhone && userPhone.length > 5) {
-      danConditions.push({ donorPhone: userPhone });
-    }
-    if (userEmail && userEmail.length > 3 && !userEmail.endsWith('@example.com')) {
-      danConditions.push({ donorEmail: userEmail });
-    }
+    // Strictly scope transactions to this user's unique _id (never match unverified phones or other users' records)
+    const transactions = await Transaction.find({
+      type: 'Donation',
+      userId: dbUser._id,
+      status: 'Success'
+    })
+    .sort({ date: -1, createdAt: -1, _id: -1 })
+    .lean();
 
+    // Strictly scope Dan donations to this user's unique _id
     const danDonations = await DanDonation.find({
-      $or: danConditions
-    }).sort({ createdAt: -1, _id: -1 });
-
-    const displayName = userName || dbUser?.name || 'You';
+      donorId: dbUser._id,
+      paymentStatus: 'Success'
+    })
+    .sort({ createdAt: -1, _id: -1 })
+    .lean();
 
     const formattedFromTx = transactions
       .filter(tx => !isTopupOrRecharge(tx.item, tx.fundCategory, tx.type))
       .map(tx => ({
         _id: tx._id,
+        id: tx._id,
         donationId: tx.transactionId || `DON-${tx._id.toString().slice(-4)}`,
         transactionId: tx.transactionId || '',
         type: 'Donation',
@@ -349,12 +350,17 @@ const handleDonationHistory = async (req, res) => {
         donatedBy: tx.user || displayName,
         donated_by: tx.user || displayName,
         name: tx.user || displayName,
+        image: userPhoto,
+        donorImage: userPhoto,
+        userImage: userPhoto,
+        profilePhoto: userPhoto,
         date: tx.date || tx.createdAt,
         createdAt: tx.date || tx.createdAt
       }));
 
     const formattedFromDan = danDonations.map(d => ({
       _id: d._id,
+      id: d._id,
       donationId: d.donationId || `DON-${d._id.toString().slice(-4)}`,
       transactionId: d.transactionId || '',
       type: 'Dan Donation',
@@ -374,6 +380,10 @@ const handleDonationHistory = async (req, res) => {
       donatedBy: d.donorName || displayName,
       donated_by: d.donorName || displayName,
       name: d.donorName || displayName,
+      image: userPhoto,
+      donorImage: userPhoto,
+      userImage: userPhoto,
+      profilePhoto: userPhoto,
       date: d.createdAt,
       createdAt: d.createdAt
     }));
@@ -388,6 +398,9 @@ const handleDonationHistory = async (req, res) => {
       totalDonatedAmount,
       donations: combined,
       donationHistory: combined,
+      myDonations: combined,
+      myDonationHistory: combined,
+      userDonationHistory: combined,
       history: combined,
       data: combined
     });

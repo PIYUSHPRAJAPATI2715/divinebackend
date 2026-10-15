@@ -380,7 +380,8 @@ router.post('/coupons/claim', async (req, res) => {
       user.walletBalance = (user.walletBalance || 0) + coupon.value;
       const tx = new Transaction({
         transactionId: `TXN-${Date.now().toString().slice(-4)}`,
-        type: 'Donation',
+        userId: user._id,
+        type: 'Wallet Top-up',
         user: user.name || user.phone,
         amount: Number(coupon.value),
         status: 'Success',

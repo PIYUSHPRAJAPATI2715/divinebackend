@@ -1,10 +1,16 @@
 const router = require('express').Router();
 const Transaction = require('../../models/Transaction');
 
-// Get all transactions
+// Get transactions (strictly user-isolated for non-admin users)
 router.get('/', async (req, res) => {
   try {
-    const transactions = await Transaction.find().sort({ date: -1 });
+    let filter = {};
+    if (req.user && req.user.role !== 'admin') {
+      filter.userId = req.user._id || req.user.id;
+    } else if (req.query.userId) {
+      filter.userId = req.query.userId;
+    }
+    const transactions = await Transaction.find(filter).sort({ date: -1, createdAt: -1 });
     res.json(transactions);
   } catch (err) {
     res.status(500).json({ message: err.message });

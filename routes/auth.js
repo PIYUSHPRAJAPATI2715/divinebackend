@@ -1185,9 +1185,15 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
 
       // Log transaction
       const newTx = new Transaction({
-        transactionId, type: 'Donation', user: user.name || user.phone,
-        mobile: user.phone || '', amount: Number(amount), status: 'Success',
-        date: new Date(), item: `Direct Donation to ${ngo.name}`
+        transactionId,
+        userId: user._id,
+        type: 'Donation',
+        user: user.name || user.phone,
+        mobile: user.phone || '',
+        amount: Number(amount),
+        status: 'Success',
+        date: new Date(),
+        item: `Direct Donation to ${ngo.name}`
       });
       await newTx.save();
 
@@ -1260,9 +1266,15 @@ router.post('/wallet/donate', authMiddleware, async (req, res) => {
       }
 
       const newTx = new Transaction({
-        transactionId, type: 'Donation', user: user.name || user.phone,
-        mobile: user.phone || '', amount: Number(amount), status: 'Success',
-        date: new Date(), item: campaign.title
+        transactionId,
+        userId: user._id,
+        type: 'Donation',
+        user: user.name || user.phone,
+        mobile: user.phone || '',
+        amount: Number(amount),
+        status: 'Success',
+        date: new Date(),
+        item: campaign.title
       });
       await newTx.save();
 

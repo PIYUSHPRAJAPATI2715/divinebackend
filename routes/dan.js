@@ -955,6 +955,7 @@ router.post('/cart/checkout', requireAuth, async (req, res) => {
     const itemDesc = resolvedItems.map(item => `${item.name} (x${item.quantity})`).join(', ');
     const newTx = new Transaction({
       transactionId,
+      userId: user._id,
       type: 'Donation',
       user: user.name || user.phone,
       mobile: user.phone || '',
