@@ -147,18 +147,36 @@ async function connectDB() {
       console.log('Index sync note:', err.message);
     }
     
-    // Auto-seed cloud database if it is empty or missing Daan categories!
-    // This ensures prototype data is populated on newly connected databases without wiping active data
+    // Ensure default Admin account exists so admin panel is always accessible
     const Admin = require('./models/Admin');
-    const DanCategory = require('./models/DanCategory');
     const adminCount = await Admin.countDocuments({});
-    const danCatCount = await DanCategory.countDocuments({});
-    
-    if (adminCount === 0 || danCatCount === 0) {
-      console.log('Detected empty cloud database or missing Daan data. Seeding collections...');
-      await seedDatabase();
+    if (adminCount === 0) {
+      const adminId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c79');
+      await Admin.create({ _id: adminId, email: 'admin@astroadvyc.com', password: 'password123' });
+      console.log('Default Admin account created (admin@astroadvyc.com).');
     } else {
-      console.log('Database already contains records. Skipping auto-seeding.');
+      console.log('Admin account verified.');
+    }
+
+    // Ensure default WalletSettings exist for platform operations
+    const WalletSettings = require('./models/WalletSettings');
+    const wsCount = await WalletSettings.countDocuments({});
+    if (wsCount === 0) {
+      await WalletSettings.create({
+        settingsId: 'GLOBAL_SETTINGS',
+        coinsPerRupee: 10,
+        coinRedeemLotSize: 2500,
+        cashbackExpiryDays: 15,
+        cashbackMaxRedeemPercent: 20,
+        predefinedRechargeTiers: [
+          { tierId: 'TIER-100', amount: 100, cashback: 10, bonusCoins: 100, badgeText: '', description: 'Recharge ₹100 & get ₹10 Cashback + 100 Coins', isActive: true },
+          { tierId: 'TIER-500', amount: 500, cashback: 50, bonusCoins: 500, badgeText: 'Popular', description: 'Recharge ₹500 & get ₹50 Cashback + 500 Coins', isActive: true },
+          { tierId: 'TIER-1000', amount: 1000, cashback: 150, bonusCoins: 1000, badgeText: 'Best Value', description: 'Recharge ₹1,000 & get ₹150 Cashback + 1,000 Coins', isActive: true },
+          { tierId: 'TIER-2000', amount: 2000, cashback: 400, bonusCoins: 2500, badgeText: 'Super Saver', description: 'Recharge ₹2,000 & get ₹400 Cashback + 2,500 Coins', isActive: true },
+          { tierId: 'TIER-5000', amount: 5000, cashback: 1200, bonusCoins: 5000, badgeText: 'Mega Booster', description: 'Recharge ₹5,000 & get ₹1,200 Cashback + 5,000 Coins', isActive: true }
+        ]
+      });
+      console.log('Default WalletSettings initialized.');
     }
   } catch (err) {
     console.log('MongoDB connection failed. Initializing In-Memory MongoDB Server...');
