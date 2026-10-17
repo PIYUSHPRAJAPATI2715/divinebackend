@@ -9,6 +9,7 @@ const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const Donor = require('../models/Donor');
 const authMiddleware = require('../middleware/auth');
+const { normalizePhone, getPhoneVariants, buildPhoneFilter, findUserByPhone } = require('../utils/phone');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -17,31 +18,51 @@ const constructFullUserData = async (user) => {
   const userObj = user.toObject ? user.toObject() : user;
   let extra = {};
 
-  if (user.role === 'ngo' || user.role === 'corporate') {
-    let ngo = await NGO.findOne({
-      $or: [
-        { email: user.email },
-        { phone: user.phone },
-        { name: user.organizationName || user.name }
-      ]
-    });
-    if (ngo) {
-      extra = ngo.toObject();
+  // Build conditions for NGO lookup
+  let ngo = null;
+  const ngoOrConditions = [];
+  if (user.email) ngoOrConditions.push({ email: user.email });
+  if (user.phone) ngoOrConditions.push(buildPhoneFilter(user.phone));
+  const orgName = (user.organizationName || user.name || '').trim();
+  if (orgName && orgName !== 'Google User' && orgName !== 'Apple User') {
+    ngoOrConditions.push({ name: orgName });
+  }
+
+  // Cross-check NGO if role is ngo/corporate, OR auto-check if role is donor/unspecified
+  if (ngoOrConditions.length > 0) {
+    ngo = await NGO.findOne({ $or: ngoOrConditions });
+  }
+
+  if (ngo) {
+    extra = ngo.toObject();
+    const ngoRole = (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo';
+    if (user.role !== ngoRole || user.isProfileComplete !== true) {
+      user.role = ngoRole;
+      user.isProfileComplete = true;
+      if (!user.name || user.name === 'Google User' || user.name === 'Apple User' || user.name === '') {
+        user.name = ngo.name;
+      }
+      user.organizationName = ngo.name;
+      if (!user.phone && ngo.phone) user.phone = ngo.phone;
+      await user.save().catch(() => {});
     }
   } else if (user.role === 'teacher') {
-    let teacher = await Teacher.findOne({
-      $or: [{ email: user.email }, { phone: user.phone }]
-    });
+    const teacherOr = [];
+    if (user.email) teacherOr.push({ email: user.email });
+    if (user.phone) teacherOr.push(buildPhoneFilter(user.phone));
+    let teacher = teacherOr.length > 0 ? await Teacher.findOne({ $or: teacherOr }) : null;
     if (teacher) extra = teacher.toObject();
   } else if (user.role === 'student') {
-    let student = await Student.findOne({
-      $or: [{ email: user.email }, { phone: user.phone }]
-    });
+    const studentOr = [];
+    if (user.email) studentOr.push({ email: user.email });
+    if (user.phone) studentOr.push(buildPhoneFilter(user.phone));
+    let student = studentOr.length > 0 ? await Student.findOne({ $or: studentOr }) : null;
     if (student) extra = student.toObject();
   } else if (user.role === 'donor') {
-    let donor = await Donor.findOne({
-      $or: [{ email: user.email }, { phone: user.phone }]
-    });
+    const donorOr = [];
+    if (user.email) donorOr.push({ email: user.email });
+    if (user.phone) donorOr.push(buildPhoneFilter(user.phone));
+    let donor = donorOr.length > 0 ? await Donor.findOne({ $or: donorOr }) : null;
     if (donor) extra = donor.toObject();
   }
 
@@ -50,6 +71,7 @@ const constructFullUserData = async (user) => {
   const isProfileComplete = !!(
     user.isProfileComplete === true ||
     extra.isProfileComplete === true ||
+    (ngo && ngo._id) ||
     (hasExtraProfile && (user.role === 'corporate' || user.role === 'ngo' || user.role === 'teacher' || user.role === 'student')) ||
     (user.name && user.name !== 'Google User' && user.name !== 'Apple User' && (user.phone || extra.phone))
   );
@@ -90,11 +112,26 @@ router.post('/check-role', async (req, res) => {
     if (!phone) {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
-    const user = await User.findOne({ phone });
+    const user = await findUserByPhone(phone, User);
     if (!user) {
+      const ngo = await NGO.findOne(buildPhoneFilter(phone));
+      if (ngo) {
+        return res.json({
+          status: true,
+          isProfileComplete: true,
+          role: (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo',
+          name: ngo.name
+        });
+      }
       return res.json({ status: true, isProfileComplete: false, role: null });
     }
-    res.json({ status: true, isProfileComplete: !!user.isProfileComplete, role: user.role });
+    const fullData = await constructFullUserData(user);
+    res.json({
+      status: true,
+      isProfileComplete: !!fullData?.isProfileComplete,
+      role: fullData?.role || user.role,
+      name: fullData?.name || user.name
+    });
   } catch (err) {
     console.error('Check role error:', err);
     res.status(400).json({ status: false, message: err.message || 'Check role failed' });
@@ -112,24 +149,53 @@ router.post('/signup', async (req, res) => {
     if (!phone) {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
-    const existingUser = await User.findOne({ phone });
+    let existingUser = await findUserByPhone(phone, User);
+    let ngo = null;
+    if (!existingUser) {
+      ngo = await NGO.findOne(buildPhoneFilter(phone));
+    }
+
     if (existingUser) {
       existingUser.otp = '1234';
       existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+      const matchedNgo = await NGO.findOne({
+        $or: [
+          buildPhoneFilter(phone),
+          ...(existingUser.phone ? [buildPhoneFilter(existingUser.phone)] : []),
+          ...(existingUser.email ? [{ email: existingUser.email }] : [])
+        ]
+      });
+      if (matchedNgo) {
+        existingUser.role = (matchedNgo.organizationType === 'Corporate' || matchedNgo.organizationType === 'Company') ? 'corporate' : 'ngo';
+        existingUser.isProfileComplete = true;
+        if (!existingUser.name || existingUser.name === 'Google User' || existingUser.name === 'Apple User') {
+          existingUser.name = matchedNgo.name;
+        }
+        existingUser.organizationName = matchedNgo.name;
+      }
+
       await existingUser.save();
+      const fullData = await constructFullUserData(existingUser);
       return res.json({
         status: true,
         message: 'OTP sent successfully (Use static code 1234 to verify)',
-        isProfileComplete: !!existingUser.isProfileComplete,
-        phone,
+        isProfileComplete: !!fullData?.isProfileComplete,
+        phone: existingUser.phone || phone,
         role: existingUser.role,
         otp: '1234'
       });
     }
+
+    const initialRole = ngo ? ((ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo') : 'donor';
+    const initialComplete = !!ngo;
+    const initialName = ngo ? ngo.name : '';
+
     const newUser = new User({
       phone,
-      role: 'donor',
-      isProfileComplete: false,
+      role: initialRole,
+      name: initialName,
+      isProfileComplete: initialComplete,
       otp: '1234',
       otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
     });
@@ -137,9 +203,9 @@ router.post('/signup', async (req, res) => {
     res.json({
       status: true,
       message: 'OTP sent successfully (Use static code 1234 to verify)',
-      isProfileComplete: false,
+      isProfileComplete: initialComplete,
       phone,
-      role: 'donor',
+      role: initialRole,
       otp: '1234'
     });
   } catch (err) {
@@ -157,24 +223,55 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password, phone } = req.body;
     if (phone) {
-      const existingUser = await User.findOne({ phone });
+      let existingUser = await findUserByPhone(phone, User);
+      let ngo = null;
+      if (!existingUser) {
+        ngo = await NGO.findOne(buildPhoneFilter(phone));
+      }
+
       if (existingUser) {
         existingUser.otp = '1234';
         existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+        const matchedNgo = await NGO.findOne({
+          $or: [
+            buildPhoneFilter(phone),
+            ...(existingUser.phone ? [buildPhoneFilter(existingUser.phone)] : []),
+            ...(existingUser.email ? [{ email: existingUser.email }] : [])
+          ]
+        });
+        if (matchedNgo) {
+          existingUser.role = (matchedNgo.organizationType === 'Corporate' || matchedNgo.organizationType === 'Company') ? 'corporate' : 'ngo';
+          existingUser.isProfileComplete = true;
+          if (!existingUser.name || existingUser.name === 'Google User' || existingUser.name === 'Apple User') {
+            existingUser.name = matchedNgo.name;
+          }
+          existingUser.organizationName = matchedNgo.name;
+        }
+
         await existingUser.save();
+        const fullData = await constructFullUserData(existingUser);
+        const userComplete = !!fullData?.isProfileComplete;
         return res.json({
           status: true,
           message: 'OTP sent successfully (Use static code 1234 to verify)',
-          isUserExist: existingUser.isProfileComplete,
-          phone,
+          isUserExist: userComplete,
+          isProfileComplete: userComplete,
+          phone: existingUser.phone || phone,
           role: existingUser.role,
           otp: '1234'
         });
       }
+
+      const initialRole = ngo ? ((ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo') : 'donor';
+      const initialComplete = !!ngo;
+      const initialName = ngo ? ngo.name : '';
+
       const newUser = new User({
         phone,
-        role: 'donor',
-        isProfileComplete: false,
+        role: initialRole,
+        name: initialName,
+        isProfileComplete: initialComplete,
         otp: '1234',
         otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
       });
@@ -182,9 +279,10 @@ router.post('/login', async (req, res) => {
       return res.json({
         status: true,
         message: 'OTP sent successfully (Use static code 1234 to verify)',
-        isUserExist: false,
+        isUserExist: initialComplete,
+        isProfileComplete: initialComplete,
         phone,
-        role: 'donor',
+        role: initialRole,
         otp: '1234'
       });
     }
@@ -223,12 +321,12 @@ router.post('/resend-otp', async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ status: false, message: 'Phone number is required' });
-    const user = await User.findOne({ phone });
+    const user = await findUserByPhone(phone, User);
     if (!user) return res.status(404).json({ status: false, message: 'User session not found. Please initiate signup/login first.' });
     user.otp = '1234';
     user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
-    res.json({ status: true, message: 'OTP resent successfully (Use static code 1234 to verify)', phone: user.phone, role: user.role, otp: '1234' });
+    res.json({ status: true, message: 'OTP resent successfully (Use static code 1234 to verify)', phone: user.phone || phone, role: user.role, otp: '1234' });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message || 'Resend OTP failed' });
   }
@@ -242,27 +340,51 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const { phone, otp } = req.body;
     if (!phone || !otp) return res.status(400).json({ status: false, message: 'Phone number and OTP are required' });
-    const user = await User.findOne({ phone });
+    const user = await findUserByPhone(phone, User);
     if (!user) return res.status(404).json({ status: false, message: 'User session not found. Please request a new OTP.' });
     if (!user.otp || user.otp !== otp) return res.status(400).json({ status: false, message: 'Invalid OTP' });
     if (new Date() > user.otpExpiry) return res.status(400).json({ status: false, message: 'OTP has expired. Please request a new OTP.' });
     user.otp = null;
     user.otpExpiry = null;
+
+    // Cross-check NGO collection for auto-healing role & completeness
+    const ngo = await NGO.findOne({
+      $or: [
+        ...(user.email ? [{ email: user.email }] : []),
+        buildPhoneFilter(phone),
+        ...(user.phone ? [buildPhoneFilter(user.phone)] : [])
+      ]
+    });
+
+    if (ngo) {
+      user.role = (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo';
+      user.isProfileComplete = true;
+      if (!user.name || user.name === 'Google User' || user.name === 'Apple User' || user.name === '') {
+        user.name = ngo.name;
+      }
+      user.organizationName = ngo.name;
+    }
+
     await user.save();
-    const token = jwt.sign({ id: user._id, role: user.role, phone: user.phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role, phone: user.phone || phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     const fullData = await constructFullUserData(user);
+    const isComplete = !!(fullData?.isProfileComplete || user.isProfileComplete || ngo);
+    const verifiedStatus = !!(fullData?.verified || user.verified || (ngo && (ngo.status === 'Verified' || ngo.verified)));
+
     res.json({
       status: true,
       success: true,
       message: 'OTP verified successfully',
       token,
-      isProfileComplete: !!fullData?.isProfileComplete,
-      verified: !!fullData?.verified,
+      isProfileComplete: isComplete,
+      verified: verifiedStatus,
       data: {
         token,
-        isProfileComplete: !!fullData?.isProfileComplete,
-        verified: !!fullData?.verified,
-        ...fullData
+        isProfileComplete: isComplete,
+        verified: verifiedStatus,
+        ...fullData,
+        role: user.role,
+        isProfileComplete: isComplete
       }
     });
   } catch (err) {
@@ -833,21 +955,14 @@ router.get('/me', authMiddleware, async (req, res) => {
       
       const ngoName = user.organizationName || user.name || '';
       let ngo = null;
-      if (ngoName && ngoName.trim() !== '') {
-        ngo = await NGO.findOne({
-          $or: [
-            { email: user.email },
-            { phone: user.phone },
-            { name: ngoName.trim() }
-          ]
-        });
-      } else {
-        ngo = await NGO.findOne({
-          $or: [
-            { email: user.email },
-            { phone: user.phone }
-          ]
-        });
+      const ngoOrConditions = [];
+      if (user.email) ngoOrConditions.push({ email: user.email });
+      if (user.phone) ngoOrConditions.push(buildPhoneFilter(user.phone));
+      if (ngoName && ngoName.trim() !== '' && ngoName !== 'Google User' && ngoName !== 'Apple User') {
+        ngoOrConditions.push({ name: ngoName.trim() });
+      }
+      if (ngoOrConditions.length > 0) {
+        ngo = await NGO.findOne({ $or: ngoOrConditions });
       }
 
       if (ngo) {
@@ -933,8 +1048,12 @@ router.put('/profile', authMiddleware, async (req, res) => {
       user.email = email;
     }
 
-    if (user.role === 'ngo') {
-      let ngo = await NGO.findOne({ email: user.email });
+    if (user.role === 'ngo' || user.role === 'corporate') {
+      const ngoOrList = [];
+      if (user.email) ngoOrList.push({ email: user.email });
+      if (email) ngoOrList.push({ email });
+      if (user.phone) ngoOrList.push(buildPhoneFilter(user.phone));
+      let ngo = ngoOrList.length > 0 ? await NGO.findOne({ $or: ngoOrList }) : null;
       if (!ngo) {
         ngo = new NGO({
           ngoId: `NGO-${Date.now().toString().slice(-4)}`,
@@ -1326,7 +1445,7 @@ const registerHandler = async (req, res) => {
       user.email = email;
     }
     if (phone) {
-      const phoneInUse = await User.findOne({ phone, _id: { $ne: userId } });
+      const phoneInUse = await User.findOne({ ...buildPhoneFilter(phone), _id: { $ne: userId } });
       if (phoneInUse) return res.status(400).json({ status: false, message: 'Phone number is already in use by another account' });
       user.phone = phone;
     }
@@ -1337,6 +1456,7 @@ const registerHandler = async (req, res) => {
         return res.status(400).json({ status: false, message: 'Organization Name, Registered Address, Authorized Person name, and Designation are required for registration.' });
       }
       user.name = organizationName;
+      user.organizationName = organizationName;
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
       user.verified = false;
@@ -1367,10 +1487,16 @@ const registerHandler = async (req, res) => {
     // ----------------------------------------------------
     // REAL-TIME MULTI-COLLECTION SYNC
     // ----------------------------------------------------
-    const finalEmail = user.email || req.body.email || `${user.phone.replace(/[^0-9]/g, '')}@divine.com`;
+    const finalEmail = user.email || req.body.email || `${(user.phone || '').replace(/[^0-9]/g, '')}@divine.com`;
 
     if (user.role === 'ngo' || user.role === 'corporate') {
-      let ngo = await NGO.findOne({ email: finalEmail });
+      const ngoOrConditions = [{ email: finalEmail }];
+      if (user.phone) ngoOrConditions.push(buildPhoneFilter(user.phone));
+      if (req.body.organizationName && req.body.organizationName.trim()) {
+        ngoOrConditions.push({ name: req.body.organizationName.trim() });
+      }
+      let ngo = await NGO.findOne({ $or: ngoOrConditions });
+
       if (!ngo) {
         ngo = new NGO({
           ngoId: `NGO-${Date.now().toString().slice(-4)}`,
@@ -1406,6 +1532,50 @@ const registerHandler = async (req, res) => {
         });
 
         // Copy all 25 Non-Profit & 21 Corporate registration fields
+        const extraFields = [
+          'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
+          'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+          'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
+          'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
+          'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
+          'purposeOfFundraising', 'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas',
+          'fundingPreferences', 'csrOfficerDetails', 'awardsRecognitions', 'declarations'
+        ];
+        extraFields.forEach(f => {
+          if (req.body[f] !== undefined) ngo[f] = req.body[f];
+        });
+
+        await ngo.save();
+      } else {
+        if (req.body.organizationName) ngo.name = req.body.organizationName;
+        if (user.phone) ngo.phone = user.phone;
+        if (finalEmail) ngo.email = finalEmail;
+        if (req.body.registeredAddress) ngo.registeredAddress = req.body.registeredAddress;
+        if (req.body.authorizedPerson) ngo.contactPerson = req.body.authorizedPerson;
+        if (req.body.designation) ngo.designation = req.body.designation;
+        if (req.body.about) ngo.about = req.body.about;
+        if (req.body.ngoType) ngo.ngoType = req.body.ngoType;
+        if (req.body.logo) ngo.logo = req.body.logo;
+        if (req.body.bankAccountHolder) ngo.bankAccountHolder = req.body.bankAccountHolder;
+        if (req.body.bankName) ngo.bankName = req.body.bankName;
+        if (req.body.bankBranch) ngo.bankBranch = req.body.bankBranch;
+        if (req.body.bankAccountNumber) ngo.bankAccountNumber = req.body.bankAccountNumber;
+        if (req.body.bankIFSC) ngo.bankIFSC = req.body.bankIFSC.toUpperCase();
+        if (req.body.panNumber) ngo.panNumber = req.body.panNumber;
+        if (req.body.panImage) ngo.panImage = req.body.panImage;
+        if (req.body.tanNumber) ngo.tanNumber = req.body.tanNumber;
+        if (req.body.tanImage) ngo.tanImage = req.body.tanImage;
+        if (req.body.gstNumber) ngo.gstNumber = req.body.gstNumber;
+        if (req.body.gstDocument) ngo.gstDocument = req.body.gstDocument;
+        if (req.body.registration12A) ngo.registration12A = req.body.registration12A;
+        if (req.body.certificate12A) ngo.certificate12A = req.body.certificate12A;
+        if (req.body.registration80G) ngo.registration80G = req.body.registration80G;
+        if (req.body.certificate80G) ngo.certificate80G = req.body.certificate80G;
+        if (req.body.darpanNumber) ngo.darpanNumber = req.body.darpanNumber;
+        if (req.body.darpanCertificate) ngo.darpanCertificate = req.body.darpanCertificate;
+        if (req.body.organizationType) ngo.organizationType = req.body.organizationType;
+        if (req.body.addressCertificate) ngo.addressCertificate = req.body.addressCertificate;
+
         const extraFields = [
           'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
           'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',

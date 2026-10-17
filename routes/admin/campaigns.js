@@ -2,6 +2,7 @@ const router = require('express').Router();
 const Campaign = require('../../models/Campaign');
 const NGO = require('../../models/NGO');
 const User = require('../../models/User');
+const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
 
 const resolveCampaignCreator = async (campaign) => {
   let creatorUser = null;
@@ -14,8 +15,8 @@ const resolveCampaignCreator = async (campaign) => {
     creatorNGO = await NGO.findById(campaign.ngoId);
   }
   if (!creatorUser && !creatorNGO && campaign.userPhone) {
-    creatorUser = await User.findOne({ phone: campaign.userPhone });
-    creatorNGO = await NGO.findOne({ phone: campaign.userPhone });
+    creatorUser = await findUserByPhone(campaign.userPhone, User);
+    creatorNGO = await NGO.findOne(buildPhoneFilter(campaign.userPhone));
   }
 
   if (!creatorUser && !creatorNGO && campaign.user && campaign.user !== 'Divine Donor' && campaign.user !== 'Divine Owner') {

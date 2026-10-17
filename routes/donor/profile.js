@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../../models/User');
 const Notification = require('../../models/Notification');
+const { buildPhoneFilter } = require('../../utils/phone');
 
 // Utility to generate unique referral code
 const generateReferralCode = (name) => {
@@ -161,7 +162,7 @@ const handleUpdateDonorProfile = async (req, res) => {
 
     const resolvedPhone = phone || phoneNumber || userPhone || mobile;
     if (resolvedPhone !== undefined && resolvedPhone.trim() !== '') {
-      const existingPhone = await User.findOne({ phone: resolvedPhone.trim(), _id: { $ne: user._id } });
+      const existingPhone = await User.findOne({ ...buildPhoneFilter(resolvedPhone.trim()), _id: { $ne: user._id } });
       if (existingPhone) {
         return res.status(400).json({ status: false, message: 'This phone number is already in use by another account.' });
       }

@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const WalletSettings = require('../../models/WalletSettings');
 const User = require('../../models/User');
+const { findUserByPhone } = require('../../utils/phone');
 
 // Helper to get or create default wallet settings singleton
 const getOrCreateSettings = async () => {
@@ -122,7 +123,7 @@ router.post('/adjust-user', async (req, res) => {
     const { userId, phone, action, type, amount, description } = req.body;
     let user = null;
     if (userId) user = await User.findById(userId);
-    if (!user && phone) user = await User.findOne({ phone });
+    if (!user && phone) user = await findUserByPhone(phone, User);
 
     if (!user) {
       return res.status(404).json({ status: false, message: 'User not found' });

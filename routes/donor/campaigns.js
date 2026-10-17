@@ -5,6 +5,7 @@ const Notification = require('../../models/Notification');
 const User = require('../../models/User');
 const NGO = require('../../models/NGO');
 const Transaction = require('../../models/Transaction');
+const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
 
 const normalizeImageUrl = (urlStr, req) => {
   if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
@@ -47,8 +48,8 @@ const resolveCampaignCreator = async (campaign) => {
     creatorNGO = await NGO.findById(campaign.ngoId);
   }
   if (!creatorUser && !creatorNGO && campaign.userPhone) {
-    creatorUser = await User.findOne({ phone: campaign.userPhone });
-    creatorNGO = await NGO.findOne({ phone: campaign.userPhone });
+    creatorUser = await findUserByPhone(campaign.userPhone, User);
+    creatorNGO = await NGO.findOne(buildPhoneFilter(campaign.userPhone));
   }
 
   // 2. Try finding by campaign.user (if not generic fallback)

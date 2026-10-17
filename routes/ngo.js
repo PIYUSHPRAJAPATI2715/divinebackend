@@ -8,16 +8,19 @@ const Review = require('../models/Review');
 const DanItem = require('../models/DanItem');
 const DanSubcategory = require('../models/DanSubcategory');
 const DanDonation = require('../models/DanDonation');
+const { buildPhoneFilter } = require('../utils/phone');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
-  // Try to find by phone or email
-  let ngo = await NGO.findOne({
-    $or: [
-      { phone: req.user.phone },
-      { email: req.user.email }
-    ]
-  });
+  // Try to find by phone, email, or organizationName
+  const orConditions = [];
+  if (req.user.email) orConditions.push({ email: req.user.email });
+  if (req.user.phone) orConditions.push(buildPhoneFilter(req.user.phone));
+  const orgName = (req.user.organizationName || req.user.name || '').trim();
+  if (orgName && orgName !== 'Google User' && orgName !== 'Apple User') {
+    orConditions.push({ name: orgName });
+  }
+  let ngo = orConditions.length > 0 ? await NGO.findOne({ $or: orConditions }) : null;
 
   if (!ngo) {
     // Dynamically create an NGO record if it doesn't exist
@@ -401,7 +404,7 @@ const handleUpdateNGOProfile = async (req, res) => {
     const resolvedPhone = phone || phoneNumber || userPhone || mobile;
     if (resolvedPhone !== undefined && resolvedPhone.trim() !== '') {
       const user = req.user ? await User.findById(req.user._id || req.user.id) : null;
-      const existingPhone = await User.findOne({ phone: resolvedPhone.trim(), _id: { $ne: user ? user._id : null } });
+      const existingPhone = await User.findOne({ ...buildPhoneFilter(resolvedPhone.trim()), _id: { $ne: user ? user._id : null } });
       if (existingPhone) {
         return res.status(400).json({ status: false, message: 'This phone number is already in use by another account.' });
       }
