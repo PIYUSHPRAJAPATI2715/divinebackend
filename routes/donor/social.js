@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../../models/User');
 const NGO = require('../../models/NGO');
+const { resolveEntityPhoto } = require('../../utils/avatar');
 
 // Helper to get set of all IDs user is following
 function getUserFollowingIds(user) {
@@ -19,27 +20,37 @@ router.get('/social', async (req, res) => {
     if (req.user) {
       me = await User.findById(req.user._id || req.user.id)
         .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress')
-        .populate('followingUsers', 'name phone profilePhoto email role')
-        .populate('followers', 'name phone profilePhoto email role');
+        .populate('followingUsers', 'name phone profilePhoto email role logo')
+        .populate('followers', 'name phone profilePhoto email role logo');
     }
 
     const followingSet = getUserFollowingIds(me);
 
     const rawTopDonors = await User.find({ role: 'donor' })
-      .select('name email phone walletBalance profilePhoto')
+      .select('name email phone walletBalance profilePhoto logo')
       .sort({ walletBalance: -1 })
       .limit(10);
     
-    const topDonors = rawTopDonors.map(d => ({
-      _id: d._id,
-      id: d._id,
-      name: d.name || 'Donor',
-      phone: d.phone || '',
-      email: d.email || '',
-      walletBalance: d.walletBalance || 0,
-      profilePhoto: d.profilePhoto || 'https://files.catbox.moe/q4i0t0.jpg',
-      isFollowing: followingSet.has(d._id.toString())
-    }));
+    const topDonors = rawTopDonors.map(d => {
+      const photo = resolveEntityPhoto(d, 'user');
+      return {
+        _id: d._id,
+        id: d._id,
+        name: d.name || 'Donor',
+        phone: d.phone || '',
+        email: d.email || '',
+        walletBalance: d.walletBalance || 0,
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        isFollowing: followingSet.has(d._id.toString())
+      };
+    });
 
     let selfNgoId = null;
     if (me) {
@@ -71,55 +82,93 @@ router.get('/social', async (req, res) => {
       .sort({ verifiedCampaignsCount: -1, rating: -1 })
       .limit(10);
 
-    const topNgos = rawTopNgos.map(n => ({
-      _id: n._id,
-      id: n._id,
-      name: n.name || n.organizationName || 'NGO',
-      organizationName: n.organizationName || n.name || 'NGO',
-      logo: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      profilePhoto: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      contactPerson: n.contactPerson || '',
-      phone: n.phone || '',
-      about: n.about || '',
-      rating: n.rating || 4.5,
-      verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
-      isFollowing: followingSet.has(n._id.toString())
-    }));
+    const topNgos = rawTopNgos.map(n => {
+      const photo = resolveEntityPhoto(n, 'ngo');
+      return {
+        _id: n._id,
+        id: n._id,
+        name: n.name || n.organizationName || 'NGO',
+        organizationName: n.organizationName || n.name || 'NGO',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        contactPerson: n.contactPerson || '',
+        phone: n.phone || '',
+        about: n.about || '',
+        rating: n.rating || 4.5,
+        verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
+        isFollowing: followingSet.has(n._id.toString())
+      };
+    });
 
-    const followersList = ((me && me.followers) || []).map(f => ({
-      _id: f._id,
-      id: f._id,
-      name: f.name || 'Anonymous User',
-      phone: f.phone || '',
-      profilePhoto: f.profilePhoto || f.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      email: f.email || '',
-      role: f.role || 'donor',
-      isFollower: true,
-      isFollowing: followingSet.has(f._id.toString())
-    }));
+    const followersList = ((me && me.followers) || []).map(f => {
+      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      return {
+        _id: f._id,
+        id: f._id,
+        name: f.name || 'Anonymous User',
+        phone: f.phone || '',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        email: f.email || '',
+        role: f.role || 'donor',
+        isFollower: true,
+        isFollowing: followingSet.has(f._id.toString())
+      };
+    });
 
-    const followingNgosList = ((me && me.followingNgos) || []).map(n => ({
-      _id: n._id,
-      id: n._id,
-      name: n.name || n.organizationName || 'NGO',
-      organizationName: n.organizationName || n.name || 'NGO',
-      logo: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      profilePhoto: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      contactPerson: n.contactPerson || '',
-      phone: n.phone || '',
-      type: 'ngo',
-      isFollowing: true
-    }));
+    const followingNgosList = ((me && me.followingNgos) || []).filter(Boolean).map(n => {
+      const photo = resolveEntityPhoto(n, 'ngo');
+      return {
+        _id: n._id,
+        id: n._id,
+        name: n.name || n.organizationName || 'NGO',
+        organizationName: n.organizationName || n.name || 'NGO',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        contactPerson: n.contactPerson || '',
+        phone: n.phone || '',
+        type: 'ngo',
+        isFollowing: true
+      };
+    });
 
-    const followingUsersList = ((me && me.followingUsers) || []).map(u => ({
-      _id: u._id,
-      id: u._id,
-      name: u.name || 'User',
-      phone: u.phone || '',
-      profilePhoto: u.profilePhoto || 'https://files.catbox.moe/q4i0t0.jpg',
-      type: 'user',
-      isFollowing: true
-    }));
+    const followingUsersList = ((me && me.followingUsers) || []).filter(Boolean).map(u => {
+      const photo = resolveEntityPhoto(u, 'user');
+      return {
+        _id: u._id,
+        id: u._id,
+        name: u.name || 'User',
+        phone: u.phone || '',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        type: 'user',
+        isFollowing: true
+      };
+    });
 
     res.json({
       status: true,
@@ -145,22 +194,32 @@ const handleFollowers = async (req, res) => {
     let me = null;
     if (req.user && (req.user._id || req.user.id)) {
       me = await User.findById(req.user._id || req.user.id)
-        .populate('followers', 'name phone profilePhoto email role');
+        .populate('followers', 'name phone profilePhoto email role logo');
     }
 
     const followingSet = getUserFollowingIds(me);
 
-    const followersList = ((me && me.followers) || []).map(f => ({
-      _id: f._id,
-      id: f._id,
-      name: f.name || 'Anonymous User',
-      phone: f.phone || '',
-      profilePhoto: f.profilePhoto || f.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      email: f.email || '',
-      role: f.role || 'donor',
-      isFollower: true,
-      isFollowing: followingSet.has(f._id.toString())
-    }));
+    const followersList = ((me && me.followers) || []).filter(Boolean).map(f => {
+      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      return {
+        _id: f._id,
+        id: f._id,
+        name: f.name || 'Anonymous User',
+        phone: f.phone || '',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        email: f.email || '',
+        role: f.role || 'donor',
+        isFollower: true,
+        isFollowing: followingSet.has(f._id.toString())
+      };
+    });
 
     res.json({
       status: true,
@@ -168,7 +227,7 @@ const handleFollowers = async (req, res) => {
       count: followersList.length,
       data: followersList,
       followers: followersList,
-      ngos: [],
+      ngos: followersList.filter(f => f.role === 'ngo'),
       users: followersList,
       individuals: followersList
     });
@@ -184,36 +243,57 @@ const handleFollowing = async (req, res) => {
     if (req.user && (req.user._id || req.user.id)) {
       me = await User.findById(req.user._id || req.user.id)
         .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount')
-        .populate('followingUsers', 'name phone profilePhoto email role');
+        .populate('followingUsers', 'name phone profilePhoto email role logo');
     }
 
     const followingNgosList = ((me && me.followingNgos) || [])
       .filter(Boolean)
-      .map(n => ({
-        _id: n._id,
-        id: n._id,
-        name: n.name || n.organizationName || 'NGO',
-        organizationName: n.organizationName || n.name || 'NGO',
-        logo: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-        profilePhoto: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-        contactPerson: n.contactPerson || '',
-        phone: n.phone || '',
-        rating: n.rating || 4.5,
-        type: 'ngo',
-        isFollowing: true
-      }));
+      .map(n => {
+        const photo = resolveEntityPhoto(n, 'ngo');
+        return {
+          _id: n._id,
+          id: n._id,
+          name: n.name || n.organizationName || 'NGO',
+          organizationName: n.organizationName || n.name || 'NGO',
+          logo: photo,
+          profilePhoto: photo,
+          profileImage: photo,
+          imageUrl: photo,
+          image: photo,
+          avatar: photo,
+          photo: photo,
+          userImage: photo,
+          contactPerson: n.contactPerson || '',
+          phone: n.phone || '',
+          rating: n.rating || 4.5,
+          type: 'ngo',
+          isFollowing: true
+        };
+      });
 
     const followingUsersList = ((me && me.followingUsers) || [])
       .filter(Boolean)
-      .map(u => ({
-        _id: u._id,
-        id: u._id,
-        name: u.name || 'User',
-        phone: u.phone || '',
-        profilePhoto: u.profilePhoto || 'https://files.catbox.moe/q4i0t0.jpg',
-        type: 'user',
-        isFollowing: true
-      }));
+      .map(u => {
+        const photo = resolveEntityPhoto(u, 'user');
+        return {
+          _id: u._id,
+          id: u._id,
+          name: u.name || 'User',
+          phone: u.phone || '',
+          logo: photo,
+          profilePhoto: photo,
+          profileImage: photo,
+          imageUrl: photo,
+          image: photo,
+          avatar: photo,
+          photo: photo,
+          userImage: photo,
+          email: u.email || '',
+          role: u.role || 'donor',
+          type: 'user',
+          isFollowing: true
+        };
+      });
 
     const allFollowing = [...followingNgosList, ...followingUsersList];
 
@@ -272,28 +352,47 @@ router.get('/discover', async (req, res) => {
     if (me && me.email && me.email.trim()) discoverNgoQuery.email = { $ne: me.email.trim() };
 
     const ngos = await NGO.find(discoverNgoQuery).sort({ verifiedCampaignsCount: -1, rating: -1 });
-    const formattedNgos = ngos.map(n => ({
-      _id: n._id,
-      id: n._id,
-      name: n.name || n.organizationName,
-      organizationName: n.organizationName || n.name,
-      logo: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      profilePhoto: n.logo || 'https://files.catbox.moe/q4i0t0.jpg',
-      rating: n.rating || 4.5,
-      type: 'ngo',
-      isFollowing: followingSet.has(n._id.toString())
-    }));
+    const formattedNgos = ngos.map(n => {
+      const photo = resolveEntityPhoto(n, 'ngo');
+      return {
+        _id: n._id,
+        id: n._id,
+        name: n.name || n.organizationName,
+        organizationName: n.organizationName || n.name,
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        rating: n.rating || 4.5,
+        type: 'ngo',
+        isFollowing: followingSet.has(n._id.toString())
+      };
+    });
 
     const users = await User.find({ role: 'donor', _id: { $ne: me?._id } }).limit(20);
-    const formattedUsers = users.map(u => ({
-      _id: u._id,
-      id: u._id,
-      name: u.name || 'User',
-      phone: u.phone || '',
-      profilePhoto: u.profilePhoto || 'https://files.catbox.moe/q4i0t0.jpg',
-      type: 'user',
-      isFollowing: followingSet.has(u._id.toString())
-    }));
+    const formattedUsers = users.map(u => {
+      const photo = resolveEntityPhoto(u, 'user');
+      return {
+        _id: u._id,
+        id: u._id,
+        name: u.name || 'User',
+        phone: u.phone || '',
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo,
+        type: 'user',
+        isFollowing: followingSet.has(u._id.toString())
+      };
+    });
 
     res.json({
       status: true,

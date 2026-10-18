@@ -220,6 +220,12 @@ app.get('/api/donor/followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/donor/following', authMiddleware, socialRoutes.handleFollowing);
 app.get('/api/my-followers', authMiddleware, socialRoutes.handleFollowers);
 app.get('/api/my-following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/user/following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/user/followers', authMiddleware, socialRoutes.handleFollowers);
+app.get('/api/profile/following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/profile/followers', authMiddleware, socialRoutes.handleFollowers);
+app.get('/api/ngo/following', authMiddleware, socialRoutes.handleFollowing);
+app.get('/api/ngo/followers', authMiddleware, socialRoutes.handleFollowers);
 app.use('/api/follow', authMiddleware, socialRoutes);
 
 // MongoDB Connection and Server Start

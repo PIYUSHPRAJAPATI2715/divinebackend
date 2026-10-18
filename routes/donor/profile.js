@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../../models/User');
 const Notification = require('../../models/Notification');
 const { buildPhoneFilter } = require('../../utils/phone');
+const { resolveEntityPhoto } = require('../../utils/avatar');
 
 // Utility to generate unique referral code
 const generateReferralCode = (name) => {
@@ -15,9 +16,9 @@ const generateReferralCode = (name) => {
 router.get('/profile', async (req, res) => {
   try {
     let user = await User.findById(req.user._id)
-      .populate('followingNgos', 'name organizationName logo')
-      .populate('followingUsers', 'name phone profilePhoto')
-      .populate('followers', 'name phone profilePhoto');
+      .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount')
+      .populate('followingUsers', 'name phone profilePhoto email role logo')
+      .populate('followers', 'name phone profilePhoto email role logo');
     
     if (!user) {
       return res.status(401).json({ status: false, message: 'User not found' });
@@ -59,6 +60,52 @@ router.get('/profile', async (req, res) => {
     const name = user.name || 'Donor';
     const email = user.email || '';
     const phone = user.phone || '';
+    const userPhoto = resolveEntityPhoto(user, user.role === 'ngo' ? 'ngo' : 'user');
+
+    const formattedFollowingNgos = (userObj.followingNgos || []).filter(Boolean).map(n => {
+      const photo = resolveEntityPhoto(n, 'ngo');
+      return {
+        ...n,
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo
+      };
+    });
+
+    const formattedFollowingUsers = (userObj.followingUsers || []).filter(Boolean).map(u => {
+      const photo = resolveEntityPhoto(u, 'user');
+      return {
+        ...u,
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo
+      };
+    });
+
+    const formattedFollowers = (userObj.followers || []).filter(Boolean).map(f => {
+      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      return {
+        ...f,
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo
+      };
+    });
 
     const enrichedData = {
       ...userObj,
@@ -68,25 +115,43 @@ router.get('/profile', async (req, res) => {
       email,
       phone,
       role: user.role || 'donor',
+      profilePhoto: userPhoto,
+      logo: userPhoto,
+      avatar: userPhoto,
+      image: userPhoto,
+      imageUrl: userPhoto,
       rating: computedRating,
       reviewCount: reviews.length,
       reviews: formattedReviews,
       followersCount,
-      followers: userObj.followers || [],
+      followers: formattedFollowers,
+      followingNgos: formattedFollowingNgos,
+      followingUsers: formattedFollowingUsers,
+      following: [...formattedFollowingNgos, ...formattedFollowingUsers],
       impact: userObj.impactStats || 'Active community contributor & donor.',
       impactStats: userObj.impactStats || 'Active community contributor & donor.',
       years: userObj.years || '3 Years',
       pushNotification: user.pushNotification !== false,
       emailNotification: user.emailNotification !== false,
       smsNotification: user.smsNotification !== false,
-      user: userObj
+      user: {
+        ...userObj,
+        profilePhoto: userPhoto,
+        logo: userPhoto,
+        avatar: userPhoto,
+        image: userPhoto,
+        imageUrl: userPhoto,
+        followingNgos: formattedFollowingNgos,
+        followingUsers: formattedFollowingUsers,
+        followers: formattedFollowers
+      }
     };
 
     res.json({
       status: true,
       data: enrichedData,
       donor: enrichedData,
-      user: userObj,
+      user: enrichedData.user,
       ...enrichedData
     });
   } catch (err) {

@@ -8,6 +8,7 @@ const Campaign = require('../models/Campaign');
 const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const NewsMedia = require('../models/NewsMedia');
+const { resolveEntityPhoto } = require('../utils/avatar');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -132,13 +133,13 @@ router.get('/', optionalAuth, async (req, res) => {
     .limit(10);
 
     const recentDonationsList = await Promise.all(recentTx.map(async tx => {
-      let donorPhoto = 'https://files.catbox.moe/q4i0t0.jpg';
       let donorName = (tx.user && tx.user.trim() !== '' && tx.user !== 'User') ? tx.user.trim() : 'Anonymous Donor';
+      let donorPhoto = resolveEntityPhoto({ name: donorName }, 'user');
       if (tx.userId) {
         const u = await User.findById(tx.userId).select('name profilePhoto logo');
         if (u) {
           if (!tx.user || tx.user === 'User' || tx.user === 'Anonymous Donor') donorName = u.name || donorName;
-          donorPhoto = u.profilePhoto || u.logo || donorPhoto;
+          donorPhoto = resolveEntityPhoto(u, 'user');
         }
       }
       return {
@@ -216,7 +217,7 @@ const DanDonation = require('../models/DanDonation');
         }).sort({ createdAt: -1 }).limit(5).lean();
 
         const userDisplayName = dbUser.name || 'You';
-        const userPhoto = dbUser.profilePhoto || dbUser.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+        const userPhoto = resolveEntityPhoto(dbUser, 'user');
 
         userPersonalDonations = [
           ...myTx.map(tx => ({
@@ -350,7 +351,7 @@ const DanDonation = require('../models/DanDonation');
           }
 
           const creatorName = creatorNGO?.name || creatorUser?.name || c.user || 'Divine Organizer';
-          const creatorPhoto = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+          const creatorPhoto = resolveEntityPhoto(creatorNGO || creatorUser, creatorNGO ? 'ngo' : 'user');
 
           const profileObj = {
             _id: creatorNGO?._id || creatorUser?._id || c._id,

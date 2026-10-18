@@ -9,6 +9,7 @@ const DanItem = require('../models/DanItem');
 const DanSubcategory = require('../models/DanSubcategory');
 const DanDonation = require('../models/DanDonation');
 const { buildPhoneFilter } = require('../utils/phone');
+const { resolveEntityPhoto } = require('../utils/avatar');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -67,7 +68,21 @@ router.get('/profile', async (req, res) => {
     ngo.rating = computedRating;
     await ngo.save();
 
-    const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
+    const rawFollowersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role logo');
+    const followersList = rawFollowersList.map(f => {
+      const photo = resolveEntityPhoto(f, 'user');
+      return {
+        ...f.toObject(),
+        logo: photo,
+        profilePhoto: photo,
+        profileImage: photo,
+        imageUrl: photo,
+        image: photo,
+        avatar: photo,
+        photo: photo,
+        userImage: photo
+      };
+    });
     const followersCount = followersList.length;
 
     const user = req.user ? await User.findById(req.user.id) : null;
@@ -88,6 +103,8 @@ router.get('/profile', async (req, res) => {
       createdAt: r.createdAt
     }));
 
+    const ngoPhoto = resolveEntityPhoto(ngoObj, 'ngo');
+
     const enrichedProfile = {
       ...userObj,
       ...ngoObj,
@@ -95,8 +112,14 @@ router.get('/profile', async (req, res) => {
       name: ngoObj.name || userObj.name || 'NGO',
       organizationName: ngoObj.name || userObj.organizationName || userObj.name || '',
       registeredAddress: ngoObj.registeredAddress || userObj.registeredAddress || '',
-      logo: ngoObj.logo || userObj.profilePhoto || null,
-      profilePhoto: userObj.profilePhoto || ngoObj.logo || null,
+      logo: ngoPhoto,
+      profilePhoto: ngoPhoto,
+      profileImage: ngoPhoto,
+      imageUrl: ngoPhoto,
+      image: ngoPhoto,
+      avatar: ngoPhoto,
+      photo: ngoPhoto,
+      userImage: ngoPhoto,
       about: ngoObj.about || userObj.about || '',
       years: ngoObj.years || userObj.years || '5 Years',
       rating: computedRating,
