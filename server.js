@@ -22,26 +22,36 @@ app.get('/api/postman_collection.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'postman_collection.json'));
 });
 
-// Public File Upload endpoint (decodes base64, saves as physical file, returns public URL)
+// Public File Upload endpoint (decodes base64 for images & videos, saves as physical file, returns public URL)
 app.post('/api/upload', (req, res) => {
   try {
-    const { image } = req.body;
-    if (!image) {
-      return res.status(400).json({ status: false, message: 'Image base64 data is required' });
+    const { image, video, file, media } = req.body;
+    const rawMedia = image || video || file || media;
+    if (!rawMedia) {
+      return res.status(400).json({ status: false, message: 'Base64 image or video data is required' });
     }
 
-    let base64Data = image;
-    let ext = 'png';
-    if (image.startsWith('data:')) {
-      const matches = image.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+    let base64Data = rawMedia;
+    let ext = video ? 'mp4' : 'png';
+    const isVideo = Boolean(video) || (typeof rawMedia === 'string' && (rawMedia.startsWith('data:video/') || rawMedia.includes('video/')));
+
+    if (typeof rawMedia === 'string' && rawMedia.startsWith('data:')) {
+      const matches = rawMedia.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
-        ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const mime = matches[1].toLowerCase();
+        if (mime.includes('mp4')) ext = 'mp4';
+        else if (mime.includes('webm')) ext = 'webm';
+        else if (mime.includes('quicktime') || mime.includes('mov')) ext = 'mov';
+        else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+        else if (mime.includes('png')) ext = 'png';
+        else if (mime.includes('webp')) ext = 'webp';
         base64Data = matches[2];
       }
     }
 
     const buffer = Buffer.from(base64Data, 'base64');
-    const filename = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const prefix = isVideo ? 'vid' : 'img';
+    const filename = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
     
     const fs = require('fs');
     const uploadsDir = path.join(__dirname, 'uploads');
@@ -53,13 +63,21 @@ app.post('/api/upload', (req, res) => {
 
     const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const host = req.get('host');
-    const imageUrl = `${protocol}://${host}/uploads/${filename}`;
+    const fileUrl = `${protocol}://${host}/uploads/${filename}`;
 
-    res.json({ status: true, imageUrl });
+    res.json({
+      status: true,
+      url: fileUrl,
+      video: fileUrl,
+      videoUrl: fileUrl,
+      imageUrl: fileUrl,
+      filename
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
 });
+
 
 // Routes
 const campaignRoutes = require('./routes/campaigns');

@@ -128,15 +128,31 @@ router.get('/', async (req, res) => {
     if (rating) filter.rating = Number(rating);
 
     if (hasVideo === 'true' || reviewType === 'video') {
-      filter.videoUrl = { $exists: true, $ne: '' };
+      filter.$or = [
+        { videoUrl: { $exists: true, $ne: '' } },
+        { video: { $exists: true, $ne: '' } }
+      ];
     }
 
     const reviews = await Review.find(filter).sort({ createdAt: -1 });
 
-    const totalCount = reviews.length;
-    const videoCount = reviews.filter(r => r.videoUrl && r.videoUrl.trim() !== '').length;
+    const formattedReviews = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : { ...r };
+      const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+      return {
+        ...obj,
+        id: obj._id,
+        video: vid,
+        videoUrl: vid,
+        videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
+        hasVideo: Boolean(vid && vid.trim() !== '')
+      };
+    });
+
+    const totalCount = formattedReviews.length;
+    const videoCount = formattedReviews.filter(r => r.hasVideo).length;
     const textCount = totalCount - videoCount;
-    const avgRating = totalCount > 0 ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / totalCount) * 10) / 10 : 0;
+    const avgRating = totalCount > 0 ? Math.round((formattedReviews.reduce((s, r) => s + r.rating, 0) / totalCount) * 10) / 10 : 0;
 
     res.json({
       status: true,
@@ -147,7 +163,7 @@ router.get('/', async (req, res) => {
         textReviewsCount: textCount,
         averageRating: avgRating
       },
-      data: reviews
+      data: formattedReviews
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -186,6 +202,19 @@ router.get('/target/:targetType/:identifier', async (req, res) => {
       averageRating = Math.round((sum / total) * 10) / 10;
     }
 
+    const formattedReviews = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : { ...r };
+      const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+      return {
+        ...obj,
+        id: obj._id,
+        video: vid,
+        videoUrl: vid,
+        videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
+        hasVideo: Boolean(vid && vid.trim() !== '')
+      };
+    });
+
     res.json({
       status: true,
       targetType: normalizedType,
@@ -193,7 +222,7 @@ router.get('/target/:targetType/:identifier', async (req, res) => {
       averageRating,
       totalReviews: total,
       ratingDistribution: distribution,
-      data: reviews
+      data: formattedReviews
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -223,7 +252,9 @@ router.post('/', optionalAuth, async (req, res) => {
       ...req.body,
       reviewId,
       type,
+      video: processedVideoUrl,
       videoUrl: processedVideoUrl,
+      videos: processedVideoUrl ? [processedVideoUrl] : [],
       status: req.body.status || 'Pending'
     };
 

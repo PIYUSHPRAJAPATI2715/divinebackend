@@ -130,6 +130,19 @@ router.get('/', async (req, res) => {
     ]);
     const avgRating = avgRatingResult.length > 0 ? Math.round(avgRatingResult[0].avgRating * 10) / 10 : 0;
 
+    const formattedReviews = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : { ...r };
+      const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+      return {
+        ...obj,
+        id: obj._id,
+        video: vid,
+        videoUrl: vid,
+        videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
+        hasVideo: Boolean(vid && vid.trim() !== '')
+      };
+    });
+
     res.json({
       status: true,
       stats: {
@@ -140,7 +153,7 @@ router.get('/', async (req, res) => {
         videoReviewsCount,
         avgRating
       },
-      data: reviews
+      data: formattedReviews
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -170,7 +183,9 @@ router.post('/', async (req, res) => {
       ...req.body,
       reviewId,
       type,
+      video: processedVideoUrl,
       videoUrl: processedVideoUrl,
+      videos: processedVideoUrl ? [processedVideoUrl] : [],
       status: req.body.status || 'Approved'
     };
 
@@ -182,7 +197,15 @@ router.post('/', async (req, res) => {
     // Recompute live rating for target entity
     await recalculateTargetRating(savedReview.type, savedReview.targetName);
 
-    res.status(201).json({ status: true, message: 'Review created successfully', data: savedReview });
+    const formattedSaved = {
+      ...savedReview.toObject(),
+      video: processedVideoUrl,
+      videoUrl: processedVideoUrl,
+      videos: processedVideoUrl ? [processedVideoUrl] : [],
+      hasVideo: Boolean(processedVideoUrl)
+    };
+
+    res.status(201).json({ status: true, message: 'Review created successfully', data: formattedSaved });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });
   }
@@ -197,7 +220,14 @@ router.put('/:id', async (req, res) => {
   try {
     const rawVideo = req.body.videoUrl || req.body.video;
     if (rawVideo && rawVideo.startsWith('data:')) {
-      req.body.videoUrl = saveBase64Media(rawVideo, req, 'rev_vid');
+      const processed = saveBase64Media(rawVideo, req, 'rev_vid');
+      req.body.video = processed;
+      req.body.videoUrl = processed;
+      req.body.videos = [processed];
+    } else if (rawVideo) {
+      req.body.video = rawVideo;
+      req.body.videoUrl = rawVideo;
+      req.body.videos = [rawVideo];
     }
 
     const updatedReview = await Review.findByIdAndUpdate(req.params.id, req.body, { new: true });

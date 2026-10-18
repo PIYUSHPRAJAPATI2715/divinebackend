@@ -92,6 +92,15 @@ module.exports = async (req, res, next) => {
     return next();
   }
 
-  // 4. Otherwise, token is required and missing
+  // 4. Allow reviews routes to proceed (optional authentication: if token was provided, it was parsed above)
+  const isReviewRoute = 
+    (req.originalUrl && req.originalUrl.includes('/reviews')) || 
+    (req.path && req.path.includes('/reviews'));
+
+  if (isReviewRoute) {
+    return next();
+  }
+
+  // 5. Otherwise, token is required and missing
   return res.status(401).json({ status: false, message: 'Access denied. No token provided.' });
 };

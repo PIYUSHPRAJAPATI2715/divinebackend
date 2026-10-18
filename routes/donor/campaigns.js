@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const Campaign = require('../../models/Campaign');
 const Notification = require('../../models/Notification');
 const User = require('../../models/User');
@@ -8,13 +10,80 @@ const Transaction = require('../../models/Transaction');
 const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
 const { resolveEntityPhoto } = require('../../utils/avatar');
 
+// Detect media extension by checking magic bytes
+const detectMediaExtension = (buffer, defaultExt = 'mp4') => {
+  if (!buffer || buffer.length < 12) return defaultExt;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'png';
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'jpg';
+  if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'webp';
+  const boxType = buffer.toString('ascii', 4, 8);
+  if (boxType === 'ftyp') {
+    const subType = buffer.toString('ascii', 8, 12);
+    if (subType.includes('qt')) return 'mov';
+    return 'mp4';
+  }
+  if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) return 'webm';
+  return defaultExt;
+};
+
+// Save Base64 file upload (Video or Image)
+const saveBase64Media = (base64Str, req, defaultPrefix = 'campaign_review') => {
+  if (!base64Str || typeof base64Str !== 'string') return '';
+  const trimmed = base64Str.trim();
+  if (!trimmed) return '';
+
+  // If already a URL or relative path
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/uploads/')) {
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : '195.35.20.150:8000';
+    return `${protocol}://${host}${trimmed}`;
+  }
+
+  try {
+    let ext = defaultPrefix.includes('img') ? 'jpg' : 'mp4';
+    let rawData = trimmed;
+    const matches = trimmed.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const mime = matches[1].toLowerCase();
+      if (mime.includes('mp4')) ext = 'mp4';
+      else if (mime.includes('webm')) ext = 'webm';
+      else if (mime.includes('quicktime') || mime.includes('mov')) ext = 'mov';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      else if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('webp')) ext = 'webp';
+      rawData = matches[2];
+    }
+
+    const buffer = Buffer.from(rawData, 'base64');
+    if (!matches) {
+      ext = detectMediaExtension(buffer, ext);
+    }
+
+    const filename = `${defaultPrefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : '195.35.20.150:8000';
+    return `${protocol}://${host}/uploads/${filename}`;
+  } catch (err) {
+    console.warn('[saveBase64Media] Failed to save media:', err.message);
+    return trimmed;
+  }
+};
+
 const normalizeImageUrl = (urlStr, req) => {
   if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '' || urlStr.includes('catbox.moe')) {
     return 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800';
   }
   let clean = urlStr.trim();
   if (clean.startsWith('data:image/')) {
-    return saveBase64Image(clean, req) || clean;
+    return saveBase64Media(clean, req, 'camp_img') || clean;
   }
   if (clean.startsWith('http://') || clean.startsWith('https://')) {
     if (req && (clean.includes('localhost:') || clean.includes('127.0.0.1:'))) {
@@ -948,6 +1017,43 @@ const handleUpdateCampaign = async (req, res) => {
   }
 };
 
+// Helper to format review objects with video and user keys for mobile/flutter
+const formatReviewResponse = (r) => {
+  const obj = r.toObject ? r.toObject() : { ...r };
+  const rawVid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+  const vidList = (Array.isArray(obj.videos) && obj.videos.length > 0)
+    ? obj.videos
+    : (rawVid ? [rawVid] : []);
+
+  const userPic = obj.userImage || obj.profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
+  const uName = obj.userName || obj.name || 'Supporter';
+  const uRole = obj.userRole || obj.role || 'Donor';
+  const cmt = obj.comment || obj.review || obj.message || '';
+
+  return {
+    ...obj,
+    _id: obj._id,
+    id: obj._id,
+    userName: uName,
+    name: uName,
+    userRole: uRole,
+    role: uRole,
+    userImage: userPic,
+    profilePhoto: userPic,
+    avatar: userPic,
+    comment: cmt,
+    review: cmt,
+    message: cmt,
+    rating: Number(obj.rating) || 5,
+    video: rawVid,
+    videoUrl: rawVid,
+    videos: vidList,
+    hasVideo: Boolean(rawVid && rawVid.trim() !== ''),
+    createdAt: obj.createdAt || new Date().toISOString(),
+    updatedAt: obj.updatedAt || new Date().toISOString()
+  };
+};
+
 // Get reviews for a specific campaign
 const handleGetCampaignReviews = async (req, res) => {
   try {
@@ -989,6 +1095,8 @@ const handleGetCampaignReviews = async (req, res) => {
       averageRating = Math.round((sum / total) * 10) / 10;
     }
 
+    const formattedReviews = reviews.map(formatReviewResponse);
+
     res.json({
       status: true,
       campaignId: campaign ? campaign._id : campaignId,
@@ -996,15 +1104,15 @@ const handleGetCampaignReviews = async (req, res) => {
       averageRating,
       totalReviews: total,
       ratingDistribution: distribution,
-      reviews,
-      data: reviews
+      reviews: formattedReviews,
+      data: formattedReviews
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
 };
 
-// Post a review for a specific campaign
+// Post a review for a specific campaign (supports video upload and video key)
 const handlePostCampaignReview = async (req, res) => {
   try {
     const campaignId = req.params.id;
@@ -1016,36 +1124,84 @@ const handlePostCampaignReview = async (req, res) => {
       return res.status(404).json({ status: false, message: 'Campaign not found' });
     }
 
-    const { rating, comment, videoUrl, video, userName, userRole } = req.body;
-    if (!rating || (!comment && !videoUrl && !video)) {
-      return res.status(400).json({ status: false, message: 'Rating (1-5) and comment or video are required' });
+    const {
+      rating,
+      comment,
+      review,
+      message,
+      videoUrl,
+      video,
+      videos,
+      media,
+      userName,
+      name,
+      userRole,
+      role,
+      userImage,
+      profilePhoto
+    } = req.body;
+
+    // Support video from video, videoUrl, media, or videos array
+    const rawVideo = video || videoUrl || media || (Array.isArray(videos) && videos[0]) || '';
+    const processedVideo = saveBase64Media(rawVideo, req, 'camp_rev_vid');
+
+    let processedVideos = [];
+    if (Array.isArray(videos) && videos.length > 0) {
+      processedVideos = videos.map((v, i) => saveBase64Media(v, req, `camp_rev_vid_${i}`)).filter(Boolean);
+    } else if (processedVideo) {
+      processedVideos = [processedVideo];
     }
 
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-      return res.status(400).json({ status: false, message: 'Rating must be a number between 1 and 5' });
+    const finalComment = (comment || review || message || '').trim();
+    let numRating = Number(rating);
+
+    // If rating is omitted but video is provided, default to 5 stars
+    if (!rating || isNaN(numRating) || numRating < 1 || numRating > 5) {
+      if (processedVideo || processedVideos.length > 0) {
+        numRating = 5;
+      } else {
+        return res.status(400).json({ status: false, message: 'Rating (1-5) is required' });
+      }
+    }
+
+    // Must provide either comment or video
+    if (!finalComment && !processedVideo && processedVideos.length === 0) {
+      return res.status(400).json({ status: false, message: 'Please provide either a review comment or video' });
     }
 
     const userId = req.user ? (req.user._id || req.user.id) : null;
     const dbUser = userId ? await User.findById(userId) : null;
 
-    const finalUserName = dbUser ? (dbUser.name || dbUser.organizationName || 'Verified User') : (userName || 'Anonymous Supporter');
-    const finalUserRole = dbUser ? (dbUser.role === 'donor' ? 'Donor' : dbUser.role === 'student' ? 'Student' : 'User') : (userRole || 'User');
+    const finalUserName = dbUser
+      ? (dbUser.name || dbUser.organizationName || 'Verified User')
+      : (userName || name || 'Anonymous Supporter');
+
+    const finalUserRole = dbUser
+      ? (dbUser.role === 'donor' ? 'Donor' : dbUser.role === 'student' ? 'Student' : 'User')
+      : (userRole || role || 'User');
+
+    const finalUserPhoto = dbUser
+      ? resolveEntityPhoto(dbUser)
+      : (userImage || profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400');
 
     const Review = require('../../models/Review');
     const newReview = new Review({
       reviewId: `REV-${Date.now().toString().slice(-6)}`,
       userName: finalUserName,
       userRole: finalUserRole,
+      userImage: finalUserPhoto,
+      profilePhoto: finalUserPhoto,
       type: 'Campaign',
       targetName: campaign.title,
       campaignId: campaign._id,
       campaign: campaign.title,
       userId: dbUser ? dbUser._id : null,
       rating: numRating,
-      comment: comment || 'Great campaign!',
-      videoUrl: videoUrl || video || '',
-      status: 'Approved'
+      comment: finalComment || (processedVideo ? 'Video Review' : 'Great campaign!'),
+      video: processedVideo,
+      videoUrl: processedVideo,
+      videos: processedVideos,
+      status: 'Approved' // auto-approved so it immediately appears in mobile app
     });
 
     const savedReview = await newReview.save();
@@ -1069,13 +1225,19 @@ const handlePostCampaignReview = async (req, res) => {
     campaign.reviewsCount = count;
     await campaign.save();
 
+    const formattedSaved = formatReviewResponse(savedReview);
+
     res.status(201).json({
       status: true,
       message: 'Review submitted successfully for campaign',
       campaignRating: avg,
       campaignReviewsCount: count,
-      data: savedReview,
-      review: savedReview
+      video: processedVideo,
+      videoUrl: processedVideo,
+      videos: processedVideos,
+      hasVideo: Boolean(processedVideo),
+      data: formattedSaved,
+      review: formattedSaved
     });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });

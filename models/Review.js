@@ -10,8 +10,12 @@ const reviewSchema = new mongoose.Schema({
   campaign: { type: String, default: null },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   rating: { type: Number, required: true, min: 1, max: 5 },
-  comment: { type: String, required: true },
+  comment: { type: String, default: '' },
+  video: { type: String, default: '' },
   videoUrl: { type: String, default: '' },
+  videos: [{ type: String }],
+  userImage: { type: String, default: '' },
+  profilePhoto: { type: String, default: '' },
   status: { type: String, enum: ['Approved', 'Pending', 'Rejected'], default: 'Pending' }
 }, { timestamps: true });
 
