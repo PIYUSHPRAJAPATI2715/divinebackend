@@ -61,8 +61,15 @@ router.get('/', optionalAuth, async (req, res) => {
     // 3. Fetch active banners (filter placement = 'Home' and status = 'Active')
     const banners = await Banner.find({ placement: 'Home', status: 'Active' });
 
-    // 4. Fetch ongoing campaigns (status = 'Live')
-    const campaigns = await Campaign.find({ status: 'Live' }).sort({ createdAt: -1 });
+    // 4. Fetch ongoing campaigns (status = 'Live', active, verified)
+    const campaigns = await Campaign.find({
+      status: 'Live',
+      isActive: { $ne: false },
+      $or: [
+        { isVerified: true },
+        { isVerified: { $exists: false } }
+      ]
+    }).sort({ createdAt: -1 });
 
     // 5. Fetch top NGOs (verified NGOs, excluding corporate profiles and self-NGO profile)
     let selfNgoId = null;
@@ -389,14 +396,24 @@ const DanDonation = require('../models/DanDonation');
             fundraiserPhoto: creatorPhoto,
             userProfile: profileObj,
             creatorProfile: profileObj,
-            fundraiserProfile: profileObj,
             category: c.category,
             imageUrl: finalImage,
             goal: c.goal,
             raised: c.raised,
             donorsCount: c.donorsCount || 0,
             daysLeft: days,
-            description: c.description
+            description: c.description,
+            activate: true,
+            active: true,
+            isActive: true,
+            is_active: true,
+            activated: true,
+            verify: true,
+            verified: true,
+            isVerified: true,
+            is_verified: true,
+            verificationStatus: 'Approved',
+            status: c.status
           };
         })),
         ngos: topNGOs.map(ngo => ({

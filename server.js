@@ -173,6 +173,21 @@ app.get('/api/donor/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMy
 app.get('/api/donor/campaigns/my', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 app.get('/api/my-campaigns', authMiddleware, donorCampaignsRoutes.handleMyCampaigns);
 
+// Campaign Deactivation & Activation Endpoints
+app.put('/api/donor/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+app.post('/api/donor/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+app.patch('/api/donor/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+app.put('/api/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+app.post('/api/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+app.patch('/api/campaigns/:id/deactivate', authMiddleware, donorCampaignsRoutes.handleDeactivateCampaign);
+
+app.put('/api/donor/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+app.post('/api/donor/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+app.patch('/api/donor/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+app.put('/api/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+app.post('/api/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+app.patch('/api/campaigns/:id/activate', authMiddleware, donorCampaignsRoutes.handleActivateCampaign);
+
 app.get('/api/campaigns/:id/reviews', donorCampaignsRoutes.handleGetCampaignReviews);
 app.post('/api/campaigns/:id/reviews', authMiddleware, donorCampaignsRoutes.handlePostCampaignReview);
 app.get('/api/donor/campaigns/:id/reviews', donorCampaignsRoutes.handleGetCampaignReviews);
@@ -238,3 +253,5 @@ connectDB()
 .catch((err) => {
   console.error('Error initializing application: ', err.message);
 });
+
+module.exports = app;

@@ -6,10 +6,11 @@ const User = require('../../models/User');
 const NGO = require('../../models/NGO');
 const Transaction = require('../../models/Transaction');
 const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
+const { resolveEntityPhoto } = require('../../utils/avatar');
 
 const normalizeImageUrl = (urlStr, req) => {
-  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
-    return 'https://files.catbox.moe/q4i0t0.jpg';
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '' || urlStr.includes('catbox.moe')) {
+    return 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800';
   }
   let clean = urlStr.trim();
   if (clean.startsWith('data:image/')) {
@@ -90,7 +91,7 @@ const resolveCampaignCreator = async (campaign) => {
     ? campaign.user 
     : (creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer');
 
-  const photo = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+  const photo = resolveEntityPhoto(creatorNGO || creatorUser, creatorNGO ? 'ngo' : 'user');
   const phone = creatorNGO?.phone || creatorUser?.phone || '';
   const email = creatorNGO?.email || creatorUser?.email || '';
   const role = creatorNGO ? 'ngo' : (creatorUser?.role || 'ngo');
@@ -123,15 +124,26 @@ router.get('/campaigns', async (req, res) => {
       return handleMyCampaigns(req, res);
     }
     const { search } = req.query;
-    let query = { status: 'Live' };
+    let query = {
+      status: 'Live',
+      isActive: { $ne: false },
+      $or: [
+        { isVerified: true },
+        { isVerified: { $exists: false } }
+      ]
+    };
     
     if (search && search.trim()) {
       const trimmedSearch = search.trim();
       const regex = new RegExp(trimmedSearch, 'i');
-      query.$or = [
-        { title: regex },
-        { category: regex },
-        { description: regex }
+      query.$and = [
+        {
+          $or: [
+            { title: regex },
+            { category: regex },
+            { description: regex }
+          ]
+        }
       ];
       
       // Save to user's search history
@@ -159,7 +171,7 @@ router.get('/campaigns', async (req, res) => {
       }
       const rawImages = (Array.isArray(c.images) && c.images.length > 0)
         ? c.images
-        : [c.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+        : [c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
 
       const normalizedImages = rawImages
         .filter(img => typeof img === 'string' && img.trim() !== '')
@@ -172,6 +184,16 @@ router.get('/campaigns', async (req, res) => {
       const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
 
       const obj = c.toObject();
+      obj.activate = true;
+      obj.active = true;
+      obj.isActive = true;
+      obj.is_active = true;
+      obj.activated = true;
+      obj.verify = true;
+      obj.verified = true;
+      obj.isVerified = true;
+      obj.is_verified = true;
+      obj.verificationStatus = 'Approved';
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = finalImage;
@@ -214,6 +236,18 @@ router.get('/campaigns/:id', async (req, res) => {
       return res.status(404).json({ status: false, message: 'Campaign not found' });
     }
 
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    const isOwner = userId && (
+      (campaign.userId && campaign.userId.toString() === userId.toString()) ||
+      (req.user && req.user.role === 'admin')
+    );
+    if ((campaign.isActive === false || campaign.status === 'Inactive') && !isOwner) {
+      return res.status(404).json({ status: false, message: 'Campaign is inactive or unavailable' });
+    }
+    if ((campaign.status === 'Pending' || campaign.isVerified === false) && !isOwner) {
+      return res.status(404).json({ status: false, message: 'Campaign is pending verification and not yet published' });
+    }
+
     // Fetch recent successful transactions for this campaign
     const recentTransactions = await Transaction.find({
       type: 'Donation',
@@ -231,7 +265,7 @@ router.get('/campaigns/:id', async (req, res) => {
           { phone: tx.mobile ? tx.mobile.replace('+91', '').trim() : '' }
         ]
       });
-      const photo = donorUser?.profilePhoto || donorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+      const photo = resolveEntityPhoto(donorUser, 'user');
       return {
         name: tx.user || 'Anonymous Donor',
         amount: tx.amount,
@@ -245,6 +279,23 @@ router.get('/campaigns/:id', async (req, res) => {
 
     // Attach to campaign object safely to prevent frontend breaking changes
     const campaignObj = campaign.toObject();
+
+    const isCampaignVerified = Boolean(campaign.isVerified === true || campaign.status === 'Live' || campaign.status === 'Completed');
+    const isCampaignActive = Boolean(campaign.isActive !== false && campaign.status !== 'Inactive');
+
+    campaignObj.activate = isCampaignActive;
+    campaignObj.active = isCampaignActive;
+    campaignObj.isActive = isCampaignActive;
+    campaignObj.is_active = isCampaignActive;
+    campaignObj.activated = isCampaignActive;
+
+    campaignObj.verify = isCampaignVerified;
+    campaignObj.verified = isCampaignVerified;
+    campaignObj.isVerified = isCampaignVerified;
+    campaignObj.is_verified = isCampaignVerified;
+    campaignObj.verificationStatus = campaign.status === 'Rejected' 
+      ? 'Rejected' 
+      : (isCampaignVerified ? 'Approved' : (campaign.verificationStatus || 'Pending'));
 
     // Look up creator dynamic profile info
     const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campaign);
@@ -260,7 +311,7 @@ router.get('/campaigns/:id', async (req, res) => {
 
     const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
       ? campaignObj.images
-      : [campaignObj.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+      : [campaignObj.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
 
     const normalizedImages = rawImages
       .filter(img => typeof img === 'string' && img.trim() !== '')
@@ -419,6 +470,24 @@ const handleMyCampaigns = async (req, res) => {
       obj.daysLeft = days;
       obj.donorsCount = donorsCountNum;
 
+      const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
+      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+
+      obj.activate = isCampaignActive;
+      obj.active = isCampaignActive;
+      obj.isActive = isCampaignActive;
+      obj.is_active = isCampaignActive;
+      obj.activated = isCampaignActive;
+
+      obj.verify = isCampaignVerified;
+      obj.verified = isCampaignVerified;
+      obj.isVerified = isCampaignVerified;
+      obj.is_verified = isCampaignVerified;
+      obj.verificationStatus = c.status === 'Rejected' 
+        ? 'Rejected' 
+        : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      obj.status = c.status;
+
       obj.raised = c.raised || `₹${raisedNum.toLocaleString('en-IN')}`;
       obj.raisedAmount = raisedNum;
       obj.getAmount = raisedNum;
@@ -513,7 +582,10 @@ router.post('/campaigns', async (req, res) => {
       goal: `₹${Number(goal).toLocaleString()}`,
       raised: '₹0',
       oneTimeOrMonthly: oneTimeOrMonthly || 'One-Time',
-      status: 'Live',
+      status: 'Pending',
+      isActive: true,
+      isVerified: false,
+      verificationStatus: 'Pending',
       donorsCount: 0,
       endDate: endDate || null,
       images: validImages.length > 0 ? validImages : [finalCoverImage],
@@ -528,8 +600,8 @@ router.post('/campaigns', async (req, res) => {
       const { createAndSendNotification } = require('../../utils/notification');
       await createAndSendNotification({
         userId: req.user._id || req.user.id,
-        title: 'Campaign Created Successfully! 📢',
-        body: `Your fundraising campaign "${title}" has been created and is now live!`,
+        title: 'Campaign Submitted for Review! 📝',
+        body: `Your fundraising campaign "${title}" has been submitted for review. It will go live once verified and approved by admin.`,
         type: 'campaign',
         screen: 'campaign_details',
         dataId: String(newCampaign._id)
@@ -538,11 +610,210 @@ router.post('/campaigns', async (req, res) => {
       console.error('Campaign creation notification error:', notifErr.message);
     }
     
-    res.status(201).json({ status: true, message: 'Campaign raised successfully', data: newCampaign });
+    const campObj = newCampaign.toObject();
+    campObj.activate = true;
+    campObj.active = true;
+    campObj.isActive = true;
+    campObj.is_active = true;
+    campObj.activated = true;
+    campObj.verify = false;
+    campObj.verified = false;
+    campObj.isVerified = false;
+    campObj.is_verified = false;
+    campObj.verificationStatus = 'Pending';
+
+    res.status(201).json({ 
+      status: true, 
+      message: 'Campaign submitted for review successfully. It will be published upon admin approval.', 
+      data: campObj,
+      campaign: campObj,
+      ...campObj
+    });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });
   }
 });
+
+// Deactivate campaign handler (Owner only, keeps in my-campaigns with isActive: false, hides from other users)
+const handleDeactivateCampaign = async (req, res) => {
+  try {
+    const campaignId = req.params.id || req.body.campaignId || req.body.id;
+    if (!campaignId) {
+      return res.status(400).json({ status: false, message: 'Campaign ID is required' });
+    }
+
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    if (!userId) {
+      return res.status(401).json({ status: false, message: 'Authentication required' });
+    }
+
+    const dbUser = await User.findById(userId);
+    let dbNGO = null;
+    if (dbUser) {
+      dbNGO = await NGO.findOne({
+        $or: [
+          { phone: dbUser.phone },
+          { email: dbUser.email }
+        ]
+      });
+    }
+
+    const isOwner = (
+      (campaign.userId && campaign.userId.toString() === userId.toString()) ||
+      (campaign.userPhone && dbUser && campaign.userPhone === dbUser.phone) ||
+      (dbNGO && campaign.ngoId && campaign.ngoId.toString() === dbNGO._id.toString()) ||
+      (dbUser && dbUser.role === 'admin')
+    );
+
+    if (!isOwner) {
+      return res.status(403).json({
+        status: false,
+        message: 'Access denied: You can only deactivate your own campaign'
+      });
+    }
+
+    campaign.isActive = false;
+    if (campaign.status === 'Live') {
+      campaign.previousStatus = campaign.status;
+      campaign.status = 'Inactive';
+    }
+    await campaign.save();
+
+    const isCampaignVerified = Boolean(campaign.isVerified === true || campaign.status === 'Live' || campaign.previousStatus === 'Live');
+
+    const campObj = campaign.toObject();
+    const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campObj);
+
+    campObj.activate = false;
+    campObj.active = false;
+    campObj.isActive = false;
+    campObj.is_active = false;
+    campObj.activated = false;
+    campObj.verify = isCampaignVerified;
+    campObj.verified = isCampaignVerified;
+    campObj.isVerified = isCampaignVerified;
+    campObj.is_verified = isCampaignVerified;
+    campObj.verificationStatus = campaign.status === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (campaign.verificationStatus || 'Pending'));
+    campObj.user = creatorName;
+    campObj.userName = creatorName;
+    campObj.userImage = creatorPhoto;
+    campObj.profilePhoto = creatorPhoto;
+    campObj.userProfile = creatorProfile;
+
+    res.json({
+      status: true,
+      message: 'Campaign deactivated successfully. It will no longer be visible to other users, but remains in your campaign list.',
+      activate: false,
+      active: false,
+      isActive: false,
+      verify: isCampaignVerified,
+      isVerified: isCampaignVerified,
+      data: campObj,
+      campaign: campObj,
+      ...campObj
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+// Activate campaign handler
+const handleActivateCampaign = async (req, res) => {
+  try {
+    const campaignId = req.params.id || req.body.campaignId || req.body.id;
+    if (!campaignId) {
+      return res.status(400).json({ status: false, message: 'Campaign ID is required' });
+    }
+
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    const userId = req.user ? (req.user._id || req.user.id) : null;
+    if (!userId) {
+      return res.status(401).json({ status: false, message: 'Authentication required' });
+    }
+
+    const dbUser = await User.findById(userId);
+    let dbNGO = null;
+    if (dbUser) {
+      dbNGO = await NGO.findOne({
+        $or: [
+          { phone: dbUser.phone },
+          { email: dbUser.email }
+        ]
+      });
+    }
+
+    const isOwner = (
+      (campaign.userId && campaign.userId.toString() === userId.toString()) ||
+      (campaign.userPhone && dbUser && campaign.userPhone === dbUser.phone) ||
+      (dbNGO && campaign.ngoId && campaign.ngoId.toString() === dbNGO._id.toString()) ||
+      (dbUser && dbUser.role === 'admin')
+    );
+
+    if (!isOwner) {
+      return res.status(403).json({
+        status: false,
+        message: 'Access denied: You can only activate your own campaign'
+      });
+    }
+
+    campaign.isActive = true;
+    if (campaign.status === 'Inactive') {
+      campaign.status = (campaign.isVerified || campaign.previousStatus === 'Live') ? 'Live' : 'Pending';
+    }
+    await campaign.save();
+
+    const isCampaignVerified = Boolean(campaign.isVerified === true || campaign.status === 'Live');
+
+    const campObj = campaign.toObject();
+    const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campObj);
+
+    campObj.activate = true;
+    campObj.active = true;
+    campObj.isActive = true;
+    campObj.is_active = true;
+    campObj.activated = true;
+    campObj.verify = isCampaignVerified;
+    campObj.verified = isCampaignVerified;
+    campObj.isVerified = isCampaignVerified;
+    campObj.is_verified = isCampaignVerified;
+    campObj.verificationStatus = campaign.status === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (campaign.verificationStatus || 'Pending'));
+    campObj.user = creatorName;
+    campObj.userName = creatorName;
+    campObj.userImage = creatorPhoto;
+    campObj.profilePhoto = creatorPhoto;
+    campObj.userProfile = creatorProfile;
+
+    res.json({
+      status: true,
+      message: 'Campaign activated successfully.',
+      activate: true,
+      active: true,
+      isActive: true,
+      verify: isCampaignVerified,
+      isVerified: isCampaignVerified,
+      data: campObj,
+      campaign: campObj,
+      ...campObj
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
 
 // Update campaign route handler
 const handleUpdateCampaign = async (req, res) => {
@@ -588,6 +859,24 @@ const handleUpdateCampaign = async (req, res) => {
     if (documents !== undefined) campaign.documents = documents;
     if (bankDetails !== undefined) campaign.bankDetails = bankDetails;
 
+    if (req.body.activate !== undefined || req.body.isActive !== undefined || req.body.active !== undefined) {
+      const activeVal = Boolean(req.body.activate ?? req.body.isActive ?? req.body.active);
+      campaign.isActive = activeVal;
+      if (!activeVal && campaign.status === 'Live') {
+        campaign.previousStatus = campaign.status;
+        campaign.status = 'Inactive';
+      } else if (activeVal && campaign.status === 'Inactive') {
+        campaign.status = (campaign.isVerified || campaign.previousStatus === 'Live') ? 'Live' : 'Pending';
+      }
+    }
+
+    if (req.body.isVerified !== undefined || req.body.verify !== undefined) {
+      if (dbUser && dbUser.role === 'admin') {
+        campaign.isVerified = Boolean(req.body.isVerified ?? req.body.verify);
+        campaign.verificationStatus = campaign.isVerified ? 'Approved' : 'Pending';
+      }
+    }
+
     let validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
       campaign.imageUrl = imageUrl.trim();
@@ -603,7 +892,7 @@ const handleUpdateCampaign = async (req, res) => {
     const campaignObj = campaign.toObject();
     const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
       ? campaignObj.images
-      : [campaignObj.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+      : [campaignObj.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
 
     const normalizedImages = rawImages
       .filter(img => typeof img === 'string' && img.trim() !== '')
@@ -620,6 +909,23 @@ const handleUpdateCampaign = async (req, res) => {
       const diffTime = new Date(campaignObj.endDate) - new Date();
       days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
+
+    const isCampaignVerified = Boolean(campaign.isVerified === true || campaign.status === 'Live' || campaign.status === 'Completed');
+    const isCampaignActive = Boolean(campaign.isActive !== false && campaign.status !== 'Inactive');
+
+    campaignObj.activate = isCampaignActive;
+    campaignObj.active = isCampaignActive;
+    campaignObj.isActive = isCampaignActive;
+    campaignObj.is_active = isCampaignActive;
+    campaignObj.activated = isCampaignActive;
+
+    campaignObj.verify = isCampaignVerified;
+    campaignObj.verified = isCampaignVerified;
+    campaignObj.isVerified = isCampaignVerified;
+    campaignObj.is_verified = isCampaignVerified;
+    campaignObj.verificationStatus = campaign.status === 'Rejected' 
+      ? 'Rejected' 
+      : (isCampaignVerified ? 'Approved' : (campaign.verificationStatus || 'Pending'));
 
     campaignObj.imageUrl = finalImage;
     campaignObj.images = normalizedImages;
@@ -780,6 +1086,23 @@ router.put('/campaigns/:id', handleUpdateCampaign);
 router.put('/campaigns/update/:id', handleUpdateCampaign);
 router.put('/campaigns/edit/:id', handleUpdateCampaign);
 
+router.put('/campaigns/:id/deactivate', handleDeactivateCampaign);
+router.post('/campaigns/:id/deactivate', handleDeactivateCampaign);
+router.patch('/campaigns/:id/deactivate', handleDeactivateCampaign);
+router.put('/campaigns/deactivate/:id', handleDeactivateCampaign);
+router.post('/campaigns/deactivate/:id', handleDeactivateCampaign);
+
+router.put('/campaigns/:id/activate', handleActivateCampaign);
+router.post('/campaigns/:id/activate', handleActivateCampaign);
+router.patch('/campaigns/:id/activate', handleActivateCampaign);
+router.put('/campaigns/activate/:id', handleActivateCampaign);
+router.post('/campaigns/activate/:id', handleActivateCampaign);
+
+router.put('/:id/deactivate', handleDeactivateCampaign);
+router.post('/:id/deactivate', handleDeactivateCampaign);
+router.put('/:id/activate', handleActivateCampaign);
+router.post('/:id/activate', handleActivateCampaign);
+
 router.get('/campaigns/:id/reviews', handleGetCampaignReviews);
 router.get('/:id/reviews', handleGetCampaignReviews);
 
@@ -788,11 +1111,15 @@ router.post('/:id/reviews', handlePostCampaignReview);
 
 router.handleMyCampaigns = handleMyCampaigns;
 router.handleUpdateCampaign = handleUpdateCampaign;
+router.handleDeactivateCampaign = handleDeactivateCampaign;
+router.handleActivateCampaign = handleActivateCampaign;
 router.handleGetCampaignReviews = handleGetCampaignReviews;
 router.handlePostCampaignReview = handlePostCampaignReview;
 
 module.exports = router;
 module.exports.handleMyCampaigns = handleMyCampaigns;
 module.exports.handleUpdateCampaign = handleUpdateCampaign;
+module.exports.handleDeactivateCampaign = handleDeactivateCampaign;
+module.exports.handleActivateCampaign = handleActivateCampaign;
 module.exports.handleGetCampaignReviews = handleGetCampaignReviews;
 module.exports.handlePostCampaignReview = handlePostCampaignReview;

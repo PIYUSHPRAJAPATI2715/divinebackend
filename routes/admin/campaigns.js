@@ -3,6 +3,7 @@ const Campaign = require('../../models/Campaign');
 const NGO = require('../../models/NGO');
 const User = require('../../models/User');
 const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
+const { resolveEntityPhoto } = require('../../utils/avatar');
 
 const resolveCampaignCreator = async (campaign) => {
   let creatorUser = null;
@@ -54,7 +55,7 @@ const resolveCampaignCreator = async (campaign) => {
     ? campaign.user 
     : (creatorNGO?.name || creatorNGO?.organizationName || creatorUser?.name || creatorUser?.organizationName || 'Divine Organizer');
 
-  const photo = creatorNGO?.logo || creatorUser?.profilePhoto || creatorUser?.logo || 'https://files.catbox.moe/q4i0t0.jpg';
+  const photo = resolveEntityPhoto(creatorNGO || creatorUser, creatorNGO ? 'ngo' : 'user');
   const phone = creatorNGO?.phone || creatorUser?.phone || '';
   const email = creatorNGO?.email || creatorUser?.email || '';
   const role = creatorNGO ? 'ngo' : (creatorUser?.role || 'ngo');
@@ -81,8 +82,8 @@ const resolveCampaignCreator = async (campaign) => {
 };
 
 const normalizeImageUrl = (urlStr, req) => {
-  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
-    return 'https://files.catbox.moe/q4i0t0.jpg';
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '' || urlStr.includes('catbox.moe')) {
+    return 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800';
   }
   let clean = urlStr.trim();
   if (clean.startsWith('http://') || clean.startsWith('https://')) {
@@ -120,7 +121,7 @@ const enrichCampaign = async (campaignDoc, req = null) => {
 
   const rawImages = (Array.isArray(c.images) && c.images.length > 0)
     ? c.images
-    : [c.imageUrl || 'https://files.catbox.moe/q4i0t0.jpg'];
+    : [c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
 
   const normalizedImages = rawImages
     .filter(img => typeof img === 'string' && img.trim() !== '')
@@ -130,8 +131,23 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     ? normalizedImages[0]
     : normalizeImageUrl(c.imageUrl, req);
 
+  const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
+  const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+
   return {
     ...c,
+    activate: isCampaignActive,
+    active: isCampaignActive,
+    isActive: isCampaignActive,
+    is_active: isCampaignActive,
+    activated: isCampaignActive,
+    verify: isCampaignVerified,
+    verified: isCampaignVerified,
+    isVerified: isCampaignVerified,
+    is_verified: isCampaignVerified,
+    verificationStatus: c.status === 'Rejected' 
+      ? 'Rejected' 
+      : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending')),
     imageUrl: primaryImage,
     images: normalizedImages,
     user: creatorName,
@@ -167,6 +183,12 @@ router.get('/', async (req, res) => {
     if (req.query.status && req.query.status !== 'All') {
       filter.status = req.query.status;
     }
+    const isAdminRoute = req.baseUrl && req.baseUrl.startsWith('/api/admin');
+    if (!isAdminRoute && !req.query.my && req.query.user !== 'me') {
+      filter.status = 'Live';
+      filter.isActive = { $ne: false };
+      filter.isVerified = { $ne: false };
+    }
     if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       const userId = req.user ? (req.user._id || req.user.id) : null;
       if (!userId) {
@@ -177,7 +199,7 @@ router.get('/', async (req, res) => {
       filter.userId = req.query.userId;
     }
     const campaigns = await Campaign.find(filter).sort({ createdAt: -1 });
-    const enriched = await Promise.all(campaigns.map(enrichCampaign));
+    const enriched = await Promise.all(campaigns.map(c => enrichCampaign(c, req)));
     res.json(enriched);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -236,8 +258,86 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ status: false, message: 'Campaign not found' });
     }
 
-    Object.assign(campaign, req.body);
+    const prevStatus = campaign.status;
+    const { status, isVerified, verify, isActive, activate, ...otherFields } = req.body;
+
+    Object.assign(campaign, otherFields);
+
+    if (status !== undefined) {
+      const s = String(status).trim();
+      if (s === 'Live' || s === 'Approved') {
+        campaign.status = 'Live';
+        campaign.isVerified = true;
+        campaign.verificationStatus = 'Approved';
+        campaign.isActive = true;
+      } else if (s === 'Rejected') {
+        campaign.status = 'Rejected';
+        campaign.isVerified = false;
+        campaign.verificationStatus = 'Rejected';
+        campaign.isActive = false;
+      } else if (s === 'Inactive') {
+        campaign.status = 'Inactive';
+        campaign.isActive = false;
+      } else {
+        campaign.status = s;
+      }
+    }
+
+    if (isVerified !== undefined || verify !== undefined) {
+      const v = Boolean(isVerified ?? verify);
+      campaign.isVerified = v;
+      if (v) {
+        campaign.verificationStatus = 'Approved';
+        if (campaign.status === 'Pending') campaign.status = 'Live';
+        campaign.isActive = true;
+      } else {
+        campaign.verificationStatus = 'Pending';
+      }
+    }
+
+    if (isActive !== undefined || activate !== undefined) {
+      const a = Boolean(isActive ?? activate);
+      campaign.isActive = a;
+      if (!a && campaign.status === 'Live') {
+        campaign.previousStatus = campaign.status;
+        campaign.status = 'Inactive';
+      } else if (a && campaign.status === 'Inactive') {
+        campaign.status = (campaign.isVerified || campaign.previousStatus === 'Live') ? 'Live' : 'Pending';
+      }
+    }
+
     await campaign.save();
+
+    // Trigger push notification if status transitioned
+    if (campaign.status === 'Live' && prevStatus !== 'Live' && campaign.userId) {
+      try {
+        const { createAndSendNotification } = require('../../utils/notification');
+        await createAndSendNotification({
+          userId: campaign.userId,
+          title: 'Campaign Approved! 🎉',
+          body: `Your fundraising campaign "${campaign.title}" has been reviewed and approved by admin. It is now live!`,
+          type: 'campaign',
+          screen: 'campaign_details',
+          dataId: String(campaign._id)
+        });
+      } catch (notifErr) {
+        console.error('Campaign approve notification error:', notifErr.message);
+      }
+    } else if (campaign.status === 'Rejected' && prevStatus !== 'Rejected' && campaign.userId) {
+      try {
+        const { createAndSendNotification } = require('../../utils/notification');
+        await createAndSendNotification({
+          userId: campaign.userId,
+          title: 'Campaign Review Update ⚠️',
+          body: `Your fundraising campaign "${campaign.title}" could not be approved at this time.`,
+          type: 'campaign',
+          screen: 'campaign_details',
+          dataId: String(campaign._id)
+        });
+      } catch (notifErr) {
+        console.error('Campaign reject notification error:', notifErr.message);
+      }
+    }
 
     const enriched = await enrichCampaign(campaign, req);
     res.json({
@@ -251,6 +351,102 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// Dedicated Admin Approve endpoint
+const handleAdminApprove = async (req, res) => {
+  try {
+    let campaign = await Campaign.findById(req.params.id).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId: req.params.id });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    campaign.status = 'Live';
+    campaign.isVerified = true;
+    campaign.verificationStatus = 'Approved';
+    campaign.isActive = true;
+    await campaign.save();
+
+    if (campaign.userId) {
+      try {
+        const { createAndSendNotification } = require('../../utils/notification');
+        await createAndSendNotification({
+          userId: campaign.userId,
+          title: 'Campaign Approved! 🎉',
+          body: `Your fundraising campaign "${campaign.title}" has been reviewed and approved by admin. It is now live!`,
+          type: 'campaign',
+          screen: 'campaign_details',
+          dataId: String(campaign._id)
+        });
+      } catch (notifErr) {
+        console.error('Approve notification error:', notifErr.message);
+      }
+    }
+
+    const enriched = await enrichCampaign(campaign, req);
+    res.json({
+      status: true,
+      message: 'Campaign approved successfully and is now Live',
+      data: enriched,
+      ...enriched
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+// Dedicated Admin Reject endpoint
+const handleAdminReject = async (req, res) => {
+  try {
+    let campaign = await Campaign.findById(req.params.id).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId: req.params.id });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    campaign.status = 'Rejected';
+    campaign.isVerified = false;
+    campaign.verificationStatus = 'Rejected';
+    campaign.isActive = false;
+    if (req.body.reason) campaign.rejectionReason = req.body.reason;
+    await campaign.save();
+
+    if (campaign.userId) {
+      try {
+        const { createAndSendNotification } = require('../../utils/notification');
+        await createAndSendNotification({
+          userId: campaign.userId,
+          title: 'Campaign Review Update ⚠️',
+          body: `Your fundraising campaign "${campaign.title}" could not be approved at this time.`,
+          type: 'campaign',
+          screen: 'campaign_details',
+          dataId: String(campaign._id)
+        });
+      } catch (notifErr) {
+        console.error('Reject notification error:', notifErr.message);
+      }
+    }
+
+    const enriched = await enrichCampaign(campaign, req);
+    res.json({
+      status: true,
+      message: 'Campaign rejected',
+      data: enriched,
+      ...enriched
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+router.put('/:id/approve', handleAdminApprove);
+router.post('/:id/approve', handleAdminApprove);
+router.put('/:id/reject', handleAdminReject);
+router.post('/:id/reject', handleAdminReject);
+
 // Delete a campaign
 router.delete('/:id', async (req, res) => {
   try {
@@ -261,9 +457,17 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Campaign Reviews Endpoints
+// Campaign Reviews Endpoints & Deactivate/Activate Forwarding
 const donorCampaignsRoutes = require('../donor/campaigns');
 router.get('/:id/reviews', donorCampaignsRoutes.handleGetCampaignReviews);
 router.post('/:id/reviews', donorCampaignsRoutes.handlePostCampaignReview);
+
+router.put('/:id/deactivate', donorCampaignsRoutes.handleDeactivateCampaign);
+router.post('/:id/deactivate', donorCampaignsRoutes.handleDeactivateCampaign);
+router.patch('/:id/deactivate', donorCampaignsRoutes.handleDeactivateCampaign);
+
+router.put('/:id/activate', donorCampaignsRoutes.handleActivateCampaign);
+router.post('/:id/activate', donorCampaignsRoutes.handleActivateCampaign);
+router.patch('/:id/activate', donorCampaignsRoutes.handleActivateCampaign);
 
 module.exports = router;

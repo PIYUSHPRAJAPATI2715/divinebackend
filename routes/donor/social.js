@@ -186,7 +186,7 @@ const handleSocialOverview = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
-});
+};
 
 // 2. Dedicated Followers Handler (Shows users following me, with isFollowing back state)
 const handleFollowers = async (req, res) => {
@@ -408,7 +408,7 @@ const handleDiscover = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
-});
+};
 
 // 5. Follow Check Status Endpoint
 router.get('/follow/check/:id', async (req, res) => {

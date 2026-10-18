@@ -230,6 +230,22 @@ router.get('/campaigns', async (req, res) => {
         days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       }
       const obj = c.toObject();
+      const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
+      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+
+      obj.activate = isCampaignActive;
+      obj.active = isCampaignActive;
+      obj.isActive = isCampaignActive;
+      obj.is_active = isCampaignActive;
+      obj.activated = isCampaignActive;
+
+      obj.verify = isCampaignVerified;
+      obj.verified = isCampaignVerified;
+      obj.isVerified = isCampaignVerified;
+      obj.is_verified = isCampaignVerified;
+      obj.verificationStatus = c.status === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      obj.status = c.status;
+
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = obj.imageUrl || (obj.images && obj.images.length > 0 ? obj.images[0] : '');
@@ -265,14 +281,15 @@ router.post('/campaigns', async (req, res) => {
       images: validImages.length > 0 ? validImages : [finalCoverImage],
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       user: ngo.name,
-      status: 'Live' // Default to Live so it renders on home feed immediately
+      status: 'Pending',
+      isActive: true,
+      isVerified: false,
+      verificationStatus: 'Pending'
     };
     
     const newCampaign = new Campaign(campaignData);
     const saved = await newCampaign.save();
     
-    // Increment campaigns count in NGO record
-    ngo.verifiedCampaignsCount = (ngo.verifiedCampaignsCount || 0) + 1;
     ngo.campaigns.push({
       campaignId: saved.campaignId,
       title: saved.title,
@@ -282,7 +299,21 @@ router.post('/campaigns', async (req, res) => {
     });
     await ngo.save();
     
-    res.status(201).json(saved);
+    const resp = saved.toObject();
+    resp.activate = true;
+    resp.active = true;
+    resp.isActive = true;
+    resp.verify = false;
+    resp.verified = false;
+    resp.isVerified = false;
+    resp.verificationStatus = 'Pending';
+    
+    res.status(201).json({
+      status: true,
+      message: 'Campaign submitted for review successfully. It will be published upon admin approval.',
+      data: resp,
+      ...resp
+    });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

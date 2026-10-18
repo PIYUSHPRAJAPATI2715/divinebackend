@@ -2266,6 +2266,74 @@
               ]
             }
           }
+        },
+        {
+          "name": "Deactivate Campaign (Owner Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns/:id/deactivate",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "donor",
+                "campaigns",
+                ":id",
+                "deactivate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_CAMPAIGN_ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Activate Campaign (Owner Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "https://divinebackend-v5gl.onrender.com/api/donor/campaigns/:id/activate",
+              "protocol": "https",
+              "host": [
+                "divinebackend-v5gl",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "api",
+                "donor",
+                "campaigns",
+                ":id",
+                "activate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_CAMPAIGN_ID"
+                }
+              ]
+            }
+          }
         }
       ]
     },
