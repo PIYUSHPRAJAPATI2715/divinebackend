@@ -14,7 +14,7 @@ function getUserFollowingIds(user) {
 }
 
 // 1. Get Social Overview (Leaderboard, Top NGOs with dynamic isFollowing)
-router.get('/social', async (req, res) => {
+const handleSocialOverview = async (req, res) => {
   try {
     let me = null;
     if (req.user) {
@@ -314,16 +314,20 @@ const handleFollowing = async (req, res) => {
   }
 };
 
+router.get('/social', handleSocialOverview);
 router.get('/followers', handleFollowers);
 router.get('/following', handleFollowing);
+router.get('/discover', (req, res) => handleDiscover(req, res));
 router.get('/', (req, res, next) => {
   if (req.baseUrl.includes('followers')) return handleFollowers(req, res);
   if (req.baseUrl.includes('following')) return handleFollowing(req, res);
-  return next();
+  if (req.baseUrl.includes('discover')) return handleDiscover(req, res);
+  if (req.baseUrl.includes('social')) return handleSocialOverview(req, res);
+  return handleSocialOverview(req, res);
 });
 
 // 4. Discover / Suggested NGOs & Users to Follow (with isFollowing status for each)
-router.get('/discover', async (req, res) => {
+const handleDiscover = async (req, res) => {
   try {
     let me = null;
     if (req.user) {
@@ -585,5 +589,7 @@ router.post('/follow/user/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.handleSocialOverview = handleSocialOverview;
 module.exports.handleFollowers = handleFollowers;
 module.exports.handleFollowing = handleFollowing;
+module.exports.handleDiscover = handleDiscover;
