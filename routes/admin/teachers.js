@@ -61,7 +61,25 @@ router.put('/:id', async (req, res) => {
 // Delete a teacher
 router.delete('/:id', async (req, res) => {
   try {
-    await Teacher.findByIdAndDelete(req.params.id);
+    const teacher = await Teacher.findByIdAndDelete(req.params.id);
+    if (teacher) {
+      const User = require('../../models/User');
+      const { buildPhoneFilter } = require('../../utils/phone');
+      const userOr = [];
+      if (teacher.email) userOr.push({ email: teacher.email.toLowerCase().trim() });
+      if (teacher.phone) userOr.push(buildPhoneFilter(teacher.phone));
+      if (userOr.length > 0) {
+        const user = await User.findOne({ $or: userOr });
+        if (user) {
+          user.isDeleted = true;
+          user.status = 'Deleted';
+          user.deletedAt = new Date();
+          user.fcmToken = null;
+          user.deviceToken = null;
+          await user.save();
+        }
+      }
+    }
     res.json({ message: 'Teacher deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -113,6 +113,20 @@ router.post('/check-role', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
     const user = await findUserByPhone(phone, User);
+    if (user && (user.isDeleted === true || user.status === 'Deleted')) {
+      return res.status(403).json({
+        status: false,
+        message: 'Your account has been deleted by an administrator. Please contact support.',
+        isDeleted: true
+      });
+    }
+    if (user && user.status === 'Suspended') {
+      return res.status(403).json({
+        status: false,
+        message: 'Your account has been suspended by an administrator.',
+        isSuspended: true
+      });
+    }
     if (!user) {
       const ngo = await NGO.findOne(buildPhoneFilter(phone));
       if (ngo) {
@@ -150,6 +164,20 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
     let existingUser = await findUserByPhone(phone, User);
+    if (existingUser && (existingUser.isDeleted === true || existingUser.status === 'Deleted')) {
+      return res.status(403).json({
+        status: false,
+        message: 'Your account has been deleted by an administrator. You cannot sign up or log in with this phone number.',
+        isDeleted: true
+      });
+    }
+    if (existingUser && existingUser.status === 'Suspended') {
+      return res.status(403).json({
+        status: false,
+        message: 'Your account has been suspended by an administrator.',
+        isSuspended: true
+      });
+    }
     let ngo = null;
     if (!existingUser) {
       ngo = await NGO.findOne(buildPhoneFilter(phone));
@@ -224,6 +252,20 @@ router.post('/login', async (req, res) => {
     const { email, password, phone } = req.body;
     if (phone) {
       let existingUser = await findUserByPhone(phone, User);
+      if (existingUser && (existingUser.isDeleted === true || existingUser.status === 'Deleted')) {
+        return res.status(403).json({
+          status: false,
+          message: 'Your account has been deleted by an administrator. You cannot log in with this phone number.',
+          isDeleted: true
+        });
+      }
+      if (existingUser && existingUser.status === 'Suspended') {
+        return res.status(403).json({
+          status: false,
+          message: 'Your account has been suspended by an administrator.',
+          isSuspended: true
+        });
+      }
       let ngo = null;
       if (!existingUser) {
         ngo = await NGO.findOne(buildPhoneFilter(phone));
@@ -323,6 +365,12 @@ router.post('/resend-otp', async (req, res) => {
     if (!phone) return res.status(400).json({ status: false, message: 'Phone number is required' });
     const user = await findUserByPhone(phone, User);
     if (!user) return res.status(404).json({ status: false, message: 'User session not found. Please initiate signup/login first.' });
+    if (user.isDeleted === true || user.status === 'Deleted') {
+      return res.status(403).json({ status: false, message: 'Your account has been deleted by an administrator.', isDeleted: true });
+    }
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ status: false, message: 'Your account has been suspended by an administrator.', isSuspended: true });
+    }
     user.otp = '1234';
     user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
@@ -342,6 +390,12 @@ router.post('/verify-otp', async (req, res) => {
     if (!phone || !otp) return res.status(400).json({ status: false, message: 'Phone number and OTP are required' });
     const user = await findUserByPhone(phone, User);
     if (!user) return res.status(404).json({ status: false, message: 'User session not found. Please request a new OTP.' });
+    if (user.isDeleted === true || user.status === 'Deleted') {
+      return res.status(403).json({ status: false, message: 'Your account has been deleted by an administrator.', isDeleted: true });
+    }
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ status: false, message: 'Your account has been suspended by an administrator.', isSuspended: true });
+    }
     if (!user.otp || user.otp !== otp) return res.status(400).json({ status: false, message: 'Invalid OTP' });
     if (new Date() > user.otpExpiry) return res.status(400).json({ status: false, message: 'OTP has expired. Please request a new OTP.' });
     user.otp = null;
@@ -438,6 +492,22 @@ router.post('/google', async (req, res) => {
     }
 
     let user = existingUser;
+    if (user && (user.isDeleted === true || user.status === 'Deleted')) {
+      return res.status(403).json({
+        status: false,
+        success: false,
+        message: 'Your account has been deleted by an administrator. You cannot log in with this Google account.',
+        isDeleted: true
+      });
+    }
+    if (user && user.status === 'Suspended') {
+      return res.status(403).json({
+        status: false,
+        success: false,
+        message: 'Your account has been suspended by an administrator.',
+        isSuspended: true
+      });
+    }
 
     if (!user) {
       user = new User({
@@ -594,6 +664,22 @@ router.post('/apple', async (req, res) => {
 
     const isUserExist = !!existingUser;
     let user = existingUser;
+    if (user && (user.isDeleted === true || user.status === 'Deleted')) {
+      return res.status(403).json({
+        status: false,
+        success: false,
+        message: 'Your account has been deleted by an administrator. You cannot log in with this Apple account.',
+        isDeleted: true
+      });
+    }
+    if (user && user.status === 'Suspended') {
+      return res.status(403).json({
+        status: false,
+        success: false,
+        message: 'Your account has been suspended by an administrator.',
+        isSuspended: true
+      });
+    }
 
     if (!user) {
       user = new User({

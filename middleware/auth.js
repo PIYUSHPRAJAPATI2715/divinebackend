@@ -24,8 +24,19 @@ module.exports = async (req, res, next) => {
       } else {
         userExists = await User.findById(userId);
       }
-      if (!userExists) {
-        return res.status(401).json({ status: false, message: 'User account no longer exists in database. Please register/login again.' });
+      if (!userExists || userExists.isDeleted === true || userExists.status === 'Deleted') {
+        return res.status(401).json({ 
+          status: false, 
+          message: 'User account no longer exists in database or has been deleted. Please register/login again.',
+          isDeleted: true
+        });
+      }
+      if (userExists.status === 'Suspended') {
+        return res.status(401).json({ 
+          status: false, 
+          message: 'User account has been suspended by an administrator.',
+          isSuspended: true
+        });
       }
 
       req.user = {

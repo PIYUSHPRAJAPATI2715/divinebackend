@@ -205,7 +205,37 @@ router.delete('/:id', async (req, res) => {
   try {
     const ngo = await NGO.findByIdAndDelete(req.params.id);
     if (!ngo) return res.status(404).json({ status: false, message: 'NGO not found' });
-    res.json({ status: true, message: 'NGO deleted' });
+
+    // Also invalidate the corresponding User account
+    const User = require('../../models/User');
+    const { buildPhoneFilter } = require('../../utils/phone');
+    const userOr = [];
+    if (ngo.email) userOr.push({ email: ngo.email.toLowerCase().trim() }, { googleEmail: ngo.email.toLowerCase().trim() });
+    if (ngo.phone) userOr.push(buildPhoneFilter(ngo.phone));
+    if (userOr.length > 0) {
+      const user = await User.findOne({ $or: userOr });
+      if (user) {
+        if (user.fcmToken || user.deviceToken) {
+          try {
+            const { sendPushNotification } = require('../../utils/notification');
+            await sendPushNotification({
+              token: user.fcmToken || user.deviceToken,
+              title: 'Session Expired',
+              body: 'Your NGO account has been deleted by an administrator.',
+              data: { type: 'LOGOUT', action: 'FORCE_LOGOUT', reason: 'ACCOUNT_DELETED' }
+            });
+          } catch (e) {}
+        }
+        user.isDeleted = true;
+        user.status = 'Deleted';
+        user.deletedAt = new Date();
+        user.fcmToken = null;
+        user.deviceToken = null;
+        await user.save();
+      }
+    }
+
+    res.json({ status: true, message: 'NGO deleted and associated user session invalidated' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }

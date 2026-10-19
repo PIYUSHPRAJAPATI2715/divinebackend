@@ -23,6 +23,19 @@ const userSchema = new mongoose.Schema({
     required: true,
     default: 'donor'
   },
+  status: {
+    type: String,
+    enum: ['Active', 'Suspended', 'Deleted'],
+    default: 'Active'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
   // Fields for both roles
   email: {
     type: String,
