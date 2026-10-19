@@ -9,6 +9,7 @@ const NGO = require('../../models/NGO');
 const Transaction = require('../../models/Transaction');
 const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
 const { resolveEntityPhoto } = require('../../utils/avatar');
+const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('../../utils/campaignHelper');
 
 // Detect media extension by checking magic bytes
 const detectMediaExtension = (buffer, defaultExt = 'mp4') => {
@@ -192,12 +193,22 @@ router.get('/campaigns', async (req, res) => {
     if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       return handleMyCampaigns(req, res);
     }
+
+    // Automatically transition expired campaigns to 'Completed'
+    await syncExpiredCampaigns();
+
     const { search, category } = req.query;
+    const now = new Date();
     let query = {
       status: 'Live',
       isActive: { $ne: false },
       isVerified: true,
-      verificationStatus: 'Approved'
+      verificationStatus: 'Approved',
+      $or: [
+        { endDate: null },
+        { endDate: { $exists: false } },
+        { endDate: { $gt: now } }
+      ]
     };
 
     if (category && category !== 'All' && category.trim()) {
@@ -232,14 +243,15 @@ router.get('/campaigns', async (req, res) => {
 
     const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
     const enriched = await Promise.all(campaigns.map(async c => {
-      let days = c.daysLeft || 30;
-      if (c.endDate) {
-        const diffTime = new Date(c.endDate) - new Date();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-      } else if (c.createdAt) {
-        const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      // In-memory safety guard: Filter out any expired campaigns
+      if (isCampaignExpired(c, now)) {
+        return null;
       }
+      const days = calculateDaysLeft(c, now);
+      if (days <= 0 && c.endDate && new Date(c.endDate) <= now) {
+        return null;
+      }
+
       const rawImages = (Array.isArray(c.images) && c.images.length > 0)
         ? c.images
         : [c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
@@ -293,7 +305,7 @@ router.get('/campaigns', async (req, res) => {
       return obj;
     }));
 
-    res.json({ status: true, data: enriched });
+    res.json({ status: true, data: enriched.filter(Boolean) });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
@@ -302,6 +314,7 @@ router.get('/campaigns', async (req, res) => {
 // Get single campaign
 router.get('/campaigns/:id', async (req, res) => {
   try {
+    await syncExpiredCampaigns();
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) {
       return res.status(404).json({ status: false, message: 'Campaign not found' });
@@ -371,14 +384,15 @@ router.get('/campaigns/:id', async (req, res) => {
     // Look up creator dynamic profile info
     const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(campaign);
 
-    let days = campaignObj.daysLeft || 30;
-    if (campaignObj.endDate) {
-      const diffTime = new Date(campaignObj.endDate) - new Date();
-      days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    } else if (campaignObj.createdAt) {
-      const diffTime = (new Date(campaignObj.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-      days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const now = new Date();
+    const isExpired = isCampaignExpired(campaign, now);
+    const days = calculateDaysLeft(campaign, now);
+    if (isExpired && campaignObj.status === 'Live') {
+      campaignObj.status = 'Completed';
     }
+    campaignObj.daysLeft = days;
+    campaignObj.isCompleted = isExpired || campaignObj.status === 'Completed';
+    campaignObj.isExpired = isExpired;
 
     const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
       ? campaignObj.images
@@ -504,6 +518,8 @@ const handleMyCampaigns = async (req, res) => {
 
     let query = { $or: queryConditions };
 
+    await syncExpiredCampaigns();
+
     if (req.query.status && req.query.status.trim() !== '' && req.query.status !== 'All') {
       const targetStatus = req.query.status.trim();
       query = { $and: [query, { status: { $regex: new RegExp(`^${targetStatus}$`, 'i') } }] };
@@ -516,13 +532,12 @@ const handleMyCampaigns = async (req, res) => {
     let totalDonors = 0;
 
     const enriched = await Promise.all(myCampaigns.map(async c => {
-      let days = c.daysLeft || 30;
-      if (c.endDate) {
-        const diffTime = new Date(c.endDate) - new Date();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-      } else if (c.createdAt) {
-        const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      const now = new Date();
+      const isExpired = isCampaignExpired(c, now);
+      const days = calculateDaysLeft(c, now);
+      let currentStatus = c.status;
+      if (isExpired && currentStatus === 'Live') {
+        currentStatus = 'Completed';
       }
 
       const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
@@ -539,6 +554,9 @@ const handleMyCampaigns = async (req, res) => {
 
       const obj = c.toObject();
       obj.daysLeft = days;
+      obj.status = currentStatus;
+      obj.isCompleted = isExpired || currentStatus === 'Completed';
+      obj.isExpired = isExpired;
       obj.donorsCount = donorsCountNum;
 
       const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');

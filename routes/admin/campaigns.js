@@ -4,6 +4,7 @@ const NGO = require('../../models/NGO');
 const User = require('../../models/User');
 const { buildPhoneFilter, findUserByPhone } = require('../../utils/phone');
 const { resolveEntityPhoto } = require('../../utils/avatar');
+const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired, getActiveCampaignsQuery } = require('../../utils/campaignHelper');
 
 const resolveCampaignCreator = async (campaign) => {
   let creatorUser = null;
@@ -110,13 +111,12 @@ const enrichCampaign = async (campaignDoc, req = null) => {
   const c = campaignDoc.toObject ? campaignDoc.toObject() : campaignDoc;
   const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
 
-  let days = c.daysLeft || 30;
-  if (c.endDate) {
-    const diffTime = new Date(c.endDate) - new Date();
-    days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-  } else if (c.createdAt) {
-    const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-    days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  const now = new Date();
+  const isExpired = isCampaignExpired(c, now);
+  const days = calculateDaysLeft(c, now);
+  let currentStatus = c.status;
+  if (isExpired && currentStatus === 'Live') {
+    currentStatus = 'Completed';
   }
 
   const rawImages = (Array.isArray(c.images) && c.images.length > 0)
@@ -131,11 +131,14 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     ? normalizedImages[0]
     : normalizeImageUrl(c.imageUrl, req);
 
-  const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
-  const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+  const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || currentStatus === 'Completed');
+  const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive');
 
   return {
     ...c,
+    status: currentStatus,
+    isCompleted: isExpired || currentStatus === 'Completed',
+    isExpired: isExpired,
     activate: isCampaignActive,
     active: isCampaignActive,
     isActive: isCampaignActive,
@@ -145,7 +148,7 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     verified: isCampaignVerified,
     isVerified: isCampaignVerified,
     is_verified: isCampaignVerified,
-    verificationStatus: c.status === 'Rejected' 
+    verificationStatus: currentStatus === 'Rejected' 
       ? 'Rejected' 
       : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending')),
     imageUrl: primaryImage,
@@ -179,9 +182,20 @@ const enrichCampaign = async (campaignDoc, req = null) => {
 // Get all campaigns
 router.get('/', async (req, res) => {
   try {
+    // Automatically transition expired campaigns to 'Completed'
+    await syncExpiredCampaigns();
+
     const filter = {};
+    const now = new Date();
     if (req.query.status && req.query.status !== 'All') {
       filter.status = req.query.status;
+      if (req.query.status === 'Live') {
+        filter.$or = [
+          { endDate: null },
+          { endDate: { $exists: false } },
+          { endDate: { $gt: now } }
+        ];
+      }
     }
     const isAdminRoute = req.baseUrl && req.baseUrl.startsWith('/api/admin');
     if (!isAdminRoute && !req.query.my && req.query.user !== 'me') {
@@ -189,6 +203,11 @@ router.get('/', async (req, res) => {
       filter.isActive = { $ne: false };
       filter.isVerified = true;
       filter.verificationStatus = 'Approved';
+      filter.$or = [
+        { endDate: null },
+        { endDate: { $exists: false } },
+        { endDate: { $gt: now } }
+      ];
     }
     if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       const userId = req.user ? (req.user._id || req.user.id) : null;
@@ -201,6 +220,12 @@ router.get('/', async (req, res) => {
     }
     const campaigns = await Campaign.find(filter).sort({ createdAt: -1 });
     const enriched = await Promise.all(campaigns.map(c => enrichCampaign(c, req)));
+
+    if (!isAdminRoute && !req.query.my && req.query.user !== 'me') {
+      const validEnriched = enriched.filter(c => !isCampaignExpired(c, now) && c.daysLeft > 0);
+      return res.json(validEnriched);
+    }
+
     res.json(enriched);
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -10,6 +10,7 @@ const Notification = require('../models/Notification');
 const NewsMedia = require('../models/NewsMedia');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../utils/avatar');
 const { calculateNgoDynamicRating } = require('../utils/rating');
+const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired, getActiveCampaignsQuery } = require('../utils/campaignHelper');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -56,19 +57,17 @@ router.get('/', optionalAuth, async (req, res) => {
       }
     }
 
+    // 1.5 Auto-transition any expired campaigns to Completed
+    await syncExpiredCampaigns();
+
     // 2. Fetch categories
     const categories = await CampaignCategory.find().sort({ name: 1 });
 
     // 3. Fetch active banners (filter placement = 'Home' and status = 'Active')
     const banners = await Banner.find({ placement: 'Home', status: 'Active' });
 
-    // 4. Fetch ongoing campaigns (status = 'Live', active, verified)
-    const campaigns = await Campaign.find({
-      status: 'Live',
-      isActive: { $ne: false },
-      isVerified: true,
-      verificationStatus: 'Approved'
-    }).sort({ createdAt: -1 });
+    // 4. Fetch ongoing active unexpired campaigns (status = 'Live', active, verified, unexpired)
+    const campaigns = await Campaign.find(getActiveCampaignsQuery()).sort({ createdAt: -1 });
 
     // 5. Fetch top NGOs (verified NGOs, excluding corporate profiles and self-NGO profile)
     let selfNgoId = null;
@@ -305,14 +304,14 @@ const DanDonation = require('../models/DanDonation');
           imageUrl: c.imageUrl || '',
           description: c.description
         })),
-        campaigns: await Promise.all(campaigns.map(async c => {
-          let days = c.daysLeft || 30;
-          if (c.endDate) {
-            const diffTime = new Date(c.endDate) - new Date();
-            days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-          } else if (c.createdAt) {
-            const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-            days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        campaigns: (await Promise.all(campaigns.map(async c => {
+          const now = new Date();
+          if (isCampaignExpired(c, now)) {
+            return null;
+          }
+          const days = calculateDaysLeft(c, now);
+          if (days <= 0 && c.endDate && new Date(c.endDate) <= now) {
+            return null;
           }
           let finalImage = '';
           if (Array.isArray(c.images)) {
@@ -414,7 +413,7 @@ const DanDonation = require('../models/DanDonation');
             verificationStatus: 'Approved',
             status: c.status
           };
-        })),
+        }))).filter(Boolean),
         ngos: await Promise.all(topNGOs.map(async ngo => {
           const dynamicRating = await calculateNgoDynamicRating(ngo);
           const photos = enrichEntityPhotos(ngo, 'ngo');

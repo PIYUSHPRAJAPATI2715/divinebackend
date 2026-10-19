@@ -10,6 +10,7 @@ const DanSubcategory = require('../models/DanSubcategory');
 const DanDonation = require('../models/DanDonation');
 const { buildPhoneFilter } = require('../utils/phone');
 const { resolveEntityPhoto } = require('../utils/avatar');
+const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('../utils/campaignHelper');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -216,22 +217,22 @@ router.put('/profile', async (req, res) => {
 // 2. Get NGO Campaigns
 router.get('/campaigns', async (req, res) => {
   try {
+    await syncExpiredCampaigns();
     const ngo = await getOrCreateNGOProfile(req);
     const userId = req.user ? (req.user._id || req.user.id) : null;
     const query = userId ? { $or: [{ ngoId: ngo._id }, { userId }] } : { ngoId: ngo._id };
     const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
     const enriched = campaigns.map(c => {
-      let days = c.daysLeft || 30;
-      if (c.endDate) {
-        const diffTime = new Date(c.endDate) - new Date();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-      } else if (c.createdAt) {
-        const diffTime = (new Date(c.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-        days = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      const now = new Date();
+      const isExpired = isCampaignExpired(c, now);
+      const days = calculateDaysLeft(c, now);
+      let currentStatus = c.status;
+      if (isExpired && currentStatus === 'Live') {
+        currentStatus = 'Completed';
       }
       const obj = c.toObject();
-      const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
-      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+      const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || currentStatus === 'Completed');
+      const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive');
 
       obj.activate = isCampaignActive;
       obj.active = isCampaignActive;
@@ -243,9 +244,10 @@ router.get('/campaigns', async (req, res) => {
       obj.verified = isCampaignVerified;
       obj.isVerified = isCampaignVerified;
       obj.is_verified = isCampaignVerified;
-      obj.verificationStatus = c.status === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
-      obj.status = c.status;
-
+      obj.verificationStatus = currentStatus === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      obj.status = currentStatus;
+      obj.isCompleted = isExpired || currentStatus === 'Completed';
+      obj.isExpired = isExpired;
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = obj.imageUrl || (obj.images && obj.images.length > 0 ? obj.images[0] : '');
