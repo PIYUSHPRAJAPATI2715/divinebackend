@@ -115,18 +115,23 @@ router.get('/', optionalAuth, async (req, res) => {
       .sort({ publishedDate: -1, createdAt: -1 })
       .limit(10);
 
-    const pressAndMedia = pressAndMediaDocs.map(item => ({
-      _id: item._id,
-      id: item._id,
-      newsId: item.newsId,
-      title: item.title,
-      source: item.source,
-      content: item.content,
-      imageUrl: item.imageUrl || '',
-      publishedDate: item.publishedDate,
-      date: item.publishedDate,
-      status: item.status
-    }));
+    const pressAndMedia = pressAndMediaDocs.map(item => {
+      const img = item.imageUrl || item.image || item.mediaUrl || '';
+      return {
+        _id: item._id,
+        id: item._id,
+        newsId: item.newsId,
+        title: item.title,
+        source: item.source,
+        content: item.content,
+        imageUrl: img,
+        image: img,
+        mediaUrl: img,
+        publishedDate: item.publishedDate,
+        date: item.publishedDate,
+        status: item.status
+      };
+    });
 
     // 6. Fetch recent successful donations on the platform (last 10 recent donation transactions, excluding wallet topups)
     const recentTx = await Transaction.find({

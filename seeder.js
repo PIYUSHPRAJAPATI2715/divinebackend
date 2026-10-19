@@ -864,8 +864,8 @@ const mockBanners = [
 ];
 
 const mockNewsMedia = [
-  { newsId: 'NWS-001', title: 'Divine Admin launches Astro-Coaching Scholarship program', source: 'Times of India', content: 'The Divine spiritual coaching network has launched its state of the art scholarship program. Students who score above 80% on their entrance tests will get direct monthly fee waivers up to 50%.', status: 'Published', publishedDate: daysAgo(3) },
-  { newsId: 'NWS-002', title: 'Spiritual tech systems see 120% surge in rural regions', source: 'Economic Times', content: 'Astrology and spiritual coaching platforms are seeing unprecedented subscription rates from tier-3 cities, showing high interest in local certified experts.', status: 'Published', publishedDate: daysAgo(10) }
+  { newsId: 'NWS-001', title: 'Divine Admin launches Astro-Coaching Scholarship program', source: 'Times of India', imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80', content: 'The Divine spiritual coaching network has launched its state of the art scholarship program. Students who score above 80% on their entrance tests will get direct monthly fee waivers up to 50%.', status: 'Published', publishedDate: daysAgo(3) },
+  { newsId: 'NWS-002', title: 'Spiritual tech systems see 120% surge in rural regions', source: 'Economic Times', imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80', content: 'Astrology and spiritual coaching platforms are seeing unprecedented subscription rates from tier-3 cities, showing high interest in local certified experts.', status: 'Published', publishedDate: daysAgo(10) }
 ];
 
 const mockSeminars = [
