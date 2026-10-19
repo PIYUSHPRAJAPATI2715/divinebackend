@@ -267,6 +267,42 @@ router.post('/campaigns', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
     }
 
+    const cleanTitle = String(title).trim();
+    if (!cleanTitle) {
+      return res.status(400).json({ status: false, message: 'Title cannot be empty' });
+    }
+
+    const escapedTitle = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const titleRegex = new RegExp(`^\\s*${escapedTitle}\\s*$`, 'i');
+
+    // 1. Check if this NGO already created a campaign with this title
+    const ngoDuplicate = await Campaign.findOne({
+      title: titleRegex,
+      $or: [
+        { ngoId: ngo._id },
+        { user: ngo.name },
+        { userId: req.user?._id || req.user?.id }
+      ]
+    });
+    if (ngoDuplicate) {
+      return res.status(400).json({
+        status: false,
+        message: `Your organization has already submitted a campaign with the title "${cleanTitle}".`
+      });
+    }
+
+    // 2. Check platform-wide duplicate (active or pending review)
+    const platformDuplicate = await Campaign.findOne({
+      title: titleRegex,
+      status: { $in: ['Live', 'Pending'] }
+    });
+    if (platformDuplicate) {
+      return res.status(400).json({
+        status: false,
+        message: `A campaign with the title "${cleanTitle}" already exists or is pending approval. Please choose a distinct title.`
+      });
+    }
+
     const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
     const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
 
@@ -274,15 +310,18 @@ router.post('/campaigns', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
     }
 
-    // Automatically enforce campaignId and user context (linked to NGO name)
+    // Automatically enforce campaignId, ngo context, and pending approval status
     const campaignData = {
       ...req.body,
+      title: cleanTitle,
       imageUrl: finalCoverImage,
       images: validImages.length > 0 ? validImages : [finalCoverImage],
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       user: ngo.name,
+      ngoId: ngo._id,
+      userId: req.user?._id || req.user?.id || null,
       status: 'Pending',
-      isActive: true,
+      isActive: false,
       isVerified: false,
       verificationStatus: 'Pending'
     };
@@ -300,13 +339,14 @@ router.post('/campaigns', async (req, res) => {
     await ngo.save();
     
     const resp = saved.toObject();
-    resp.activate = true;
-    resp.active = true;
-    resp.isActive = true;
+    resp.activate = false;
+    resp.active = false;
+    resp.isActive = false;
     resp.verify = false;
     resp.verified = false;
     resp.isVerified = false;
     resp.verificationStatus = 'Pending';
+    resp.status = 'Pending';
     
     res.status(201).json({
       status: true,

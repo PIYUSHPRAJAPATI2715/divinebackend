@@ -66,10 +66,8 @@ router.get('/', optionalAuth, async (req, res) => {
     const campaigns = await Campaign.find({
       status: 'Live',
       isActive: { $ne: false },
-      $or: [
-        { isVerified: true },
-        { isVerified: { $exists: false } }
-      ]
+      isVerified: true,
+      verificationStatus: 'Approved'
     }).sort({ createdAt: -1 });
 
     // 5. Fetch top NGOs (verified NGOs, excluding corporate profiles and self-NGO profile)

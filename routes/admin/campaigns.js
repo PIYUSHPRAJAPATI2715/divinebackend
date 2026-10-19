@@ -187,7 +187,8 @@ router.get('/', async (req, res) => {
     if (!isAdminRoute && !req.query.my && req.query.user !== 'me') {
       filter.status = 'Live';
       filter.isActive = { $ne: false };
-      filter.isVerified = { $ne: false };
+      filter.isVerified = true;
+      filter.verificationStatus = 'Approved';
     }
     if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       const userId = req.user ? (req.user._id || req.user.id) : null;
@@ -226,6 +227,46 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
     }
 
+    const cleanTitle = String(title).trim();
+    if (!cleanTitle) {
+      return res.status(400).json({ status: false, message: 'Title cannot be empty' });
+    }
+
+    const escapedTitle = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const titleRegex = new RegExp(`^\\s*${escapedTitle}\\s*$`, 'i');
+
+    // 1. Duplicate check: Check if current account already submitted this campaign
+    const userConditions = [];
+    if (req.user?._id) userConditions.push({ userId: req.user._id });
+    if (req.user?.id) userConditions.push({ userId: req.user.id });
+    if (req.user?.phone) userConditions.push({ userPhone: req.user.phone });
+    if (req.body.user && String(req.body.user).trim()) userConditions.push({ user: String(req.body.user).trim() });
+
+    if (userConditions.length > 0) {
+      const userDuplicate = await Campaign.findOne({
+        title: titleRegex,
+        $or: userConditions
+      });
+      if (userDuplicate) {
+        return res.status(400).json({
+          status: false,
+          message: `A campaign with the title "${cleanTitle}" has already been submitted by this account.`
+        });
+      }
+    }
+
+    // 2. Duplicate check: Check if an active or pending campaign already exists platform-wide
+    const platformDuplicate = await Campaign.findOne({
+      title: titleRegex,
+      status: { $in: ['Live', 'Pending'] }
+    });
+    if (platformDuplicate) {
+      return res.status(400).json({
+        status: false,
+        message: `A campaign with the title "${cleanTitle}" is already active or awaiting approval. Please use a unique title.`
+      });
+    }
+
     const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
     const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
 
@@ -233,15 +274,53 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
     }
 
+    const isAdmin = Boolean(req.user && req.user.role === 'admin');
+    const isAdminRoute = Boolean(req.baseUrl && req.baseUrl.startsWith('/api/admin'));
+
+    // Status assignment: Only an admin can immediately create a Live campaign
+    let status = 'Pending';
+    let isVerified = false;
+    let verificationStatus = 'Pending';
+    let isActive = false;
+
+    if (isAdmin || (isAdminRoute && req.body.status)) {
+      status = req.body.status || 'Live';
+      if (status === 'Live') {
+        isVerified = true;
+        verificationStatus = 'Approved';
+        isActive = true;
+      } else if (status === 'Rejected') {
+        isVerified = false;
+        verificationStatus = 'Rejected';
+        isActive = false;
+      } else {
+        isVerified = false;
+        verificationStatus = 'Pending';
+        isActive = false;
+      }
+    }
+
     const newCampaign = new Campaign({
       ...req.body,
+      title: cleanTitle,
       imageUrl: finalCoverImage,
       images: validImages.length > 0 ? validImages : [finalCoverImage],
-      campaignId: `CMP-${Date.now().toString().slice(-4)}`
+      campaignId: `CMP-${Date.now().toString().slice(-4)}`,
+      status,
+      isVerified,
+      verificationStatus,
+      isActive
     });
     const savedCampaign = await newCampaign.save();
-    const enriched = await enrichCampaign(savedCampaign);
-    res.status(201).json({ status: true, message: 'Campaign created successfully', data: enriched, ...enriched });
+    const enriched = await enrichCampaign(savedCampaign, req);
+    res.status(201).json({
+      status: true,
+      message: (status === 'Live') 
+        ? 'Campaign created and published successfully' 
+        : 'Campaign submitted for review successfully. It will be published upon admin approval.',
+      data: enriched,
+      ...enriched
+    });
   } catch (err) {
     res.status(400).json({ status: false, message: err.message });
   }

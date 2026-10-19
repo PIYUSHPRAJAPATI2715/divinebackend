@@ -192,15 +192,17 @@ router.get('/campaigns', async (req, res) => {
     if (req.query.my === 'true' || req.query.user === 'me' || req.query.filter === 'my') {
       return handleMyCampaigns(req, res);
     }
-    const { search } = req.query;
+    const { search, category } = req.query;
     let query = {
       status: 'Live',
       isActive: { $ne: false },
-      $or: [
-        { isVerified: true },
-        { isVerified: { $exists: false } }
-      ]
+      isVerified: true,
+      verificationStatus: 'Approved'
     };
+
+    if (category && category !== 'All' && category.trim()) {
+      query.category = category.trim();
+    }
     
     if (search && search.trim()) {
       const trimmedSearch = search.trim();
@@ -621,6 +623,45 @@ router.post('/campaigns', async (req, res) => {
     if (!title || !goal) {
       return res.status(400).json({ status: false, message: 'Title and Goal amount are required' });
     }
+
+    const cleanTitle = String(title).trim();
+    if (!cleanTitle) {
+      return res.status(400).json({ status: false, message: 'Title cannot be empty' });
+    }
+
+    const escapedTitle = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const titleRegex = new RegExp(`^\\s*${escapedTitle}\\s*$`, 'i');
+
+    const dbUser = await User.findById(req.user.id || req.user._id);
+
+    // 1. Check if same user already submitted this campaign
+    const userConditions = [];
+    if (dbUser?._id) userConditions.push({ userId: dbUser._id });
+    if (dbUser?.phone) userConditions.push({ userPhone: dbUser.phone });
+    if (userConditions.length > 0) {
+      const userDuplicate = await Campaign.findOne({
+        title: titleRegex,
+        $or: userConditions
+      });
+      if (userDuplicate) {
+        return res.status(400).json({
+          status: false,
+          message: `You have already submitted a campaign with the title "${cleanTitle}".`
+        });
+      }
+    }
+
+    // 2. Check platform-wide duplicate (active or pending review)
+    const platformDuplicate = await Campaign.findOne({
+      title: titleRegex,
+      status: { $in: ['Live', 'Pending'] }
+    });
+    if (platformDuplicate) {
+      return res.status(400).json({
+        status: false,
+        message: `A campaign with the title "${cleanTitle}" already exists or is pending admin review. Please use a unique title.`
+      });
+    }
     
     const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
     const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
@@ -629,7 +670,6 @@ router.post('/campaigns', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
     }
 
-    const dbUser = await User.findById(req.user.id || req.user._id);
     const creatorName = (dbUser && dbUser.name && dbUser.name.trim() !== '') 
       ? dbUser.name 
       : (dbUser && dbUser.organizationName && dbUser.organizationName.trim() !== '') 
@@ -640,7 +680,7 @@ router.post('/campaigns', async (req, res) => {
 
     const newCampaign = new Campaign({
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
-      title,
+      title: cleanTitle,
       user: creatorName,
       userId: dbUser ? dbUser._id : null,
       ngoId: ngo ? ngo._id : null,
@@ -652,7 +692,7 @@ router.post('/campaigns', async (req, res) => {
       raised: '₹0',
       oneTimeOrMonthly: oneTimeOrMonthly || 'One-Time',
       status: 'Pending',
-      isActive: true,
+      isActive: false,
       isVerified: false,
       verificationStatus: 'Pending',
       donorsCount: 0,
@@ -680,16 +720,17 @@ router.post('/campaigns', async (req, res) => {
     }
     
     const campObj = newCampaign.toObject();
-    campObj.activate = true;
-    campObj.active = true;
-    campObj.isActive = true;
-    campObj.is_active = true;
-    campObj.activated = true;
+    campObj.activate = false;
+    campObj.active = false;
+    campObj.isActive = false;
+    campObj.is_active = false;
+    campObj.activated = false;
     campObj.verify = false;
     campObj.verified = false;
     campObj.isVerified = false;
     campObj.is_verified = false;
     campObj.verificationStatus = 'Pending';
+    campObj.status = 'Pending';
 
     res.status(201).json({ 
       status: true, 
