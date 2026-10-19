@@ -31,6 +31,21 @@ const enrichNGOData = async (ngo) => {
   const ngoObj = ngo.toObject ? ngo.toObject() : ngo;
   const photos = enrichEntityPhotos(ngoObj, 'ngo');
 
+  const normalizeCountryPhone = (p) => {
+    if (!p || typeof p !== 'string') return '';
+    const clean = p.trim();
+    if (!clean) return '';
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length === 10) return `+91 ${digits}`;
+    if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2)}`;
+    if (clean.startsWith('+91')) {
+      const rest = clean.replace(/^\+91\s*/, '').trim();
+      return `+91 ${rest}`;
+    }
+    if (clean.startsWith('+')) return clean;
+    return `+91 ${clean}`;
+  };
+
   let userPhone = ngoObj.phone || ngoObj.mobileNumber || ngoObj.userPhone || ngoObj.phoneNumber || '';
   if (!userPhone) {
     const userDoc = await User.findOne({
@@ -48,8 +63,9 @@ const enrichNGOData = async (ngo) => {
 
   if (!userPhone) {
     const numSeed = parseInt((ngoObj.ngoId || '').replace(/[^0-9]/g, '')) || Math.floor(1000 + Math.random() * 9000);
-    userPhone = `+91 98709${String(numSeed).padStart(5, '0').slice(-5)}`;
+    userPhone = `98709${String(numSeed).padStart(5, '0').slice(-5)}`;
   }
+  userPhone = normalizeCountryPhone(userPhone);
 
   return {
     ...ngoObj,

@@ -19,7 +19,7 @@ module.exports = async (req, res, next) => {
       const User = require('../models/User');
       const Admin = require('../models/Admin');
       let userExists = null;
-      if (decoded.role === 'admin') {
+      if (decoded.role === 'admin' || decoded.role === 'superadmin' || decoded.role === 'social_admin' || decoded.role === 'astro_admin' || decoded.platform) {
         userExists = await Admin.findById(userId);
       } else {
         userExists = await User.findById(userId);

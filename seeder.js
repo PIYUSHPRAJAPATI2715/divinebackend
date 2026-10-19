@@ -328,7 +328,7 @@ const mockNGOs = [
     registrationNumber: 'REG-54321', 
     contactPerson: 'Neha Singh', 
     email: 'hello@hopengo.in', 
-    phone: '8877665544',
+    phone: '+91 8877665544',
     logo: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&q=80&w=300',
     about: 'Providing emergency winter blankets, clothing kits, and disaster relief aid to the most vulnerable.',
     status: 'Pending',
@@ -362,7 +362,7 @@ const mockNGOs = [
     registrationNumber: 'REG-00000', 
     contactPerson: 'Unknown', 
     email: 'scam@fakengo.com', 
-    phone: '0000000000',
+    phone: '+91 0000000000',
     logo: 'https://ui-avatars.com/api/?name=Fraudulent+NGO&background=DC2626&color=fff&size=256&bold=true&format=png',
     about: 'Fake registration attempting double-billing and scamming on social causes.',
     status: 'Rejected',
@@ -429,9 +429,34 @@ const mockDonors = [
 ];
 
 const adminId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c79');
+const socialAdminId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7a');
+const astroAdminId = new mongoose.Types.ObjectId('6671c22d1ce70b55582f0c7b');
 
 const mockAdmin = [
-  { _id: adminId, email: 'admin@astroadvyc.com', password: 'password123' }
+  { 
+    _id: adminId, 
+    email: 'admin@astroadvyc.com', 
+    password: 'password123',
+    name: 'Divine Master Admin',
+    role: 'superadmin',
+    platform: 'all'
+  },
+  { 
+    _id: socialAdminId, 
+    email: 'social.admin@divine.org', 
+    password: 'password123',
+    name: 'Social Welfare Admin',
+    role: 'social_admin',
+    platform: 'social'
+  },
+  { 
+    _id: astroAdminId, 
+    email: 'astro.admin@divine.org', 
+    password: 'password123',
+    name: 'Astro Learning Admin',
+    role: 'astro_admin',
+    platform: 'astro'
+  }
 ];
 
 const mockStudents = [

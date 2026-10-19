@@ -329,7 +329,33 @@ router.post('/login', async (req, res) => {
       });
     }
     if (email && password) {
-      const admin = await Admin.findOne({ email });
+      const cleanEmail = email.toLowerCase().trim();
+      let admin = await Admin.findOne({ email: cleanEmail });
+      if (!admin) {
+        admin = await Admin.findOne({ email: { $regex: new RegExp(`^${cleanEmail}$`, 'i') } });
+      }
+
+      // Auto-provision standard profiles if they don't exist yet in the database
+      if (!admin) {
+        if (cleanEmail === 'social.admin@divine.org' || cleanEmail === 'ngo.admin@divine.org') {
+          admin = await Admin.create({
+            email: cleanEmail,
+            password: 'password123',
+            name: 'Social Welfare Admin',
+            role: 'social_admin',
+            platform: 'social'
+          });
+        } else if (cleanEmail === 'astro.admin@divine.org' || cleanEmail === 'coaching.admin@divine.org') {
+          admin = await Admin.create({
+            email: cleanEmail,
+            password: 'password123',
+            name: 'Astro Learning Admin',
+            role: 'astro_admin',
+            platform: 'astro'
+          });
+        }
+      }
+
       if (admin) {
         const isPlainMatch = admin.password === password;
         let isHashMatch = false;
@@ -337,12 +363,29 @@ router.post('/login', async (req, res) => {
           isHashMatch = await bcrypt.compare(password, admin.password);
         }
         if (isPlainMatch || isHashMatch) {
-          const token = jwt.sign({ id: admin._id, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+          const adminRole = admin.role || (admin.platform === 'social' ? 'social_admin' : (admin.platform === 'astro' ? 'astro_admin' : 'superadmin'));
+          const adminPlatform = admin.platform || (adminRole === 'social_admin' ? 'social' : (adminRole === 'astro_admin' ? 'astro' : 'all'));
+          const adminName = admin.name || (adminRole === 'social_admin' ? 'Social Welfare Admin' : (adminRole === 'astro_admin' ? 'Astro Learning Admin' : 'Divine Master Admin'));
+
+          const token = jwt.sign({ 
+            id: admin._id, 
+            role: adminRole,
+            platform: adminPlatform,
+            email: admin.email,
+            name: adminName
+          }, JWT_SECRET, { expiresIn: '7d' });
+
           return res.json({
             status: true,
             message: 'Login successful',
             token,
-            data: { id: admin._id, email: admin.email, role: 'admin' }
+            data: { 
+              id: admin._id, 
+              email: admin.email, 
+              name: adminName,
+              role: adminRole,
+              platform: adminPlatform
+            }
           });
         }
       }
@@ -1021,7 +1064,27 @@ router.get('/me', authMiddleware, async (req, res) => {
     if (!req.user || (!req.user.id && !req.user._id)) {
       return res.status(401).json({ status: false, message: 'Authentication required' });
     }
-    const user = await User.findById(req.user.id || req.user._id);
+    const userId = req.user.id || req.user._id;
+    const isSpecialAdmin = ['admin', 'superadmin', 'social_admin', 'astro_admin'].includes(req.user.role) || req.user.platform;
+    if (isSpecialAdmin) {
+      const Admin = require('../models/Admin');
+      const adminDoc = await Admin.findById(userId);
+      if (adminDoc) {
+        return res.json({
+          status: true,
+          data: {
+            id: adminDoc._id,
+            _id: adminDoc._id,
+            email: adminDoc.email,
+            name: adminDoc.name || req.user.name || 'Admin',
+            role: adminDoc.role || req.user.role || 'superadmin',
+            platform: adminDoc.platform || req.user.platform || 'all'
+          }
+        });
+      }
+    }
+
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ status: false, message: 'User not found' });
 
     const userObj = user.toObject();
