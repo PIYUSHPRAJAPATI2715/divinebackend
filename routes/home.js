@@ -8,7 +8,8 @@ const Campaign = require('../models/Campaign');
 const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 const NewsMedia = require('../models/NewsMedia');
-const { resolveEntityPhoto } = require('../utils/avatar');
+const { resolveEntityPhoto, enrichEntityPhotos } = require('../utils/avatar');
+const { calculateNgoDynamicRating } = require('../utils/rating');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -416,16 +417,25 @@ const DanDonation = require('../models/DanDonation');
             status: c.status
           };
         })),
-        ngos: topNGOs.map(ngo => ({
-          id: ngo._id,
-          _id: ngo._id,
-          name: ngo.name || ngo.organizationName || 'NGO',
-          organizationName: ngo.organizationName || ngo.name || 'NGO',
-          logo: ngo.logo,
-          profilePhoto: ngo.logo,
-          rating: ngo.rating || 4.5,
-          impactStats: ngo.impactStats || '',
-          description: ngo.about || ''
+        ngos: await Promise.all(topNGOs.map(async ngo => {
+          const dynamicRating = await calculateNgoDynamicRating(ngo);
+          const photos = enrichEntityPhotos(ngo, 'ngo');
+          return {
+            id: ngo._id,
+            _id: ngo._id,
+            name: ngo.name || ngo.organizationName || 'NGO',
+            organizationName: ngo.organizationName || ngo.name || 'NGO',
+            rating: dynamicRating.rating,
+            ratingValue: dynamicRating.rating,
+            averageRating: dynamicRating.rating,
+            reviewsCount: dynamicRating.reviewsCount,
+            reviewCount: dynamicRating.reviewsCount,
+            totalReviews: dynamicRating.reviewsCount,
+            impactStats: ngo.impactStats || '',
+            description: ngo.about || '',
+            about: ngo.about || '',
+            ...photos
+          };
         })),
         pressAndMedia,
         pressMedia: pressAndMedia,

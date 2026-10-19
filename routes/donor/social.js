@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../../models/User');
 const NGO = require('../../models/NGO');
-const { resolveEntityPhoto } = require('../../utils/avatar');
+const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
+const { calculateNgoDynamicRating } = require('../../utils/rating');
 
 // Helper to get set of all IDs user is following
 function getUserFollowingIds(user) {
@@ -19,7 +20,7 @@ const handleSocialOverview = async (req, res) => {
     let me = null;
     if (req.user) {
       me = await User.findById(req.user._id || req.user.id)
-        .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress')
+        .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount about')
         .populate('followingUsers', 'name phone profilePhoto email role logo')
         .populate('followers', 'name phone profilePhoto email role logo');
     }
@@ -32,7 +33,7 @@ const handleSocialOverview = async (req, res) => {
       .limit(10);
     
     const topDonors = rawTopDonors.map(d => {
-      const photo = resolveEntityPhoto(d, 'user');
+      const photos = enrichEntityPhotos(d, 'user');
       return {
         _id: d._id,
         id: d._id,
@@ -40,15 +41,8 @@ const handleSocialOverview = async (req, res) => {
         phone: d.phone || '',
         email: d.email || '',
         walletBalance: d.walletBalance || 0,
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
-        isFollowing: followingSet.has(d._id.toString())
+        isFollowing: followingSet.has(d._id.toString()),
+        ...photos
       };
     });
 
@@ -82,91 +76,80 @@ const handleSocialOverview = async (req, res) => {
       .sort({ verifiedCampaignsCount: -1, rating: -1 })
       .limit(10);
 
-    const topNgos = rawTopNgos.map(n => {
-      const photo = resolveEntityPhoto(n, 'ngo');
+    const topNgos = await Promise.all(rawTopNgos.map(async (n) => {
+      const dynamicRating = await calculateNgoDynamicRating(n);
+      const photos = enrichEntityPhotos(n, 'ngo');
       return {
         _id: n._id,
         id: n._id,
         name: n.name || n.organizationName || 'NGO',
         organizationName: n.organizationName || n.name || 'NGO',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
         contactPerson: n.contactPerson || '',
         phone: n.phone || '',
         about: n.about || '',
-        rating: n.rating || 4.5,
+        rating: dynamicRating.rating,
+        ratingValue: dynamicRating.rating,
+        averageRating: dynamicRating.rating,
+        reviewsCount: dynamicRating.reviewsCount,
+        reviewCount: dynamicRating.reviewsCount,
+        totalReviews: dynamicRating.reviewsCount,
         verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
-        isFollowing: followingSet.has(n._id.toString())
+        isFollowing: followingSet.has(n._id.toString()),
+        ...photos
       };
-    });
+    }));
 
     const followersList = ((me && me.followers) || []).map(f => {
-      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
       return {
         _id: f._id,
         id: f._id,
         name: f.name || 'Anonymous User',
         phone: f.phone || '',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
         email: f.email || '',
         role: f.role || 'donor',
         isFollower: true,
-        isFollowing: followingSet.has(f._id.toString())
+        isFollowing: followingSet.has(f._id.toString()),
+        ...photos
       };
     });
 
-    const followingNgosList = ((me && me.followingNgos) || []).filter(Boolean).map(n => {
-      const photo = resolveEntityPhoto(n, 'ngo');
+    const followingNgosList = await Promise.all(((me && me.followingNgos) || []).filter(Boolean).map(async (n) => {
+      const dynamicRating = await calculateNgoDynamicRating(n);
+      const photos = enrichEntityPhotos(n, 'ngo');
       return {
         _id: n._id,
         id: n._id,
         name: n.name || n.organizationName || 'NGO',
         organizationName: n.organizationName || n.name || 'NGO',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
         contactPerson: n.contactPerson || '',
         phone: n.phone || '',
+        about: n.about || '',
+        rating: dynamicRating.rating,
+        ratingValue: dynamicRating.rating,
+        averageRating: dynamicRating.rating,
+        reviewsCount: dynamicRating.reviewsCount,
+        reviewCount: dynamicRating.reviewsCount,
+        totalReviews: dynamicRating.reviewsCount,
+        verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
         type: 'ngo',
-        isFollowing: true
+        isFollowing: true,
+        ...photos
       };
-    });
+    }));
 
     const followingUsersList = ((me && me.followingUsers) || []).filter(Boolean).map(u => {
-      const photo = resolveEntityPhoto(u, 'user');
+      const photos = enrichEntityPhotos(u, 'user');
       return {
         _id: u._id,
         id: u._id,
         name: u.name || 'User',
         phone: u.phone || '',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
+        email: u.email || '',
+        role: u.role || 'donor',
         type: 'user',
-        isFollowing: true
+        isFollowing: true,
+        ...photos
       };
     });
 
@@ -200,24 +183,17 @@ const handleFollowers = async (req, res) => {
     const followingSet = getUserFollowingIds(me);
 
     const followersList = ((me && me.followers) || []).filter(Boolean).map(f => {
-      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
       return {
         _id: f._id,
         id: f._id,
         name: f.name || 'Anonymous User',
         phone: f.phone || '',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
         email: f.email || '',
         role: f.role || 'donor',
         isFollower: true,
-        isFollowing: followingSet.has(f._id.toString())
+        isFollowing: followingSet.has(f._id.toString()),
+        ...photos
       };
     });
 
@@ -242,56 +218,52 @@ const handleFollowing = async (req, res) => {
     let me = null;
     if (req.user && (req.user._id || req.user.id)) {
       me = await User.findById(req.user._id || req.user.id)
-        .populate('followingNgos', 'name organizationName logo contactPerson phone registeredAddress rating verifiedCampaignsCount')
+        .populate('followingNgos', 'name organizationName logo contactPerson phone email registeredAddress about rating verifiedCampaignsCount')
         .populate('followingUsers', 'name phone profilePhoto email role logo');
     }
 
-    const followingNgosList = ((me && me.followingNgos) || [])
+    const followingNgosList = await Promise.all(((me && me.followingNgos) || [])
       .filter(Boolean)
-      .map(n => {
-        const photo = resolveEntityPhoto(n, 'ngo');
+      .map(async (n) => {
+        const dynamicRating = await calculateNgoDynamicRating(n);
+        const photos = enrichEntityPhotos(n, 'ngo');
         return {
           _id: n._id,
           id: n._id,
           name: n.name || n.organizationName || 'NGO',
           organizationName: n.organizationName || n.name || 'NGO',
-          logo: photo,
-          profilePhoto: photo,
-          profileImage: photo,
-          imageUrl: photo,
-          image: photo,
-          avatar: photo,
-          photo: photo,
-          userImage: photo,
           contactPerson: n.contactPerson || '',
           phone: n.phone || '',
-          rating: n.rating || 4.5,
+          email: n.email || '',
+          registeredAddress: n.registeredAddress || '',
+          about: n.about || '',
+          rating: dynamicRating.rating,
+          ratingValue: dynamicRating.rating,
+          averageRating: dynamicRating.rating,
+          reviewsCount: dynamicRating.reviewsCount,
+          reviewCount: dynamicRating.reviewsCount,
+          totalReviews: dynamicRating.reviewsCount,
+          verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
           type: 'ngo',
-          isFollowing: true
+          isFollowing: true,
+          ...photos
         };
-      });
+      }));
 
     const followingUsersList = ((me && me.followingUsers) || [])
       .filter(Boolean)
       .map(u => {
-        const photo = resolveEntityPhoto(u, 'user');
+        const photos = enrichEntityPhotos(u, 'user');
         return {
           _id: u._id,
           id: u._id,
           name: u.name || 'User',
           phone: u.phone || '',
-          logo: photo,
-          profilePhoto: photo,
-          profileImage: photo,
-          imageUrl: photo,
-          image: photo,
-          avatar: photo,
-          photo: photo,
-          userImage: photo,
           email: u.email || '',
           role: u.role || 'donor',
           type: 'user',
-          isFollowing: true
+          isFollowing: true,
+          ...photos
         };
       });
 
@@ -356,45 +328,42 @@ const handleDiscover = async (req, res) => {
     if (me && me.email && me.email.trim()) discoverNgoQuery.email = { $ne: me.email.trim() };
 
     const ngos = await NGO.find(discoverNgoQuery).sort({ verifiedCampaignsCount: -1, rating: -1 });
-    const formattedNgos = ngos.map(n => {
-      const photo = resolveEntityPhoto(n, 'ngo');
+    const formattedNgos = await Promise.all(ngos.map(async (n) => {
+      const dynamicRating = await calculateNgoDynamicRating(n);
+      const photos = enrichEntityPhotos(n, 'ngo');
       return {
         _id: n._id,
         id: n._id,
         name: n.name || n.organizationName,
         organizationName: n.organizationName || n.name,
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
-        rating: n.rating || 4.5,
+        contactPerson: n.contactPerson || '',
+        phone: n.phone || '',
+        about: n.about || '',
+        rating: dynamicRating.rating,
+        ratingValue: dynamicRating.rating,
+        averageRating: dynamicRating.rating,
+        reviewsCount: dynamicRating.reviewsCount,
+        reviewCount: dynamicRating.reviewsCount,
+        totalReviews: dynamicRating.reviewsCount,
+        verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
         type: 'ngo',
-        isFollowing: followingSet.has(n._id.toString())
+        isFollowing: followingSet.has(n._id.toString()),
+        ...photos
       };
-    });
+    }));
 
     const users = await User.find({ role: 'donor', _id: { $ne: me?._id } }).limit(20);
     const formattedUsers = users.map(u => {
-      const photo = resolveEntityPhoto(u, 'user');
+      const photos = enrichEntityPhotos(u, 'user');
       return {
         _id: u._id,
         id: u._id,
         name: u.name || 'User',
         phone: u.phone || '',
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo,
+        email: u.email || '',
         type: 'user',
-        isFollowing: followingSet.has(u._id.toString())
+        isFollowing: followingSet.has(u._id.toString()),
+        ...photos
       };
     });
 

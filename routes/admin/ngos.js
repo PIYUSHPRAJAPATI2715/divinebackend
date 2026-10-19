@@ -3,26 +3,13 @@ const router = express.Router();
 const NGO = require('../../models/NGO');
 const User = require('../../models/User');
 const Review = require('../../models/Review');
+const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
+const { calculateNgoDynamicRating } = require('../../utils/rating');
 
 // Helper to enrich NGO object with reviews, impact, followersCount, years, rating
 const enrichNGOData = async (ngo) => {
-  let reviews = await Review.find({
-    $or: [
-      { targetName: ngo.name },
-      { type: 'NGO' }
-    ],
-    status: 'Approved'
-  }).sort({ createdAt: -1 });
-
-  if (reviews.length === 0) {
-    reviews = await Review.find({ status: 'Approved' }).limit(5);
-  }
-
-  let computedRating = ngo.rating || 4.5;
-  if (reviews.length > 0) {
-    const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-    computedRating = Math.round(avg * 10) / 10;
-  }
+  const dynamicRatingData = await calculateNgoDynamicRating(ngo);
+  const reviews = dynamicRatingData.reviews || [];
 
   const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
   const followersCount = followersList.length;
@@ -42,6 +29,7 @@ const enrichNGOData = async (ngo) => {
   }));
 
   const ngoObj = ngo.toObject ? ngo.toObject() : ngo;
+  const photos = enrichEntityPhotos(ngoObj, 'ngo');
 
   let userPhone = ngoObj.phone || ngoObj.mobileNumber || ngoObj.userPhone || ngoObj.phoneNumber || '';
   if (!userPhone) {
@@ -70,8 +58,12 @@ const enrichNGOData = async (ngo) => {
     userPhone: userPhone,
     phoneNumber: userPhone,
     mobile: userPhone,
-    rating: computedRating,
-    reviewCount: reviews.length,
+    rating: dynamicRatingData.rating,
+    ratingValue: dynamicRatingData.rating,
+    averageRating: dynamicRatingData.rating,
+    reviewCount: dynamicRatingData.reviewsCount,
+    reviewsCount: dynamicRatingData.reviewsCount,
+    totalReviews: dynamicRatingData.reviewsCount,
     reviews: formattedReviews,
     followersCount: followersCount,
     followers: followersList,
@@ -79,7 +71,8 @@ const enrichNGOData = async (ngo) => {
     impact: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
     impactStats: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
     years: ngoObj.years || '5 Years',
-    verified: ngoObj.status === 'Verified' || true
+    verified: ngoObj.status === 'Verified' || true,
+    ...photos
   };
 };
 

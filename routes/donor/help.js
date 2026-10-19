@@ -14,6 +14,8 @@ const Teacher = require('../../models/Teacher');
 const Course = require('../../models/Course');
 const path = require('path');
 const fs = require('fs');
+const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
+const { calculateNgoDynamicRating } = require('../../utils/rating');
 
 // Helper: Save Base64 file upload (Video or Image)
 const saveBase64Media = (base64Str, req, defaultPrefix = 'donor_review_vid') => {
@@ -129,7 +131,21 @@ router.get('/ngos', async (req, res) => {
       }
     }
 
-    const ngos = await NGO.find(query).sort({ createdAt: -1 });
+    const rawNgos = await NGO.find(query).sort({ createdAt: -1 });
+    const ngos = await Promise.all(rawNgos.map(async (n) => {
+      const dynamicRating = await calculateNgoDynamicRating(n);
+      const photos = enrichEntityPhotos(n, 'ngo');
+      return {
+        ...n.toObject(),
+        rating: dynamicRating.rating,
+        ratingValue: dynamicRating.rating,
+        averageRating: dynamicRating.rating,
+        reviewsCount: dynamicRating.reviewsCount,
+        reviewCount: dynamicRating.reviewsCount,
+        totalReviews: dynamicRating.reviewsCount,
+        ...photos
+      };
+    }));
     res.json({ status: true, data: ngos });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -201,9 +217,19 @@ router.get('/ngos/:id', async (req, res) => {
 
     // Attach to NGO object safely to prevent frontend breaking changes
     const ngoObj = ngo.toObject();
+    const dynamicRating = await calculateNgoDynamicRating(ngo);
+    const photos = enrichEntityPhotos(ngoObj, 'ngo', user);
+
+    ngoObj.rating = dynamicRating.rating;
+    ngoObj.ratingValue = dynamicRating.rating;
+    ngoObj.averageRating = dynamicRating.rating;
+    ngoObj.reviewsCount = dynamicRating.reviewsCount;
+    ngoObj.reviewCount = dynamicRating.reviewsCount;
+    ngoObj.totalReviews = dynamicRating.reviewsCount;
     ngoObj.reviews = reviews;
     ngoObj.verification = verification;
     ngoObj.transparency = transparency;
+    Object.assign(ngoObj, photos);
 
     res.json({ status: true, data: ngoObj });
   } catch (err) {

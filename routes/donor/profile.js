@@ -3,7 +3,8 @@ const router = express.Router();
 const User = require('../../models/User');
 const Notification = require('../../models/Notification');
 const { buildPhoneFilter } = require('../../utils/phone');
-const { resolveEntityPhoto } = require('../../utils/avatar');
+const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
+const { calculateNgoDynamicRating } = require('../../utils/rating');
 
 // Utility to generate unique referral code
 const generateReferralCode = (name) => {
@@ -62,48 +63,34 @@ router.get('/profile', async (req, res) => {
     const phone = user.phone || '';
     const userPhoto = resolveEntityPhoto(user, user.role === 'ngo' ? 'ngo' : 'user');
 
-    const formattedFollowingNgos = (userObj.followingNgos || []).filter(Boolean).map(n => {
-      const photo = resolveEntityPhoto(n, 'ngo');
+    const formattedFollowingNgos = await Promise.all((userObj.followingNgos || []).filter(Boolean).map(async (n) => {
+      const dynamicRating = await calculateNgoDynamicRating(n);
+      const photos = enrichEntityPhotos(n, 'ngo');
       return {
         ...n,
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo
+        rating: dynamicRating.rating,
+        ratingValue: dynamicRating.rating,
+        averageRating: dynamicRating.rating,
+        reviewsCount: dynamicRating.reviewsCount,
+        reviewCount: dynamicRating.reviewsCount,
+        totalReviews: dynamicRating.reviewsCount,
+        ...photos
       };
-    });
+    }));
 
     const formattedFollowingUsers = (userObj.followingUsers || []).filter(Boolean).map(u => {
-      const photo = resolveEntityPhoto(u, 'user');
+      const photos = enrichEntityPhotos(u, 'user');
       return {
         ...u,
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo
+        ...photos
       };
     });
 
     const formattedFollowers = (userObj.followers || []).filter(Boolean).map(f => {
-      const photo = resolveEntityPhoto(f, f.role === 'ngo' ? 'ngo' : 'user');
+      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
       return {
         ...f,
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo
+        ...photos
       };
     });
 
