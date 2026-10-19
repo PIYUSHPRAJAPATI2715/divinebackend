@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Category name is required' });
     }
     if (!icon && !imageUrl) {
-      return res.status(400).json({ status: false, message: 'Category Image or Icon is mandatory' });
+      return res.status(400).json({ status: false, message: 'Category Icon is required' });
     }
 
     const categoryId = `CAT-${Date.now().toString().slice(-4)}`;
@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
       categoryId,
       name,
       icon: icon || DEFAULT_CATEGORY_ICONS[name] || '🏷️',
-      imageUrl: imageUrl || DEFAULT_CATEGORY_IMAGES[name] || '',
+      imageUrl: imageUrl || '',
       description: description || ''
     });
 
