@@ -18,15 +18,14 @@ router.get('/', async (req, res) => {
       Donor.find({ status: { $ne: 'Deleted' } }).sort({ createdAt: -1 }),
       User.find({ 
         isDeleted: { $ne: true }, 
-        status: { $ne: 'Deleted' },
-        role: { $in: ['donor', undefined, null] }
+        status: { $ne: 'Deleted' }
       }).sort({ createdAt: -1 })
     ]);
 
     const matchedDonorIds = new Set();
     const result = [];
 
-    // 1. Process all app users with donor role
+    // 1. Process all app users
     for (const u of users) {
       const uEmail = (u.email || u.googleEmail || '').toLowerCase().trim();
       const uPhoneLast10 = cleanPhone(u.phone);
@@ -53,6 +52,16 @@ router.get('/', async (req, res) => {
           phone: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || '',
           mobileNumber: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || '',
           status: matchedDonor.status || u.status || 'Active',
+          role: u.role || 'donor',
+          gender: u.gender || null,
+          profilePhoto: u.profilePhoto || null,
+          verified: u.verified === true,
+          walletBalance: u.walletBalance || 0,
+          cashbackBalance: u.cashbackBalance || 0,
+          totalCoins: u.totalCoins || 0,
+          referralCode: u.referralCode || '',
+          referredBy: u.referredBy || '',
+          organizationName: u.organizationName || '',
           totalDonated: matchedDonor.totalDonated || `₹${(u.walletBalance || 0).toLocaleString()}`,
           campaignsSupported: matchedDonor.campaignsSupported || 0,
           donationHistory: matchedDonor.donationHistory || [],
@@ -66,11 +75,21 @@ router.get('/', async (req, res) => {
           _id: u._id,
           userId: u._id,
           donorId: fallbackDonorId,
-          name: u.name || (phone ? `User ${phone.slice(-4)}` : 'Divine Donor'),
+          name: u.name || (phone ? `User ${phone.slice(-4)}` : 'Divine User'),
           email: uEmail,
           phone: phone,
           mobileNumber: phone,
           status: u.status || 'Active',
+          role: u.role || 'donor',
+          gender: u.gender || null,
+          profilePhoto: u.profilePhoto || null,
+          verified: u.verified === true,
+          walletBalance: u.walletBalance || 0,
+          cashbackBalance: u.cashbackBalance || 0,
+          totalCoins: u.totalCoins || 0,
+          referralCode: u.referralCode || '',
+          referredBy: u.referredBy || '',
+          organizationName: u.organizationName || '',
           totalDonated: `₹${(u.walletBalance || 0).toLocaleString()}`,
           campaignsSupported: 0,
           donationHistory: [],
@@ -123,21 +142,42 @@ router.get('/:id', async (req, res) => {
         ...donor.toObject(),
         userId: u?._id,
         phone: u?.phone || donor.phone || donor.mobileNumber || '',
-        mobileNumber: u?.phone || donor.phone || donor.mobileNumber || ''
+        mobileNumber: u?.phone || donor.phone || donor.mobileNumber || '',
+        role: u?.role || 'donor',
+        gender: u?.gender || null,
+        profilePhoto: u?.profilePhoto || null,
+        verified: u?.verified === true,
+        walletBalance: u?.walletBalance || 0,
+        cashbackBalance: u?.cashbackBalance || 0,
+        totalCoins: u?.totalCoins || 0,
+        referralCode: u?.referralCode || '',
+        referredBy: u?.referredBy || '',
+        organizationName: u?.organizationName || ''
       });
     }
 
     const user = await User.findById(id);
     if (user && !user.isDeleted && user.status !== 'Deleted') {
+      const phone = user.phone || '';
       return res.json({
         _id: user._id,
         userId: user._id,
         donorId: `DNR-${user._id.toString().slice(-4).toUpperCase()}`,
-        name: user.name || 'Divine Donor',
+        name: user.name || (phone ? `User ${phone.slice(-4)}` : 'Divine User'),
         email: user.email || user.googleEmail || '',
-        phone: user.phone || '',
-        mobileNumber: user.phone || '',
+        phone: phone,
+        mobileNumber: phone,
         status: user.status || 'Active',
+        role: user.role || 'donor',
+        gender: user.gender || null,
+        profilePhoto: user.profilePhoto || null,
+        verified: user.verified === true,
+        walletBalance: user.walletBalance || 0,
+        cashbackBalance: user.cashbackBalance || 0,
+        totalCoins: user.totalCoins || 0,
+        referralCode: user.referralCode || '',
+        referredBy: user.referredBy || '',
+        organizationName: user.organizationName || '',
         totalDonated: `₹${(user.walletBalance || 0).toLocaleString()}`,
         campaignsSupported: 0,
         donationHistory: [],
