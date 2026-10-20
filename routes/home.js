@@ -63,8 +63,14 @@ router.get('/', optionalAuth, async (req, res) => {
     // 2. Fetch categories
     const categories = await CampaignCategory.find().sort({ name: 1 });
 
-    // 3. Fetch active banners (filter placement = 'Home' and status = 'Active')
-    const banners = await Banner.find({ placement: 'Home', status: 'Active' });
+    // 3. Fetch active banners (filter placement/location = 'home_top' or 'Home' and status = 'Active')
+    const banners = await Banner.find({
+      $or: [
+        { placement: { $in: ['Home', 'home', 'home_top'] } },
+        { location: { $in: ['home_top', 'home', 'Home'] } }
+      ],
+      status: 'Active'
+    });
 
     // 4. Fetch ongoing active unexpired campaigns (status = 'Live', active, verified, unexpired)
     const campaigns = await Campaign.find(getActiveCampaignsQuery()).sort({ createdAt: -1 });
