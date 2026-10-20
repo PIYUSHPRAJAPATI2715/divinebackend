@@ -7,7 +7,7 @@ const donorSchema = new mongoose.Schema({
   phone: { type: String, default: '' },
   totalDonated: { type: String, required: true }, // e.g. "₹45,000"
   campaignsSupported: { type: Number, required: true },
-  status: { type: String, enum: ['Active', 'Suspended'], default: 'Active' },
+  status: { type: String, enum: ['Active', 'Pending', 'Suspended', 'Deleted'], default: 'Active' },
   donationHistory: [
     {
       campaignTitle: { type: String },

@@ -25,8 +25,29 @@ const userSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Active', 'Suspended', 'Deleted'],
+    enum: ['Active', 'Pending', 'Verified', 'Approved', 'Rejected', 'Suspended', 'Deleted'],
     default: 'Active'
+  },
+  verificationStatus: {
+    type: String,
+    enum: ['Pending', 'Verified', 'Approved', 'Rejected'],
+    default: 'Pending'
+  },
+  organizationName: {
+    type: String,
+    default: ""
+  },
+  registeredAddress: {
+    type: String,
+    default: ""
+  },
+  authorizedPerson: {
+    type: String,
+    default: ""
+  },
+  designation: {
+    type: String,
+    default: ""
   },
   isDeleted: {
     type: Boolean,

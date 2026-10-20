@@ -11,7 +11,7 @@ const studentSchema = new mongoose.Schema({
   scholarshipStatus: { type: String, enum: ['None', 'Applied', 'Approved', 'Rejected'], default: 'None' },
   scholarshipAmount: { type: String, default: '₹0' },
   referredBy: { type: String, default: '' },
-  status: { type: String, enum: ['Active', 'Suspended'], default: 'Active' },
+  status: { type: String, enum: ['Active', 'Pending', 'Suspended', 'Deleted'], default: 'Active' },
   attendanceRate: { type: Number, default: 100 }, // Attendance percentage
   certificatesEarned: [{ type: String }], // Array of Certificate URLs
   assignmentsSubmitted: [

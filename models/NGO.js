@@ -25,7 +25,7 @@ const ngoSchema = new mongoose.Schema({
   isRegisteredCompany: { type: String, default: '' },
 
   ngoType: { type: String, enum: ['Individual', 'Organization'], default: 'Organization' },
-  status: { type: String, enum: ['Pending', 'Verified', 'Rejected'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Verified', 'Approved', 'Rejected'], default: 'Pending' },
   rejectionReason: { type: String, default: "" },
   rejectedAt: { type: Date, default: null },
   resubmittedAt: { type: Date, default: null },

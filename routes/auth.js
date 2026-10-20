@@ -1697,10 +1697,14 @@ const registerHandler = async (req, res) => {
       }
       user.name = organizationName;
       user.organizationName = organizationName;
+      user.registeredAddress = registeredAddress || '';
+      user.authorizedPerson = authorizedPerson || '';
+      user.designation = designation || '';
       user.gender = gender || null;
       user.profilePhoto = profilePhoto || null;
       user.verified = false;
       user.status = 'Pending';
+      user.verificationStatus = 'Pending';
     } else if (user.role === 'teacher') {
       const { name, expertise, experience, gender, profilePhoto } = req.body;
       if (!name || !expertise || !experience) {
