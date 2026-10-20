@@ -118,6 +118,9 @@ router.get('/profile', async (req, res) => {
 
     const ngoPhoto = resolveEntityPhoto(ngoObj, 'ngo');
 
+    const isVerified = (ngoObj.status === 'Verified' || userObj.verified === true);
+    const isRejected = (ngoObj.status === 'Rejected' || userObj.status === 'Rejected');
+
     const enrichedProfile = {
       ...userObj,
       ...ngoObj,
@@ -125,6 +128,13 @@ router.get('/profile', async (req, res) => {
       name: ngoObj.name || userObj.name || 'NGO',
       organizationName: ngoObj.name || userObj.organizationName || userObj.name || '',
       registeredAddress: ngoObj.registeredAddress || userObj.registeredAddress || '',
+      status: ngoObj.status || (isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending')),
+      verificationStatus: ngoObj.status || (isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending')),
+      rejectionReason: ngoObj.rejectionReason || userObj.rejectionReason || '',
+      rejectedAt: ngoObj.rejectedAt || null,
+      resubmittedAt: ngoObj.resubmittedAt || null,
+      canResubmit: isRejected,
+      verified: isVerified,
       logo: ngoPhoto,
       profilePhoto: ngoPhoto,
       profileImage: ngoPhoto,
@@ -143,12 +153,13 @@ router.get('/profile', async (req, res) => {
       followingCount: 0,
       impact: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
       impactStats: ngoObj.impactStats || userObj.impactStats || 'Grassroots community empowerment and emergency relief.',
-      verified: true,
       pushNotification: user ? user.pushNotification !== false : true,
       emailNotification: user ? user.emailNotification !== false : true,
       smsNotification: user ? user.smsNotification !== false : true,
       user: {
         ...userObj,
+        status: ngoObj.status || (isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending')),
+        rejectionReason: ngoObj.rejectionReason || userObj.rejectionReason || '',
         pushNotification: user ? user.pushNotification !== false : true,
         emailNotification: user ? user.emailNotification !== false : true,
         smsNotification: user ? user.smsNotification !== false : true
@@ -176,6 +187,7 @@ router.put('/profile', async (req, res) => {
       'name', 'legalName', 'logo', 'registrationNumber', 'contactPerson', 'registeredAddress',
       'addressCertificate', 'designation', 'email', 'phone', 'about', 'briefProfile', 'years', 'ourMission',
       'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany', 'ngoType', 'status',
+      'rejectionReason', 'rejectedAt', 'resubmittedAt',
       'moaAoaDocs', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
       'has12A', 'registration12A', 'certificate12A', 'has80G', 'registration80G', 'certificate80G',
       'hasDarpan', 'darpanNumber', 'darpanCertificate', 'hasCSR1', 'csr1Number', 'csr1Certificate',
@@ -192,6 +204,15 @@ router.put('/profile', async (req, res) => {
         ngo[field] = req.body[field];
       }
     });
+
+    if (req.body.resubmit === true || ngo.status === 'Rejected') {
+      ngo.status = 'Pending';
+      ngo.resubmittedAt = new Date();
+      if (user) {
+        user.status = 'Pending';
+        user.verified = false;
+      }
+    }
 
     await ngo.save();
 
@@ -210,15 +231,70 @@ router.put('/profile', async (req, res) => {
 
     res.json({
       status: true,
-      message: 'Organization profile updated successfully',
+      message: (req.body.resubmit === true || ngo.status === 'Pending')
+        ? 'Profile updated and resubmitted for verification successfully!'
+        : 'Organization profile updated successfully',
       ngo,
       user: updatedUserObj,
       data: {
         ...ngo.toObject(),
         ...updatedUserObj,
+        canResubmit: ngo.status === 'Rejected',
         pushNotification: user ? user.pushNotification !== false : true,
         emailNotification: user ? user.emailNotification !== false : true,
         smsNotification: user ? user.smsNotification !== false : true
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// Explicit Resubmit Endpoint
+router.post('/resubmit', async (req, res) => {
+  try {
+    const ngo = await getOrCreateNGOProfile(req);
+    const user = await User.findById(req.user.id || req.user._id);
+
+    const allowedFields = [
+      'name', 'legalName', 'logo', 'registrationNumber', 'contactPerson', 'registeredAddress',
+      'addressCertificate', 'designation', 'email', 'phone', 'about', 'briefProfile', 'years', 'ourMission',
+      'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany', 'ngoType',
+      'moaAoaDocs', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
+      'has12A', 'registration12A', 'certificate12A', 'has80G', 'registration80G', 'certificate80G',
+      'hasDarpan', 'darpanNumber', 'darpanCertificate', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+      'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl',
+      'bankAccountHolder', 'bankName', 'bankBranch', 'bankAccountNumber', 'bankIFSC', 'cancelledChequeDoc',
+      'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
+      'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
+      'purposeOfFundraising', 'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas',
+      'fundingPreferences', 'csrOfficerDetails', 'awardsRecognitions', 'declarations'
+    ];
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        ngo[field] = req.body[field];
+      }
+    });
+
+    ngo.status = 'Pending';
+    ngo.resubmittedAt = new Date();
+    await ngo.save();
+
+    if (user) {
+      user.status = 'Pending';
+      user.verified = false;
+      await user.save();
+    }
+
+    res.json({
+      status: true,
+      message: 'Profile resubmitted for verification successfully. Administrator will review your updated details.',
+      data: {
+        ...ngo.toObject(),
+        status: 'Pending',
+        verificationStatus: 'Pending',
+        canResubmit: false
       }
     });
   } catch (err) {

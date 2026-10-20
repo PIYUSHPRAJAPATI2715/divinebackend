@@ -8,10 +8,67 @@ const NGO = require('../models/NGO');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const Donor = require('../models/Donor');
+const Referral = require('../models/Referral');
 const authMiddleware = require('../middleware/auth');
 const { normalizePhone, getPhoneVariants, buildPhoneFilter, findUserByPhone } = require('../utils/phone');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
+
+const generateReferralCode = (name = 'USER') => {
+  const clean = (name || 'DIVINE').replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) || 'DIVN';
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `${clean}${rand}`;
+};
+
+const processReferralLink = async (user, inputReferralCode) => {
+  if (!inputReferralCode || typeof inputReferralCode !== 'string') return;
+  const code = inputReferralCode.trim().toUpperCase();
+  if (!code || user.referredBy) return;
+  if (user.referralCode && user.referralCode.toUpperCase() === code) return;
+
+  try {
+    const referrer = await User.findOne({
+      referralCode: { $regex: new RegExp(`^${code}$`, 'i') },
+      _id: { $ne: user._id }
+    });
+
+    if (referrer) {
+      user.referredBy = referrer.referralCode;
+      const existingRef = await Referral.findOne({
+        referrerName: referrer.name || referrer.phone,
+        referredUserName: user.name || user.phone
+      });
+      if (!existingRef) {
+        const refEntry = new Referral({
+          referralId: `REF-${Date.now().toString().slice(-4)}`,
+          referrerName: referrer.name || referrer.phone,
+          referredUserName: user.name || user.phone || 'New User',
+          rewardAmount: 100,
+          status: 'Completed'
+        });
+        await refEntry.save();
+
+        referrer.walletBalance = (referrer.walletBalance || 0) + 100;
+        referrer.totalCoins = (referrer.totalCoins || 0) + 50;
+        await referrer.save();
+
+        user.walletBalance = (user.walletBalance || 0) + 50;
+
+        try {
+          const { createAndSendNotification } = require('../utils/notification');
+          await createAndSendNotification({
+            userId: referrer._id,
+            title: 'Referral Reward Received! 🎁',
+            body: `Congratulations! ${user.name || 'A friend'} joined using your referral code (${referrer.referralCode}). ₹100 has been credited to your wallet.`,
+            type: 'referral'
+          });
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.error('Error processing referral link:', err.message);
+  }
+};
 
 const constructFullUserData = async (user) => {
   if (!user) return null;
@@ -91,6 +148,14 @@ const constructFullUserData = async (user) => {
     ...userObj,
     ...extra,
     role: determinedRole,
+    status: extra.status || user.status || 'Active',
+    verificationStatus: extra.status || user.status || (isVer ? 'Verified' : 'Pending'),
+    rejectionReason: extra.rejectionReason || user.rejectionReason || '',
+    rejectedAt: extra.rejectedAt || null,
+    resubmittedAt: extra.resubmittedAt || null,
+    canResubmit: (extra.status === 'Rejected' || user.status === 'Rejected'),
+    referralCode: user.referralCode || '',
+    referredBy: user.referredBy || '',
     isProfileComplete,
     verified: isVer,
     walletBalance: user.walletBalance || 0,
@@ -185,9 +250,17 @@ router.post('/signup', async (req, res) => {
       ngo = await NGO.findOne(buildPhoneFilter(phone));
     }
 
+    const inputReferral = req.body.referralCode || req.body.referredBy;
+
     if (existingUser) {
       existingUser.otp = '1234';
       existingUser.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      if (!existingUser.referralCode) {
+        existingUser.referralCode = generateReferralCode(existingUser.name || 'USER');
+      }
+      if (inputReferral && !existingUser.referredBy) {
+        await processReferralLink(existingUser, inputReferral);
+      }
 
       const matchedNgo = await NGO.findOne({
         $or: [
@@ -213,6 +286,7 @@ router.post('/signup', async (req, res) => {
         isProfileComplete: !!fullData?.isProfileComplete,
         phone: existingUser.phone || phone,
         role: existingUser.role,
+        referralCode: existingUser.referralCode,
         otp: '1234'
       });
     }
@@ -220,22 +294,29 @@ router.post('/signup', async (req, res) => {
     const initialRole = ngo ? ((ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo') : 'donor';
     const initialComplete = !!ngo;
     const initialName = ngo ? ngo.name : '';
+    const myReferralCode = generateReferralCode(initialName || 'USER');
 
     const newUser = new User({
       phone,
       role: initialRole,
       name: initialName,
       isProfileComplete: initialComplete,
+      referralCode: myReferralCode,
       otp: '1234',
       otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
     });
     await newUser.save();
+    if (inputReferral) {
+      await processReferralLink(newUser, inputReferral);
+      await newUser.save();
+    }
     res.json({
       status: true,
       message: 'OTP sent successfully (Use static code 1234 to verify)',
       isProfileComplete: initialComplete,
       phone,
       role: initialRole,
+      referralCode: myReferralCode,
       otp: '1234'
     });
   } catch (err) {
@@ -462,6 +543,14 @@ router.post('/verify-otp', async (req, res) => {
         user.name = ngo.name;
       }
       user.organizationName = ngo.name;
+    }
+
+    const inputReferral = req.body.referralCode || req.body.referredBy;
+    if (!user.referralCode) {
+      user.referralCode = generateReferralCode(user.name || 'USER');
+    }
+    if (inputReferral && !user.referredBy) {
+      await processReferralLink(user, inputReferral);
     }
 
     await user.save();
@@ -1630,6 +1719,14 @@ const registerHandler = async (req, res) => {
       user.profilePhoto = profilePhoto || null;
       user.verified = true;
       user.status = 'Active';
+    }
+
+    const inputReferral = req.body.referralCode || req.body.referredBy;
+    if (!user.referralCode) {
+      user.referralCode = generateReferralCode(user.name || req.body.organizationName || 'USER');
+    }
+    if (inputReferral && !user.referredBy) {
+      await processReferralLink(user, inputReferral);
     }
 
     user.isProfileComplete = true;

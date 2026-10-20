@@ -123,6 +123,7 @@ const userSchema = new mongoose.Schema({
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   referralCode: { type: String, default: '' },
   referredBy: { type: String, default: '' },
+  rejectionReason: { type: String, default: '' },
   searchHistory: [{ type: String }],
   couponsClaimed: [{ type: String }],
 }, { timestamps: true });

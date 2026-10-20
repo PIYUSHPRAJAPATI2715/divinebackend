@@ -87,7 +87,11 @@ const enrichNGOData = async (ngo) => {
     impact: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
     impactStats: ngoObj.impactStats || 'Grassroots community empowerment and emergency relief.',
     years: ngoObj.years || '5 Years',
-    verified: ngoObj.status === 'Verified' || true,
+    status: ngoObj.status || 'Pending',
+    verified: ngoObj.status === 'Verified',
+    rejectionReason: ngoObj.rejectionReason || '',
+    rejectedAt: ngoObj.rejectedAt || null,
+    resubmittedAt: ngoObj.resubmittedAt || null,
     ...photos
   };
 };
@@ -215,15 +219,51 @@ router.post('/', async (req, res) => {
 // Update NGO
 router.put('/:id', async (req, res) => {
   try {
-    const ngo = await NGO.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    if (req.body.status === 'Rejected') {
+      updateData.rejectedAt = new Date();
+      if (req.body.rejectionReason) {
+        updateData.rejectionReason = req.body.rejectionReason;
+      }
+    } else if (req.body.status === 'Verified') {
+      updateData.rejectionReason = '';
+    }
+
+    const ngo = await NGO.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!ngo) return res.status(404).json({ status: false, message: 'NGO not found' });
 
     if (req.body.status) {
       const isVerified = req.body.status === 'Verified';
+      const userUpdate = {
+        verified: isVerified,
+        status: req.body.status === 'Verified' ? 'Active' : (req.body.status === 'Rejected' ? 'Rejected' : 'Pending')
+      };
+      if (req.body.status === 'Rejected' && req.body.rejectionReason) {
+        userUpdate.rejectionReason = req.body.rejectionReason;
+      } else if (req.body.status === 'Verified') {
+        userUpdate.rejectionReason = '';
+      }
+
       await User.findOneAndUpdate(
         { $or: [{ phone: ngo.phone }, { email: ngo.email }] },
-        { verified: isVerified }
+        userUpdate
       );
+
+      if (req.body.status === 'Rejected') {
+        try {
+          const { createAndSendNotification } = require('../../utils/notification');
+          const matchedUser = await User.findOne({ $or: [{ phone: ngo.phone }, { email: ngo.email }] });
+          if (matchedUser) {
+            await createAndSendNotification({
+              userId: matchedUser._id,
+              title: 'Organization Verification Update ⚠️',
+              body: `Your profile verification was rejected: ${req.body.rejectionReason || 'Please review your details and resubmit.'}`,
+              type: 'verification',
+              screen: 'profile'
+            });
+          }
+        } catch (notifErr) {}
+      }
     }
 
     const enriched = await enrichNGOData(ngo);
