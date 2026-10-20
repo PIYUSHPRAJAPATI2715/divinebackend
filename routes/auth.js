@@ -377,26 +377,44 @@ router.post('/login', async (req, res) => {
         await existingUser.save();
         const fullData = await constructFullUserData(existingUser);
         const userComplete = !!fullData?.isProfileComplete;
+        const verStatus = fullData?.verificationStatus || (existingUser.status === 'Verified' ? 'Verified' : (existingUser.status === 'Rejected' ? 'Rejected' : 'Pending'));
         return res.json({
           status: true,
           message: 'OTP sent successfully (Use static code 1234 to verify)',
           isUserExist: userComplete,
           isProfileComplete: userComplete,
+          verificationStatus: verStatus,
+          verified: !!fullData?.verified,
+          rejectionReason: fullData?.rejectionReason || existingUser.rejectionReason || '',
+          canResubmit: !!fullData?.canResubmit,
           phone: existingUser.phone || phone,
           role: existingUser.role,
-          otp: '1234'
+          otp: '1234',
+          data: {
+            isUserExist: userComplete,
+            isProfileComplete: userComplete,
+            verificationStatus: verStatus,
+            verified: !!fullData?.verified,
+            rejectionReason: fullData?.rejectionReason || existingUser.rejectionReason || '',
+            canResubmit: !!fullData?.canResubmit,
+            phone: existingUser.phone || phone,
+            role: existingUser.role
+          }
         });
       }
 
       const initialRole = ngo ? ((ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo') : 'donor';
       const initialComplete = !!ngo;
       const initialName = ngo ? ngo.name : '';
+      const newVerStatus = initialComplete ? (ngo?.status || 'Pending') : 'Pending';
 
       const newUser = new User({
         phone,
         role: initialRole,
         name: initialName,
         isProfileComplete: initialComplete,
+        status: newVerStatus,
+        verificationStatus: newVerStatus,
         otp: '1234',
         otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
       });
@@ -406,9 +424,23 @@ router.post('/login', async (req, res) => {
         message: 'OTP sent successfully (Use static code 1234 to verify)',
         isUserExist: initialComplete,
         isProfileComplete: initialComplete,
+        verificationStatus: newVerStatus,
+        verified: !!(ngo && (ngo.status === 'Verified' || ngo.verified)),
+        rejectionReason: ngo?.rejectionReason || '',
+        canResubmit: ngo?.status === 'Rejected',
         phone,
         role: initialRole,
-        otp: '1234'
+        otp: '1234',
+        data: {
+          isUserExist: initialComplete,
+          isProfileComplete: initialComplete,
+          verificationStatus: newVerStatus,
+          verified: !!(ngo && (ngo.status === 'Verified' || ngo.verified)),
+          rejectionReason: ngo?.rejectionReason || '',
+          canResubmit: ngo?.status === 'Rejected',
+          phone,
+          role: initialRole
+        }
       });
     }
     if (email && password) {
@@ -559,6 +591,10 @@ router.post('/verify-otp', async (req, res) => {
     const isComplete = !!(fullData?.isProfileComplete || user.isProfileComplete || ngo);
     const verifiedStatus = !!(fullData?.verified || user.verified || (ngo && (ngo.status === 'Verified' || ngo.verified)));
 
+    const currentVerStatus = fullData?.verificationStatus || (verifiedStatus ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
+    const currentRejectionReason = fullData?.rejectionReason || user.rejectionReason || (ngo ? ngo.rejectionReason : '') || '';
+    const canResubmitFlag = fullData?.canResubmit || (currentVerStatus === 'Rejected');
+
     res.json({
       status: true,
       success: true,
@@ -566,10 +602,16 @@ router.post('/verify-otp', async (req, res) => {
       token,
       isProfileComplete: isComplete,
       verified: verifiedStatus,
+      verificationStatus: currentVerStatus,
+      rejectionReason: currentRejectionReason,
+      canResubmit: canResubmitFlag,
       data: {
         token,
         isProfileComplete: isComplete,
         verified: verifiedStatus,
+        verificationStatus: currentVerStatus,
+        rejectionReason: currentRejectionReason,
+        canResubmit: canResubmitFlag,
         ...fullData,
         role: user.role,
         isProfileComplete: isComplete
@@ -687,11 +729,18 @@ router.post('/google', async (req, res) => {
     const realVerified = !!fullData?.verified;
     const isComplete = !!fullData?.isProfileComplete;
 
+    const googleVerStatus = fullData?.verificationStatus || (realVerified ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
+    const googleRejectionReason = fullData?.rejectionReason || user.rejectionReason || '';
+    const googleCanResubmit = fullData?.canResubmit || (googleVerStatus === 'Rejected');
+
     return res.json({
       status: true,
       success: true,
       isProfileComplete: isComplete,
       verified: realVerified,
+      verificationStatus: googleVerStatus,
+      rejectionReason: googleRejectionReason,
+      canResubmit: googleCanResubmit,
       message: 'Login successful',
       token,
       role: user.role,
@@ -699,6 +748,9 @@ router.post('/google', async (req, res) => {
         token,
         isProfileComplete: isComplete,
         verified: realVerified,
+        verificationStatus: googleVerStatus,
+        rejectionReason: googleRejectionReason,
+        canResubmit: googleCanResubmit,
         role: user.role,
         user: {
           _id: user._id,
@@ -708,6 +760,9 @@ router.post('/google', async (req, res) => {
           role: user.role,
           isProfileComplete: isComplete,
           verified: realVerified,
+          verificationStatus: googleVerStatus,
+          rejectionReason: googleRejectionReason,
+          canResubmit: googleCanResubmit,
           ...fullData
         }
       }
@@ -857,11 +912,18 @@ router.post('/apple', async (req, res) => {
     const realVerified = !!fullData?.verified;
     const isComplete = !!fullData?.isProfileComplete;
 
+    const appleVerStatus = fullData?.verificationStatus || (realVerified ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
+    const appleRejectionReason = fullData?.rejectionReason || user.rejectionReason || '';
+    const appleCanResubmit = fullData?.canResubmit || (appleVerStatus === 'Rejected');
+
     return res.json({
       status: true,
       success: true,
       isProfileComplete: isComplete,
       verified: realVerified,
+      verificationStatus: appleVerStatus,
+      rejectionReason: appleRejectionReason,
+      canResubmit: appleCanResubmit,
       message: 'Login successful',
       token,
       role: user.role,
@@ -869,6 +931,9 @@ router.post('/apple', async (req, res) => {
         token,
         isProfileComplete: isComplete,
         verified: realVerified,
+        verificationStatus: appleVerStatus,
+        rejectionReason: appleRejectionReason,
+        canResubmit: appleCanResubmit,
         role: user.role,
         user: {
           _id: user._id,
@@ -878,6 +943,9 @@ router.post('/apple', async (req, res) => {
           role: user.role,
           isProfileComplete: isComplete,
           verified: realVerified,
+          verificationStatus: appleVerStatus,
+          rejectionReason: appleRejectionReason,
+          canResubmit: appleCanResubmit,
           ...fullData
         }
       }
@@ -1248,12 +1316,25 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
     }
 
+    const meFullData = await constructFullUserData(user);
+    const meVerStatus = meFullData?.verificationStatus || (user.status === 'Verified' ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
+    const meRejectionReason = meFullData?.rejectionReason || user.rejectionReason || enrichedExtra.rejectionReason || '';
+    const meCanResubmit = meFullData?.canResubmit || (meVerStatus === 'Rejected');
+
     res.json({
       status: true,
+      verified: !!meFullData?.verified,
+      verificationStatus: meVerStatus,
+      rejectionReason: meRejectionReason,
+      canResubmit: meCanResubmit,
       data: {
+        ...meFullData,
         ...userObj,
         ...enrichedExtra,
-        verified: !!user.verified
+        verified: !!meFullData?.verified,
+        verificationStatus: meVerStatus,
+        rejectionReason: meRejectionReason,
+        canResubmit: meCanResubmit
       }
     });
   } catch (err) {
@@ -1924,6 +2005,9 @@ const registerHandler = async (req, res) => {
       message: 'Registration completed successfully',
       isProfileComplete: !!fullData?.isProfileComplete,
       verified: !!fullData?.verified,
+      verificationStatus: fullData?.verificationStatus || (user.status === 'Verified' ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending')),
+      rejectionReason: fullData?.rejectionReason || user.rejectionReason || '',
+      canResubmit: !!fullData?.canResubmit,
       data: fullData
     });
 
