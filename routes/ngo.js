@@ -14,6 +14,13 @@ const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
+  if (!req.user) return null;
+
+  // Individual donors, students, and teachers must NEVER have an NGO profile created
+  if (['donor', 'student', 'teacher'].includes(req.user.role)) {
+    return null;
+  }
+
   // Try to find by phone, email, or organizationName
   const orConditions = [];
   if (req.user.email) orConditions.push({ email: req.user.email });
@@ -25,6 +32,11 @@ const getOrCreateNGOProfile = async (req) => {
   let ngo = orConditions.length > 0 ? await NGO.findOne({ $or: orConditions }) : null;
 
   if (!ngo) {
+    // Only auto-create if user is registered with ngo or corporate role
+    if (req.user.role !== 'ngo' && req.user.role !== 'corporate') {
+      return null;
+    }
+
     // Dynamically create an NGO record if it doesn't exist
     const name = (req.user.organizationName && req.user.organizationName.trim() !== '')
       ? req.user.organizationName

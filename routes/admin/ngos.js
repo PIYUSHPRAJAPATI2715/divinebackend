@@ -95,7 +95,35 @@ const enrichNGOData = async (ngo) => {
 // Get all NGOs and Corporate signups
 router.get('/', async (req, res) => {
   try {
-    const ngos = await NGO.find({}).sort({ createdAt: -1 });
+    const rawNgos = await NGO.find({}).sort({ createdAt: -1 });
+
+    // Cross-check against Users collection to strictly exclude individual donors
+    const users = await User.find({ role: { $in: ['donor', 'student', 'teacher'] } }, 'phone email role');
+    const donorPhones = new Set(users.map(u => (u.phone || '').replace(/\D/g, '').slice(-10)).filter(Boolean));
+    const donorEmails = new Set(users.map(u => (u.email || '').toLowerCase().trim()).filter(Boolean));
+
+    const ngos = rawNgos.filter(n => {
+      // Exclude if marked as individual
+      if (n.ngoType === 'Individual' || (n.isRegisteredNonProfit === 'No' && n.isRegisteredCompany === 'No')) {
+        return false;
+      }
+      // Exclude if name is just a raw phone number
+      const cleanName = (n.name || '').trim();
+      if (/^(\+91\s*)?\d{10}$/.test(cleanName)) {
+        return false;
+      }
+      // Exclude if phone matches an individual donor
+      const cleanNPhone = (n.phone || '').replace(/\D/g, '').slice(-10);
+      if (cleanNPhone && donorPhones.has(cleanNPhone)) {
+        return false;
+      }
+      const cleanNEmail = (n.email || '').toLowerCase().trim();
+      if (cleanNEmail && cleanNEmail !== 'ngo@example.com' && donorEmails.has(cleanNEmail)) {
+        return false;
+      }
+      return true;
+    });
+
     const enriched = await Promise.all(ngos.map(n => enrichNGOData(n)));
     res.json({ status: true, data: enriched });
   } catch (err) {

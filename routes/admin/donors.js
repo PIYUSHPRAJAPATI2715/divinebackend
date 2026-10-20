@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Donor = require('../../models/Donor');
 const User = require('../../models/User');
+const NGO = require('../../models/NGO');
 const { buildPhoneFilter, normalizePhone } = require('../../utils/phone');
 
 // Helper to normalize phone numbers for comparison
@@ -11,15 +12,16 @@ const cleanPhone = (p) => {
   return digits.length >= 10 ? digits.slice(-10) : digits;
 };
 
-// Get all Donors & App Users (combines User collection with Donor collection, filters out deleted)
+// Get all Donors & App Users (combines User collection with Donor and NGO collection, filters out deleted)
 router.get('/', async (req, res) => {
   try {
-    const [donors, users] = await Promise.all([
+    const [donors, users, ngos] = await Promise.all([
       Donor.find({ status: { $ne: 'Deleted' } }).sort({ createdAt: -1 }),
       User.find({ 
         isDeleted: { $ne: true }, 
         status: { $ne: 'Deleted' }
-      }).sort({ createdAt: -1 })
+      }).sort({ createdAt: -1 }),
+      NGO.find({}).sort({ createdAt: -1 })
     ]);
 
     const matchedDonorIds = new Set();
@@ -40,6 +42,21 @@ router.get('/', async (req, res) => {
         return false;
       });
 
+      // Match against NGO collection for organization data
+      const matchedNgo = ngos.find(n => {
+        const nEmail = (n.email || '').toLowerCase().trim();
+        const nPhoneLast10 = cleanPhone(n.phone);
+        if (uEmail && nEmail && uEmail === nEmail) return true;
+        if (uPhoneLast10 && nPhoneLast10 && uPhoneLast10 === nPhoneLast10) return true;
+        return false;
+      });
+
+      const verificationStatus = matchedNgo ? (matchedNgo.status || 'Pending') : (u.verified ? 'Verified' : 'Pending');
+      const registrationNumber = matchedNgo?.registrationNumber || '';
+      const panNumber = matchedNgo?.panNumber || '';
+      const organizationType = matchedNgo?.organizationType || (u.role === 'corporate' ? 'Corporate' : (u.role === 'ngo' ? 'Non-Profit' : 'Individual'));
+      const address = matchedNgo?.registeredAddress || '';
+
       if (matchedDonor) {
         matchedDonorIds.add(matchedDonor._id.toString());
         const dObj = matchedDonor.toObject();
@@ -47,21 +64,26 @@ router.get('/', async (req, res) => {
           ...dObj,
           _id: matchedDonor._id, // Keep donor ID primary for backward-compat
           userId: u._id,
-          name: matchedDonor.name || u.name || 'Divine Donor',
+          name: matchedDonor.name || u.name || matchedNgo?.name || 'Divine Donor',
           email: matchedDonor.email || uEmail,
-          phone: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || '',
-          mobileNumber: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || '',
+          phone: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
+          mobileNumber: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
           status: matchedDonor.status || u.status || 'Active',
           role: u.role || 'donor',
           gender: u.gender || null,
-          profilePhoto: u.profilePhoto || null,
-          verified: u.verified === true,
+          profilePhoto: u.profilePhoto || matchedNgo?.logo || null,
+          verified: u.verified === true || verificationStatus === 'Verified',
+          verificationStatus,
+          registrationNumber,
+          panNumber,
+          organizationType,
+          address,
           walletBalance: u.walletBalance || 0,
           cashbackBalance: u.cashbackBalance || 0,
           totalCoins: u.totalCoins || 0,
           referralCode: u.referralCode || '',
           referredBy: u.referredBy || '',
-          organizationName: u.organizationName || '',
+          organizationName: u.organizationName || matchedNgo?.name || '',
           totalDonated: matchedDonor.totalDonated || `₹${(u.walletBalance || 0).toLocaleString()}`,
           campaignsSupported: matchedDonor.campaignsSupported || 0,
           donationHistory: matchedDonor.donationHistory || [],
@@ -70,26 +92,31 @@ router.get('/', async (req, res) => {
       } else {
         // App user without an explicit Donor record
         const fallbackDonorId = `DNR-${u._id.toString().slice(-4).toUpperCase()}`;
-        const phone = u.phone || '';
+        const phone = u.phone || matchedNgo?.phone || '';
         result.push({
           _id: u._id,
           userId: u._id,
           donorId: fallbackDonorId,
-          name: u.name || (phone ? `User ${phone.slice(-4)}` : 'Divine User'),
+          name: u.name || matchedNgo?.name || (phone ? `User ${phone.slice(-4)}` : 'Divine User'),
           email: uEmail,
           phone: phone,
           mobileNumber: phone,
           status: u.status || 'Active',
           role: u.role || 'donor',
           gender: u.gender || null,
-          profilePhoto: u.profilePhoto || null,
-          verified: u.verified === true,
+          profilePhoto: u.profilePhoto || matchedNgo?.logo || null,
+          verified: u.verified === true || verificationStatus === 'Verified',
+          verificationStatus,
+          registrationNumber,
+          panNumber,
+          organizationType,
+          address,
           walletBalance: u.walletBalance || 0,
           cashbackBalance: u.cashbackBalance || 0,
           totalCoins: u.totalCoins || 0,
           referralCode: u.referralCode || '',
           referredBy: u.referredBy || '',
-          organizationName: u.organizationName || '',
+          organizationName: u.organizationName || matchedNgo?.name || '',
           totalDonated: `₹${(u.walletBalance || 0).toLocaleString()}`,
           campaignsSupported: 0,
           donationHistory: [],
@@ -191,14 +218,106 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Add a new Donor
+// Add a new User / Donor
 router.post('/', async (req, res) => {
   try {
-    const newDonor = new Donor({ ...req.body, donorId: `DNR-${Date.now().toString().slice(-4)}` });
+    const {
+      name,
+      email,
+      phone,
+      mobileNumber,
+      role = 'donor',
+      gender,
+      city,
+      state,
+      panNumber,
+      registrationNumber,
+      organizationName,
+      status = 'Active',
+      verificationStatus = 'Pending',
+      totalDonated = '₹0',
+      campaignsSupported = 0
+    } = req.body;
+
+    const finalPhone = (phone || mobileNumber || '').trim();
+    const finalEmail = (email || '').toLowerCase().trim();
+
+    // 1. Create or update User record
+    let user = null;
+    if (finalPhone || finalEmail) {
+      user = await User.findOne({
+        $or: [
+          ...(finalPhone ? [buildPhoneFilter(finalPhone)] : []),
+          ...(finalEmail ? [{ email: finalEmail }] : [])
+        ]
+      });
+    }
+
+    const assignedRole = (role === 'ngo' || role === 'corporate') ? role : 'donor';
+
+    if (!user) {
+      user = new User({
+        name: name || organizationName || 'Divine User',
+        phone: finalPhone || undefined,
+        email: finalEmail || undefined,
+        role: assignedRole,
+        gender: gender || null,
+        status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active',
+        verified: verificationStatus === 'Verified',
+        organizationName: organizationName || (assignedRole !== 'donor' ? name : '')
+      });
+      await user.save().catch(err => console.log('User save warning:', err.message));
+    }
+
+    // 2. If NGO or Corporate, create NGO record if not existing
+    if (assignedRole === 'ngo' || assignedRole === 'corporate') {
+      const ngoExists = await NGO.findOne({
+        $or: [
+          ...(finalPhone ? [buildPhoneFilter(finalPhone)] : []),
+          ...(finalEmail ? [{ email: finalEmail }] : [])
+        ]
+      });
+      if (!ngoExists) {
+        const newNgo = new NGO({
+          ngoId: `NGO-${Date.now().toString().slice(-4)}`,
+          name: organizationName || name,
+          email: finalEmail || 'ngo@example.com',
+          phone: finalPhone,
+          registrationNumber: registrationNumber || 'REG-PENDING',
+          organizationType: assignedRole === 'corporate' ? 'Corporate' : 'Non-Profit',
+          status: verificationStatus || 'Pending',
+          contactPerson: name
+        });
+        await newNgo.save().catch(err => console.log('NGO save warning:', err.message));
+      }
+    }
+
+    // 3. Create Donor record
+    const donorId = `DNR-${Date.now().toString().slice(-4)}`;
+    const newDonor = new Donor({
+      donorId,
+      name: name || organizationName,
+      email: finalEmail || 'user@example.com',
+      phone: finalPhone,
+      totalDonated: totalDonated || '₹0',
+      campaignsSupported: campaignsSupported || 0,
+      status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active'
+    });
     const savedDonor = await newDonor.save();
-    res.status(201).json(savedDonor);
+
+    res.status(201).json({
+      status: true,
+      message: 'User created successfully',
+      data: {
+        ...savedDonor.toObject(),
+        userId: user?._id,
+        role: assignedRole,
+        gender,
+        verificationStatus
+      }
+    });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 });
 

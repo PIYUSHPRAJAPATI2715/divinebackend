@@ -28,23 +28,25 @@ const constructFullUserData = async (user) => {
     ngoOrConditions.push({ name: orgName });
   }
 
-  // Cross-check NGO if role is ngo/corporate, OR auto-check if role is donor/unspecified
-  if (ngoOrConditions.length > 0) {
-    ngo = await NGO.findOne({ $or: ngoOrConditions });
-  }
+  // Only lookup NGO if user role is explicitly ngo or corporate
+  if (user.role === 'ngo' || user.role === 'corporate') {
+    if (ngoOrConditions.length > 0) {
+      ngo = await NGO.findOne({ $or: ngoOrConditions });
+    }
 
-  if (ngo) {
-    extra = ngo.toObject();
-    const ngoRole = (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo';
-    if (user.role !== ngoRole || user.isProfileComplete !== true) {
-      user.role = ngoRole;
-      user.isProfileComplete = true;
-      if (!user.name || user.name === 'Google User' || user.name === 'Apple User' || user.name === '') {
-        user.name = ngo.name;
+    if (ngo) {
+      extra = ngo.toObject();
+      const ngoRole = (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo';
+      if (user.role !== ngoRole || user.isProfileComplete !== true) {
+        user.role = ngoRole;
+        user.isProfileComplete = true;
+        if (!user.name || user.name === 'Google User' || user.name === 'Apple User' || user.name === '') {
+          user.name = ngo.name;
+        }
+        user.organizationName = ngo.name;
+        if (!user.phone && ngo.phone) user.phone = ngo.phone;
+        await user.save().catch(() => {});
       }
-      user.organizationName = ngo.name;
-      if (!user.phone && ngo.phone) user.phone = ngo.phone;
-      await user.save().catch(() => {});
     }
   } else if (user.role === 'teacher') {
     const teacherOr = [];
