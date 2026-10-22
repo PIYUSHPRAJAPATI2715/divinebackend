@@ -25,6 +25,7 @@ router.get('/', async (req, res) => {
     ]);
 
     const matchedDonorIds = new Set();
+    const matchedNgoIds = new Set();
     const result = [];
 
     // 1. Process all app users
@@ -51,6 +52,10 @@ router.get('/', async (req, res) => {
         return false;
       });
 
+      if (matchedNgo) {
+        matchedNgoIds.add(matchedNgo._id.toString());
+      }
+
       const verificationStatus = matchedNgo ? (matchedNgo.status || 'Pending') : (u.verified ? 'Verified' : 'Pending');
       const registrationNumber = matchedNgo?.registrationNumber || '';
       const panNumber = matchedNgo?.panNumber || '';
@@ -69,7 +74,7 @@ router.get('/', async (req, res) => {
           phone: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
           mobileNumber: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
           status: matchedDonor.status || u.status || 'Active',
-          role: u.role || 'donor',
+          role: u.role || (matchedNgo?.organizationType === 'Corporate' ? 'corporate' : (matchedNgo ? 'ngo' : 'donor')),
           gender: u.gender || null,
           profilePhoto: u.profilePhoto || matchedNgo?.logo || null,
           verified: u.verified === true || verificationStatus === 'Verified',
@@ -102,7 +107,7 @@ router.get('/', async (req, res) => {
           phone: phone,
           mobileNumber: phone,
           status: u.status || 'Active',
-          role: u.role || 'donor',
+          role: u.role || (matchedNgo?.organizationType === 'Corporate' ? 'corporate' : (matchedNgo ? 'ngo' : 'donor')),
           gender: u.gender || null,
           profilePhoto: u.profilePhoto || matchedNgo?.logo || null,
           verified: u.verified === true || verificationStatus === 'Verified',
@@ -137,7 +142,40 @@ router.get('/', async (req, res) => {
         result.push({
           ...dObj,
           phone,
-          mobileNumber: phone
+          mobileNumber: phone,
+          role: dObj.role || 'donor'
+        });
+      }
+    }
+
+    // 3. Add remaining NGOs/Corporates from NGO collection that did not match a User record
+    for (const n of ngos) {
+      if (!matchedNgoIds.has(n._id.toString())) {
+        const nEmail = (n.email || '').toLowerCase().trim();
+        const nPhone = n.phone || '';
+        const isCorp = n.organizationType === 'Corporate' || n.organizationType === 'Company';
+        const role = isCorp ? 'corporate' : 'ngo';
+        result.push({
+          _id: n._id,
+          userId: n._id,
+          donorId: `${isCorp ? 'CRP' : 'NGO'}-${n._id.toString().slice(-4).toUpperCase()}`,
+          name: n.name || (isCorp ? 'Corporate Partner' : 'NGO Organization'),
+          email: nEmail,
+          phone: nPhone,
+          mobileNumber: nPhone,
+          status: (n.status === 'Suspended' || n.status === 'Inactive') ? 'Inactive' : 'Active',
+          role: role,
+          organizationType: isCorp ? 'Corporate' : 'Non-Profit',
+          organizationName: n.name,
+          verificationStatus: n.status === 'Verified' ? 'Verified' : (n.status === 'Rejected' ? 'Rejected' : 'Pending'),
+          verified: n.status === 'Verified',
+          registrationNumber: n.registrationNumber || '',
+          panNumber: n.panNumber || '',
+          address: n.registeredAddress || n.address || '',
+          totalDonated: '₹0',
+          campaignsSupported: 0,
+          donationHistory: [],
+          createdAt: n.createdAt || new Date()
         });
       }
     }
@@ -360,11 +398,28 @@ router.put('/:id', async (req, res) => {
       await user.save();
     }
 
+    let ngo = null;
     if (!donor && !user) {
-      return res.status(404).json({ message: 'Donor or User not found' });
+      ngo = await NGO.findById(id);
+      if (ngo) {
+        if (req.body.status) {
+          ngo.status = (req.body.status === 'Suspended' || req.body.status === 'Inactive') ? 'Suspended' : 'Verified';
+        }
+        if (req.body.verificationStatus) {
+          ngo.status = req.body.verificationStatus;
+        }
+        if (req.body.name) {
+          ngo.name = req.body.name;
+        }
+        await ngo.save();
+      }
     }
 
-    res.json(donor || user);
+    if (!donor && !user && !ngo) {
+      return res.status(404).json({ message: 'User record not found' });
+    }
+
+    res.json(donor || user || ngo);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
