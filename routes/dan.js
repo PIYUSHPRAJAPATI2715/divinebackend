@@ -71,12 +71,14 @@ const extractUser = async (req, res, next) => {
   next();
 };
 
+const isAdminRole = (role) => ['admin', 'superadmin', 'social_admin', 'astro_admin'].includes(role);
+
 // Required authentication check for management actions
 const requireNGOOrAdmin = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
   }
-  if (req.user.role !== 'admin' && req.user.role !== 'ngo') {
+  if (!isAdminRole(req.user.role) && req.user.role !== 'ngo') {
     return res.status(403).json({ status: false, message: 'Access denied: NGO or Admin role required' });
   }
   next();
@@ -86,7 +88,7 @@ const requireAdmin = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ status: false, message: 'Access denied. Authentication token required.' });
   }
-  if (req.user.role !== 'admin') {
+  if (!isAdminRole(req.user.role)) {
     return res.status(403).json({ status: false, message: 'Access denied: Admin role required' });
   }
   next();
@@ -94,7 +96,7 @@ const requireAdmin = async (req, res, next) => {
 
 // Helper function to check resource ownership for edit/delete operations
 const checkOwnership = async (req, resource) => {
-  if (req.user.role === 'admin') return true;
+  if (isAdminRole(req.user.role)) return true;
   if (req.user.role === 'ngo') {
     const ngo = await NGO.findOne({ $or: [{ phone: req.user.phone }, { email: req.user.email }] });
     if (ngo && resource.ngoId && resource.ngoId.toString() === ngo._id.toString()) {
