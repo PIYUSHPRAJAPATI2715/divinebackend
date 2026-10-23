@@ -62,11 +62,54 @@ router.get('/', async (req, res) => {
       const organizationType = matchedNgo?.organizationType || (u.role === 'corporate' ? 'Corporate' : (u.role === 'ngo' ? 'Non-Profit' : 'Individual'));
       const address = matchedNgo?.registeredAddress || '';
 
+      // Statutory documents & uploaded fields for NGO & Corporate profiles (Issue 11)
+      const ngoDocs = matchedNgo ? {
+        legalName: matchedNgo.legalName || matchedNgo.name || '',
+        contactPerson: matchedNgo.contactPerson || '',
+        designation: matchedNgo.designation || '',
+        websiteUrl: matchedNgo.websiteUrl || '',
+        about: matchedNgo.about || '',
+        panImage: matchedNgo.panImage || null,
+        tanNumber: matchedNgo.tanNumber || '',
+        tanImage: matchedNgo.tanImage || null,
+        gstNumber: matchedNgo.gstNumber || '',
+        gstDocument: matchedNgo.gstDocument || null,
+        has12A: matchedNgo.has12A || 'No',
+        registration12A: matchedNgo.registration12A || '',
+        certificate12A: matchedNgo.certificate12A || null,
+        has80G: matchedNgo.has80G || 'No',
+        registration80G: matchedNgo.registration80G || '',
+        certificate80G: matchedNgo.certificate80G || null,
+        hasDarpan: matchedNgo.hasDarpan || 'No',
+        darpanNumber: matchedNgo.darpanNumber || '',
+        darpanCertificate: matchedNgo.darpanCertificate || null,
+        hasCSR1: matchedNgo.hasCSR1 || 'No',
+        csr1Number: matchedNgo.csr1Number || '',
+        csr1Certificate: matchedNgo.csr1Certificate || null,
+        hasFCRA: matchedNgo.hasFCRA || 'No',
+        fcraNumber: matchedNgo.fcraNumber || '',
+        fcraCertificate: matchedNgo.fcraCertificate || null,
+        addressCertificate: matchedNgo.addressCertificate || null,
+        moaAoaDocs: matchedNgo.moaAoaDocs || [],
+        cancelledChequeDoc: matchedNgo.cancelledChequeDoc || null,
+        bankAccountHolder: matchedNgo.bankAccountHolder || '',
+        bankName: matchedNgo.bankName || '',
+        bankBranch: matchedNgo.bankBranch || '',
+        bankAccountNumber: matchedNgo.bankAccountNumber || '',
+        bankIFSC: matchedNgo.bankIFSC || '',
+        directorsKeyManagement: matchedNgo.directorsKeyManagement || [],
+        formFillerDetails: matchedNgo.formFillerDetails || null,
+        rejectionReason: matchedNgo.rejectionReason || '',
+        isRegisteredNonProfit: matchedNgo.isRegisteredNonProfit || '',
+        isRegisteredCompany: matchedNgo.isRegisteredCompany || ''
+      } : {};
+
       if (matchedDonor) {
         matchedDonorIds.add(matchedDonor._id.toString());
         const dObj = matchedDonor.toObject();
         result.push({
           ...dObj,
+          ...ngoDocs,
           _id: matchedDonor._id, // Keep donor ID primary for backward-compat
           userId: u._id,
           name: matchedDonor.name || u.name || matchedNgo?.name || 'Divine Donor',
@@ -80,7 +123,7 @@ router.get('/', async (req, res) => {
           verified: u.verified === true || verificationStatus === 'Verified',
           verificationStatus,
           registrationNumber,
-          panNumber,
+          panNumber: (u.role === 'ngo' || u.role === 'corporate' || matchedNgo) ? panNumber : '', // Issue 2: Don't show pan for individual donors
           organizationType,
           address,
           walletBalance: u.walletBalance || 0,
@@ -102,6 +145,7 @@ router.get('/', async (req, res) => {
           _id: u._id,
           userId: u._id,
           donorId: fallbackDonorId,
+          ...ngoDocs,
           name: u.name || matchedNgo?.name || (phone ? `User ${phone.slice(-4)}` : 'Divine User'),
           email: uEmail,
           phone: phone,
@@ -113,7 +157,7 @@ router.get('/', async (req, res) => {
           verified: u.verified === true || verificationStatus === 'Verified',
           verificationStatus,
           registrationNumber,
-          panNumber,
+          panNumber: (u.role === 'ngo' || u.role === 'corporate' || matchedNgo) ? panNumber : '', // Issue 2: Don't show pan for individual donors
           organizationType,
           address,
           walletBalance: u.walletBalance || 0,
@@ -167,10 +211,48 @@ router.get('/', async (req, res) => {
           role: role,
           organizationType: isCorp ? 'Corporate' : 'Non-Profit',
           organizationName: n.name,
+          legalName: n.legalName || n.name || '',
+          contactPerson: n.contactPerson || '',
+          designation: n.designation || '',
+          websiteUrl: n.websiteUrl || '',
+          about: n.about || '',
           verificationStatus: n.status === 'Verified' ? 'Verified' : (n.status === 'Rejected' ? 'Rejected' : 'Pending'),
           verified: n.status === 'Verified',
           registrationNumber: n.registrationNumber || '',
           panNumber: n.panNumber || '',
+          panImage: n.panImage || null,
+          tanNumber: n.tanNumber || '',
+          tanImage: n.tanImage || null,
+          gstNumber: n.gstNumber || '',
+          gstDocument: n.gstDocument || null,
+          has12A: n.has12A || 'No',
+          registration12A: n.registration12A || '',
+          certificate12A: n.certificate12A || null,
+          has80G: n.has80G || 'No',
+          registration80G: n.registration80G || '',
+          certificate80G: n.certificate80G || null,
+          hasDarpan: n.hasDarpan || 'No',
+          darpanNumber: n.darpanNumber || '',
+          darpanCertificate: n.darpanCertificate || null,
+          hasCSR1: n.hasCSR1 || 'No',
+          csr1Number: n.csr1Number || '',
+          csr1Certificate: n.csr1Certificate || null,
+          hasFCRA: n.hasFCRA || 'No',
+          fcraNumber: n.fcraNumber || '',
+          fcraCertificate: n.fcraCertificate || null,
+          addressCertificate: n.addressCertificate || null,
+          moaAoaDocs: n.moaAoaDocs || [],
+          cancelledChequeDoc: n.cancelledChequeDoc || null,
+          bankAccountHolder: n.bankAccountHolder || '',
+          bankName: n.bankName || '',
+          bankBranch: n.bankBranch || '',
+          bankAccountNumber: n.bankAccountNumber || '',
+          bankIFSC: n.bankIFSC || '',
+          directorsKeyManagement: n.directorsKeyManagement || [],
+          formFillerDetails: n.formFillerDetails || null,
+          rejectionReason: n.rejectionReason || '',
+          isRegisteredNonProfit: n.isRegisteredNonProfit || '',
+          isRegisteredCompany: n.isRegisteredCompany || '',
           address: n.registeredAddress || n.address || '',
           totalDonated: '₹0',
           campaignsSupported: 0,
@@ -438,32 +520,58 @@ router.delete('/:id', async (req, res) => {
     // 2. Try finding as Donor
     donor = await Donor.findById(id);
 
-    // 3. Link User and Donor if only one was found by ID
-    if (donor && !user) {
-      const dEmail = (donor.email || '').toLowerCase().trim();
-      const dPhone = donor.phone || donor.mobileNumber || '';
-      const userOr = [];
-      if (dEmail) userOr.push({ email: dEmail }, { googleEmail: dEmail });
-      if (dPhone) userOr.push(buildPhoneFilter(dPhone));
-      if (userOr.length > 0) {
-        user = await User.findOne({ $or: userOr });
-      }
-    } else if (user && !donor) {
-      const uEmail = (user.email || user.googleEmail || '').toLowerCase().trim();
-      const uPhone = user.phone || '';
-      const donorOr = [];
-      if (uEmail) donorOr.push({ email: uEmail });
-      if (uPhone) donorOr.push(buildPhoneFilter(uPhone));
-      if (donorOr.length > 0) {
-        donor = await Donor.findOne({ $or: donorOr });
-      }
+    // 3. Try finding as NGO
+    let ngo = null;
+    if (!user && !donor) {
+      ngo = await NGO.findById(id);
     }
 
-    if (!donor && !user) {
-      return res.status(404).json({ status: false, message: 'User / Donor profile not found' });
+    // 4. Link User, Donor, and NGO across collections by matching ID, email, or phone
+    const candidateEmails = new Set();
+    const candidatePhones = new Set();
+
+    if (user) {
+      if (user.email) candidateEmails.add(user.email.toLowerCase().trim());
+      if (user.googleEmail) candidateEmails.add(user.googleEmail.toLowerCase().trim());
+      if (user.phone) candidatePhones.add(user.phone);
+    }
+    if (donor) {
+      if (donor.email) candidateEmails.add(donor.email.toLowerCase().trim());
+      if (donor.phone) candidatePhones.add(donor.phone);
+      if (donor.mobileNumber) candidatePhones.add(donor.mobileNumber);
+    }
+    if (ngo) {
+      if (ngo.email) candidateEmails.add(ngo.email.toLowerCase().trim());
+      if (ngo.phone) candidatePhones.add(ngo.phone);
     }
 
-    // 4. Send FORCE_LOGOUT silent push notification if device token exists
+    const emailArr = Array.from(candidateEmails).filter(Boolean);
+    const phoneArr = Array.from(candidatePhones).filter(Boolean);
+
+    const lookupOr = [{ _id: id }];
+    if (emailArr.length > 0) {
+      lookupOr.push({ email: { $in: emailArr } });
+      lookupOr.push({ googleEmail: { $in: emailArr } });
+    }
+    for (const ph of phoneArr) {
+      lookupOr.push(buildPhoneFilter(ph));
+    }
+
+    if (!user) {
+      user = await User.findOne({ $or: lookupOr });
+    }
+    if (!donor) {
+      donor = await Donor.findOne({ $or: lookupOr });
+    }
+    if (!ngo) {
+      ngo = await NGO.findOne({ $or: lookupOr });
+    }
+
+    if (!donor && !user && !ngo) {
+      return res.status(404).json({ status: false, message: 'User / Donor / NGO profile not found' });
+    }
+
+    // 5. Send FORCE_LOGOUT silent push notification if device token exists
     if (user && (user.fcmToken || user.deviceToken)) {
       try {
         const { sendPushNotification } = require('../../utils/notification');
@@ -482,24 +590,44 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
-    // 5. Invalidate User account: mark isDeleted, set status Deleted, clear tokens
-    if (user) {
-      user.isDeleted = true;
-      user.status = 'Deleted';
-      user.deletedAt = new Date();
-      user.fcmToken = null;
-      user.deviceToken = null;
-      await user.save();
+    // 6. Complete, thorough deletion from all collections (Issue 3)
+    const deleteConditions = [{ _id: id }];
+    if (user?._id) deleteConditions.push({ _id: user._id });
+    if (donor?._id) deleteConditions.push({ _id: donor._id });
+    if (ngo?._id) deleteConditions.push({ _id: ngo._id });
+    if (emailArr.length > 0) {
+      deleteConditions.push({ email: { $in: emailArr } });
+      deleteConditions.push({ googleEmail: { $in: emailArr } });
+    }
+    for (const ph of phoneArr) {
+      deleteConditions.push(buildPhoneFilter(ph));
     }
 
-    // 6. Delete Donor record
-    if (donor) {
-      await Donor.findByIdAndDelete(donor._id);
-    }
+    const userIds = [];
+    if (user?._id) userIds.push(user._id);
+    if (donor?._id) userIds.push(donor._id);
+
+    const cleanupPromises = [
+      User.deleteMany({ $or: deleteConditions }),
+      Donor.deleteMany({ $or: deleteConditions }),
+      ngo ? NGO.deleteMany({ $or: deleteConditions }) : Promise.resolve()
+    ];
+
+    try {
+      const Notification = require('../../models/Notification');
+      if (userIds.length > 0) cleanupPromises.push(Notification.deleteMany({ user: { $in: userIds } }));
+    } catch (e) {}
+
+    try {
+      const DanCart = require('../../models/DanCart');
+      if (userIds.length > 0) cleanupPromises.push(DanCart.deleteMany({ donorId: { $in: userIds } }));
+    } catch (e) {}
+
+    await Promise.all(cleanupPromises);
 
     res.json({
       status: true,
-      message: 'User account and active session successfully deleted and invalidated.'
+      message: 'User account, profile records, and active sessions successfully and thoroughly deleted.'
     });
   } catch (err) {
     console.error('Delete donor error:', err);

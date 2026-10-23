@@ -68,9 +68,8 @@ const enrichTransaction = async (tx, userMap, ngoList, campaignList) => {
       email: donorEmail,
       donorType,
       avatar: user?.profilePhoto || null,
-      panNumber: user?.panNumber || 'ABCDE1234F',
-      gender: user?.gender || 'N/A',
-      city: user?.city || 'New Delhi'
+      panNumber: (donorType === 'Corporate' || donorType === 'NGO') ? (user?.panNumber || '') : '',
+      gender: user?.gender || 'N/A'
     },
     recipient: {
       name: recipient,
@@ -206,8 +205,7 @@ router.get('/donations', async (req, res) => {
             phone: d.donorPhone || '+91 9876543210',
             email: d.donorEmail || 'donor@divine.org',
             donorType: 'Individual',
-            gender: 'N/A',
-            city: 'New Delhi'
+            gender: 'N/A'
           },
           recipient: {
             name: d.ngoId?.name || (d.items && d.items[0]?.name ? d.items[0].name : 'Daan Seva Platform'),

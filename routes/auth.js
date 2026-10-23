@@ -180,31 +180,34 @@ router.post('/check-role', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Phone number is required' });
     }
     const user = await findUserByPhone(phone, User);
-    if (user && (user.isDeleted === true || user.status === 'Deleted')) {
-      return res.status(403).json({
-        status: false,
-        message: 'Your account has been deleted by an administrator. Please contact support.',
-        isDeleted: true
-      });
-    }
-    if (user && user.status === 'Suspended') {
-      return res.status(403).json({
-        status: false,
-        message: 'Your account has been suspended by an administrator.',
-        isSuspended: true
-      });
-    }
     if (!user) {
       const ngo = await NGO.findOne(buildPhoneFilter(phone));
-      if (ngo) {
+      if (ngo && ngo.status !== 'Deleted') {
         return res.json({
           status: true,
+          isUserExist: true,
           isProfileComplete: true,
           role: (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo',
           name: ngo.name
         });
       }
-      return res.json({ status: true, isProfileComplete: false, role: null });
+      return res.json({ status: false, isUserExist: false, message: 'User not found' });
+    }
+    if (user.isDeleted === true || user.status === 'Deleted') {
+      return res.json({
+        status: false,
+        isUserExist: false,
+        message: 'User not found',
+        isDeleted: true
+      });
+    }
+    if (user.status === 'Suspended') {
+      return res.status(403).json({
+        status: false,
+        isUserExist: true,
+        message: 'Your account has been suspended by an administrator.',
+        isSuspended: true
+      });
     }
     const fullData = await constructFullUserData(user);
     res.json({
@@ -335,23 +338,34 @@ router.post('/login', async (req, res) => {
     const { email, password, phone } = req.body;
     if (phone) {
       let existingUser = await findUserByPhone(phone, User);
-      if (existingUser && (existingUser.isDeleted === true || existingUser.status === 'Deleted')) {
-        return res.status(403).json({
+      let ngo = null;
+      if (!existingUser) {
+        ngo = await NGO.findOne(buildPhoneFilter(phone));
+      }
+
+      if (!existingUser && (!ngo || ngo.status === 'Deleted')) {
+        return res.json({
           status: false,
-          message: 'Your account has been deleted by an administrator. You cannot log in with this phone number.',
+          isUserExist: false,
+          message: 'User not found'
+        });
+      }
+
+      if (existingUser && (existingUser.isDeleted === true || existingUser.status === 'Deleted')) {
+        return res.json({
+          status: false,
+          isUserExist: false,
+          message: 'User not found',
           isDeleted: true
         });
       }
       if (existingUser && existingUser.status === 'Suspended') {
         return res.status(403).json({
           status: false,
+          isUserExist: true,
           message: 'Your account has been suspended by an administrator.',
           isSuspended: true
         });
-      }
-      let ngo = null;
-      if (!existingUser) {
-        ngo = await NGO.findOne(buildPhoneFilter(phone));
       }
 
       if (existingUser) {
@@ -403,45 +417,49 @@ router.post('/login', async (req, res) => {
         });
       }
 
-      const initialRole = ngo ? ((ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo') : 'donor';
-      const initialComplete = !!ngo;
-      const initialName = ngo ? ngo.name : '';
-      const newVerStatus = initialComplete ? (ngo?.status || 'Pending') : 'Pending';
+      // Existing NGO profile without user record -> create user for this NGO
+      if (ngo && ngo.status !== 'Deleted') {
+        const initialRole = (ngo.organizationType === 'Corporate' || ngo.organizationType === 'Company') ? 'corporate' : 'ngo';
+        const initialComplete = true;
+        const initialName = ngo.name || '';
+        const newVerStatus = ngo.status || 'Pending';
 
-      const newUser = new User({
-        phone,
-        role: initialRole,
-        name: initialName,
-        isProfileComplete: initialComplete,
-        status: newVerStatus,
-        verificationStatus: newVerStatus,
-        otp: '1234',
-        otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
-      });
-      await newUser.save();
-      return res.json({
-        status: true,
-        message: 'OTP sent successfully (Use static code 1234 to verify)',
-        isUserExist: initialComplete,
-        isProfileComplete: initialComplete,
-        verificationStatus: newVerStatus,
-        verified: !!(ngo && (ngo.status === 'Verified' || ngo.verified)),
-        rejectionReason: ngo?.rejectionReason || '',
-        canResubmit: ngo?.status === 'Rejected',
-        phone,
-        role: initialRole,
-        otp: '1234',
-        data: {
-          isUserExist: initialComplete,
-          isProfileComplete: initialComplete,
-          verificationStatus: newVerStatus,
-          verified: !!(ngo && (ngo.status === 'Verified' || ngo.verified)),
-          rejectionReason: ngo?.rejectionReason || '',
-          canResubmit: ngo?.status === 'Rejected',
+        const newUser = new User({
           phone,
-          role: initialRole
-        }
-      });
+          role: initialRole,
+          name: initialName,
+          organizationName: initialName,
+          isProfileComplete: initialComplete,
+          status: newVerStatus,
+          verificationStatus: newVerStatus,
+          otp: '1234',
+          otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
+        });
+        await newUser.save();
+        return res.json({
+          status: true,
+          message: 'OTP sent successfully (Use static code 1234 to verify)',
+          isUserExist: true,
+          isProfileComplete: true,
+          verificationStatus: newVerStatus,
+          verified: !!(ngo.status === 'Verified' || ngo.verified),
+          rejectionReason: ngo.rejectionReason || '',
+          canResubmit: ngo.status === 'Rejected',
+          phone,
+          role: initialRole,
+          otp: '1234',
+          data: {
+            isUserExist: true,
+            isProfileComplete: true,
+            verificationStatus: newVerStatus,
+            verified: !!(ngo.status === 'Verified' || ngo.verified),
+            rejectionReason: ngo.rejectionReason || '',
+            canResubmit: ngo.status === 'Rejected',
+            phone,
+            role: initialRole
+          }
+        });
+      }
     }
     if (email && password) {
       const cleanEmail = email.toLowerCase().trim();
@@ -547,9 +565,8 @@ router.post('/verify-otp', async (req, res) => {
     const { phone, otp } = req.body;
     if (!phone || !otp) return res.status(400).json({ status: false, message: 'Phone number and OTP are required' });
     const user = await findUserByPhone(phone, User);
-    if (!user) return res.status(404).json({ status: false, message: 'User session not found. Please request a new OTP.' });
-    if (user.isDeleted === true || user.status === 'Deleted') {
-      return res.status(403).json({ status: false, message: 'Your account has been deleted by an administrator.', isDeleted: true });
+    if (!user || user.isDeleted === true || user.status === 'Deleted') {
+      return res.json({ status: false, message: 'User not found' });
     }
     if (user.status === 'Suspended') {
       return res.status(403).json({ status: false, message: 'Your account has been suspended by an administrator.', isSuspended: true });
@@ -1244,7 +1261,9 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ status: false, message: 'User not found' });
+    if (!user || user.isDeleted === true || user.status === 'Deleted') {
+      return res.status(404).json({ status: false, message: 'User not found' });
+    }
 
     const userObj = user.toObject();
     let enrichedExtra = {
