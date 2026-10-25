@@ -4,6 +4,8 @@ const User = require('../../models/User');
 const NGO = require('../../models/NGO');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
 const { calculateNgoDynamicRating } = require('../../utils/rating');
+const { getAllFollowersForEntity, formatFollowerItem } = require('../../utils/followers');
+const { buildPhoneFilter } = require('../../utils/phone');
 
 // Helper to get set of all IDs user is following
 function getUserFollowingIds(user) {
@@ -99,20 +101,8 @@ const handleSocialOverview = async (req, res) => {
       };
     }));
 
-    const followersList = ((me && me.followers) || []).map(f => {
-      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
-      return {
-        _id: f._id,
-        id: f._id,
-        name: f.name || 'Anonymous User',
-        phone: f.phone || '',
-        email: f.email || '',
-        role: f.role || 'donor',
-        isFollower: true,
-        isFollowing: followingSet.has(f._id.toString()),
-        ...photos
-      };
-    });
+    const rawFollowers = await getAllFollowersForEntity(me);
+    const followersList = rawFollowers.map(f => formatFollowerItem(f, followingSet));
 
     const followingNgosList = await Promise.all(((me && me.followingNgos) || []).filter(Boolean).map(async (n) => {
       const dynamicRating = await calculateNgoDynamicRating(n);
@@ -176,36 +166,26 @@ const handleFollowers = async (req, res) => {
   try {
     let me = null;
     if (req.user && (req.user._id || req.user.id)) {
-      me = await User.findById(req.user._id || req.user.id)
-        .populate('followers', 'name phone profilePhoto email role logo');
+      me = await User.findById(req.user._id || req.user.id);
     }
 
     const followingSet = getUserFollowingIds(me);
-
-    const followersList = ((me && me.followers) || []).filter(Boolean).map(f => {
-      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
-      return {
-        _id: f._id,
-        id: f._id,
-        name: f.name || 'Anonymous User',
-        phone: f.phone || '',
-        email: f.email || '',
-        role: f.role || 'donor',
-        isFollower: true,
-        isFollowing: followingSet.has(f._id.toString()),
-        ...photos
-      };
-    });
+    const rawFollowers = await getAllFollowersForEntity(me);
+    const followersList = rawFollowers.map(f => formatFollowerItem(f, followingSet));
 
     res.json({
       status: true,
       followersCount: followersList.length,
       count: followersList.length,
+      total: followersList.length,
       data: followersList,
       followers: followersList,
-      ngos: followersList.filter(f => f.role === 'ngo'),
+      ngos: followersList, // CRITICAL: Mobile app Followers tab binds to ngos key!
       users: followersList,
-      individuals: followersList
+      individuals: followersList,
+      followingNgos: followersList,
+      following: followersList,
+      list: followersList
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -273,13 +253,103 @@ const handleFollowing = async (req, res) => {
       status: true,
       followingCount: allFollowing.length,
       count: allFollowing.length,
+      total: allFollowing.length,
       data: allFollowing,
       following: allFollowing,
       followingNgos: followingNgosList,
       followingUsers: followingUsersList,
       ngos: followingNgosList,
       users: followingUsersList,
-      individuals: followingUsersList
+      individuals: followingUsersList,
+      list: allFollowing
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+// 4. Dedicated Follows Handler (Combined Followers and Following)
+const handleFollows = async (req, res) => {
+  try {
+    let me = null;
+    if (req.user && (req.user._id || req.user.id)) {
+      me = await User.findById(req.user._id || req.user.id)
+        .populate('followingNgos', 'name organizationName logo contactPerson phone email registeredAddress about rating verifiedCampaignsCount')
+        .populate('followingUsers', 'name phone profilePhoto email role logo');
+    }
+
+    const followingSet = getUserFollowingIds(me);
+    const rawFollowers = await getAllFollowersForEntity(me);
+    const followersList = rawFollowers.map(f => formatFollowerItem(f, followingSet));
+
+    const followingNgosList = await Promise.all(((me && me.followingNgos) || [])
+      .filter(Boolean)
+      .map(async (n) => {
+        const dynamicRating = await calculateNgoDynamicRating(n);
+        const photos = enrichEntityPhotos(n, 'ngo');
+        return {
+          _id: n._id,
+          id: n._id,
+          name: n.name || n.organizationName || 'NGO',
+          organizationName: n.organizationName || n.name || 'NGO',
+          contactPerson: n.contactPerson || '',
+          phone: n.phone || '',
+          email: n.email || '',
+          registeredAddress: n.registeredAddress || '',
+          about: n.about || '',
+          rating: dynamicRating.rating,
+          ratingValue: dynamicRating.rating,
+          averageRating: dynamicRating.rating,
+          reviewsCount: dynamicRating.reviewsCount,
+          reviewCount: dynamicRating.reviewsCount,
+          totalReviews: dynamicRating.reviewsCount,
+          verifiedCampaignsCount: n.verifiedCampaignsCount || 0,
+          type: 'ngo',
+          isFollowing: true,
+          ...photos
+        };
+      }));
+
+    const followingUsersList = ((me && me.followingUsers) || [])
+      .filter(Boolean)
+      .map(u => {
+        const photos = enrichEntityPhotos(u, 'user');
+        return {
+          _id: u._id,
+          id: u._id,
+          name: u.name || 'User',
+          phone: u.phone || '',
+          email: u.email || '',
+          role: u.role || 'donor',
+          type: 'user',
+          isFollowing: true,
+          ...photos
+        };
+      });
+
+    const allFollowing = [...followingNgosList, ...followingUsersList];
+
+    res.json({
+      status: true,
+      followersCount: followersList.length,
+      followingCount: allFollowing.length,
+      count: followersList.length,
+      total: followersList.length,
+      followers: followersList,
+      following: allFollowing,
+      followingNgos: followingNgosList,
+      followingUsers: followingUsersList,
+      ngos: followersList,
+      users: followersList,
+      individuals: followersList,
+      data: {
+        followers: followersList,
+        following: allFollowing,
+        followersCount: followersList.length,
+        followingCount: allFollowing.length,
+        ngos: followersList,
+        followingNgos: followingNgosList
+      }
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -289,10 +359,12 @@ const handleFollowing = async (req, res) => {
 router.get('/social', handleSocialOverview);
 router.get('/followers', handleFollowers);
 router.get('/following', handleFollowing);
+router.get('/follows', handleFollows);
 router.get('/discover', (req, res) => handleDiscover(req, res));
 router.get('/', (req, res, next) => {
   if (req.baseUrl.includes('followers')) return handleFollowers(req, res);
   if (req.baseUrl.includes('following')) return handleFollowing(req, res);
+  if (req.baseUrl.includes('follows')) return handleFollows(req, res);
   if (req.baseUrl.includes('discover')) return handleDiscover(req, res);
   if (req.baseUrl.includes('social')) return handleSocialOverview(req, res);
   return handleSocialOverview(req, res);
@@ -429,6 +501,43 @@ router.post('/follow/:id', async (req, res) => {
         me.followingNgos.push(targetId);
       }
       await me.save();
+
+      // Also sync ngoUser.followers if exists
+      try {
+        const ngoUser = await User.findOne({
+          $or: [
+            { email: ngo.email },
+            { phone: ngo.phone ? buildPhoneFilter(ngo.phone) : 'NO_PHONE' },
+            { organizationName: ngo.name }
+          ]
+        });
+        if (ngoUser) {
+          if (!ngoUser.followers) ngoUser.followers = [];
+          if (isFollowing) {
+            ngoUser.followers = ngoUser.followers.filter(id => id.toString() !== me._id.toString());
+          } else {
+            if (!ngoUser.followers.map(id => id.toString()).includes(me._id.toString())) {
+              ngoUser.followers.push(me._id);
+            }
+          }
+          await ngoUser.save();
+
+          if (!isFollowing) {
+            const { createAndSendNotification } = require('../../utils/notification');
+            await createAndSendNotification({
+              userId: ngoUser._id,
+              title: 'New Follower Alert! 🏛️',
+              body: `${me.name || 'Someone'} started following ${ngo.name} on Divine Platform.`,
+              type: 'social',
+              screen: 'profile',
+              dataId: String(me._id)
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error('Error syncing ngoUser followers:', e.message);
+      }
+
       return res.json({
         status: true,
         type: 'ngo',
@@ -503,6 +612,30 @@ router.post('/follow/ngo/:id', async (req, res) => {
       user.followingNgos.push(ngoId);
     }
     await user.save();
+
+    // Also sync ngoUser.followers if exists
+    try {
+      const ngoUser = await User.findOne({
+        $or: [
+          { email: ngo.email },
+          { phone: ngo.phone ? buildPhoneFilter(ngo.phone) : 'NO_PHONE' },
+          { organizationName: ngo.name }
+        ]
+      });
+      if (ngoUser) {
+        if (!ngoUser.followers) ngoUser.followers = [];
+        if (isFollowing) {
+          ngoUser.followers = ngoUser.followers.filter(id => id.toString() !== user._id.toString());
+        } else {
+          if (!ngoUser.followers.map(id => id.toString()).includes(user._id.toString())) {
+            ngoUser.followers.push(user._id);
+          }
+        }
+        await ngoUser.save();
+      }
+    } catch (e) {
+      console.error('Error syncing ngoUser followers:', e.message);
+    }
     
     res.json({
       status: true,
@@ -561,4 +694,5 @@ module.exports = router;
 module.exports.handleSocialOverview = handleSocialOverview;
 module.exports.handleFollowers = handleFollowers;
 module.exports.handleFollowing = handleFollowing;
+module.exports.handleFollows = handleFollows;
 module.exports.handleDiscover = handleDiscover;

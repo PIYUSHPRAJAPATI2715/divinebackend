@@ -11,6 +11,7 @@ const DanDonation = require('../models/DanDonation');
 const { buildPhoneFilter } = require('../utils/phone');
 const { resolveEntityPhoto } = require('../utils/avatar');
 const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('../utils/campaignHelper');
+const { getAllFollowersForEntity, formatFollowerItem } = require('../utils/followers');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -81,24 +82,10 @@ router.get('/profile', async (req, res) => {
     ngo.rating = computedRating;
     await ngo.save();
 
-    const rawFollowersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role logo');
-    const followersList = rawFollowersList.map(f => {
-      const photo = resolveEntityPhoto(f, 'user');
-      return {
-        ...f.toObject(),
-        logo: photo,
-        profilePhoto: photo,
-        profileImage: photo,
-        imageUrl: photo,
-        image: photo,
-        avatar: photo,
-        photo: photo,
-        userImage: photo
-      };
-    });
+    const user = req.user ? await User.findById(req.user.id || req.user._id) : null;
+    const rawFollowersList = await getAllFollowersForEntity(user || req.user);
+    const followersList = rawFollowersList.map(f => formatFollowerItem(f));
     const followersCount = followersList.length;
-
-    const user = req.user ? await User.findById(req.user.id) : null;
     const ngoObj = ngo.toObject();
     const userObj = user ? user.toObject() : {};
 
@@ -1111,5 +1098,11 @@ router.get('/donations/tracking', async (req, res) => {
     res.status(500).json({ status: false, message: err.message });
   }
 });
+
+// Followers & Following endpoints for NGO portal
+const { handleFollowers, handleFollowing, handleFollows } = require('./donor/social');
+router.get('/followers', handleFollowers);
+router.get('/following', handleFollowing);
+router.get('/follows', handleFollows);
 
 module.exports = router;

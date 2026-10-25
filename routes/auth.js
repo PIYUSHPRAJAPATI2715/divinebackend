@@ -11,6 +11,7 @@ const Donor = require('../models/Donor');
 const Referral = require('../models/Referral');
 const authMiddleware = require('../middleware/auth');
 const { normalizePhone, getPhoneVariants, buildPhoneFilter, findUserByPhone } = require('../utils/phone');
+const { getAllFollowersForEntity, formatFollowerItem } = require('../utils/followers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -1304,7 +1305,8 @@ router.get('/me', authMiddleware, async (req, res) => {
           computedRating = Math.round(avg * 10) / 10;
         }
 
-        const followersList = await User.find({ followingNgos: ngo._id }).select('_id name phone profilePhoto email role');
+        const rawFollowers = await getAllFollowersForEntity(user);
+        const followersList = rawFollowers.map(f => formatFollowerItem(f));
         const followersCount = followersList.length;
 
         enrichedExtra = {

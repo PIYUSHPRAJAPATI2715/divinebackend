@@ -5,6 +5,7 @@ const Notification = require('../../models/Notification');
 const { buildPhoneFilter } = require('../../utils/phone');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
 const { calculateNgoDynamicRating } = require('../../utils/rating');
+const { getAllFollowersForEntity, formatFollowerItem } = require('../../utils/followers');
 
 // Utility to generate unique referral code
 const generateReferralCode = (name) => {
@@ -51,7 +52,8 @@ router.get('/profile', async (req, res) => {
       createdAt: r.createdAt
     }));
 
-    const followersCount = (user.followers || []).length;
+    const rawFollowers = await getAllFollowersForEntity(user);
+    const followersCount = rawFollowers.length;
     const computedRating = reviews.length > 0 
       ? (Math.round((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length) * 10) / 10) 
       : 0.0;
@@ -86,13 +88,7 @@ router.get('/profile', async (req, res) => {
       };
     });
 
-    const formattedFollowers = (userObj.followers || []).filter(Boolean).map(f => {
-      const photos = enrichEntityPhotos(f, f.role === 'ngo' ? 'ngo' : 'user');
-      return {
-        ...f,
-        ...photos
-      };
-    });
+    const formattedFollowers = rawFollowers.map(f => formatFollowerItem(f));
 
     const enrichedData = {
       ...userObj,
