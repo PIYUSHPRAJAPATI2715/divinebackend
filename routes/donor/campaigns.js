@@ -527,11 +527,15 @@ const handleMyCampaigns = async (req, res) => {
 
     const myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
 
+    // Filter out deactivated campaigns that have already been marked as read/acknowledged by admin
+    // If not marked as read by admin, it remains visible in the user's My Campaigns list
+    const activeMyCampaigns = myCampaigns.filter(c => !(c.isDeactivated === true && c.deactivationMarkedAsRead === true));
+
     let totalRaisedNum = 0;
     let totalGoalNum = 0;
     let totalDonors = 0;
 
-    const enriched = await Promise.all(myCampaigns.map(async c => {
+    const enriched = await Promise.all(activeMyCampaigns.map(async c => {
       const now = new Date();
       const isExpired = isCampaignExpired(c, now);
       const days = calculateDaysLeft(c, now);
@@ -554,13 +558,17 @@ const handleMyCampaigns = async (req, res) => {
 
       const obj = c.toObject();
       obj.daysLeft = days;
-      obj.status = currentStatus;
       obj.isCompleted = isExpired || currentStatus === 'Completed';
       obj.isExpired = isExpired;
       obj.donorsCount = donorsCountNum;
 
+      const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected');
+      const isDeactivated = Boolean(c.isDeactivated === true);
       const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
-      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive');
+      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive' && !isDeactivated && !isRejected);
+
+      const finalVerificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      const finalStatus = isRejected ? 'Rejected' : (isDeactivated ? 'Deactivated' : currentStatus);
 
       obj.activate = isCampaignActive;
       obj.active = isCampaignActive;
@@ -568,14 +576,21 @@ const handleMyCampaigns = async (req, res) => {
       obj.is_active = isCampaignActive;
       obj.activated = isCampaignActive;
 
-      obj.verify = isCampaignVerified;
-      obj.verified = isCampaignVerified;
-      obj.isVerified = isCampaignVerified;
-      obj.is_verified = isCampaignVerified;
-      obj.verificationStatus = c.status === 'Rejected' 
-        ? 'Rejected' 
-        : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
-      obj.status = c.status;
+      obj.verify = isCampaignVerified && !isRejected;
+      obj.verified = isCampaignVerified && !isRejected;
+      obj.isVerified = isCampaignVerified && !isRejected;
+      obj.is_verified = isCampaignVerified && !isRejected;
+      obj.verificationStatus = finalVerificationStatus;
+      obj.verification_status = finalVerificationStatus;
+      obj.status = finalStatus;
+      obj.rejectionReason = c.rejectionReason || '';
+      obj.rejection_reason = c.rejectionReason || '';
+      obj.isDeactivated = isDeactivated;
+      obj.deactivationReason = c.deactivationReason || '';
+      obj.deactivation_reason = c.deactivationReason || '';
+      obj.deactivationMarkedAsRead = Boolean(c.deactivationMarkedAsRead);
+      obj.deactivation_marked_as_read = Boolean(c.deactivationMarkedAsRead);
+      obj.deactivatedAt = c.deactivatedAt || null;
 
       obj.raised = c.raised || `₹${raisedNum.toLocaleString('en-IN')}`;
       obj.raisedAmount = raisedNum;
@@ -808,11 +823,19 @@ const handleDeactivateCampaign = async (req, res) => {
       });
     }
 
+    const deactivationReason = req.body.reason || req.body.deactivationReason || req.body.deactivationNote || req.body.notes || '';
+
     campaign.isActive = false;
+    campaign.isDeactivated = true;
+    campaign.deactivationReason = deactivationReason;
+    campaign.deactivatedAt = new Date();
+    campaign.deactivationMarkedAsRead = false;
+    campaign.deactivationReadAt = null;
+
     if (campaign.status === 'Live') {
       campaign.previousStatus = campaign.status;
-      campaign.status = 'Inactive';
     }
+    campaign.status = 'Inactive';
     await campaign.save();
 
     const isCampaignVerified = Boolean(campaign.isVerified === true || campaign.status === 'Live' || campaign.previousStatus === 'Live');
@@ -825,11 +848,19 @@ const handleDeactivateCampaign = async (req, res) => {
     campObj.isActive = false;
     campObj.is_active = false;
     campObj.activated = false;
+    campObj.isDeactivated = true;
+    campObj.deactivationReason = deactivationReason;
+    campObj.deactivation_reason = deactivationReason;
+    campObj.deactivatedAt = campaign.deactivatedAt;
+    campObj.deactivationMarkedAsRead = false;
+    campObj.deactivation_marked_as_read = false;
     campObj.verify = isCampaignVerified;
     campObj.verified = isCampaignVerified;
     campObj.isVerified = isCampaignVerified;
     campObj.is_verified = isCampaignVerified;
     campObj.verificationStatus = campaign.status === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (campaign.verificationStatus || 'Pending'));
+    campObj.verification_status = campObj.verificationStatus;
+    campObj.status = 'Deactivated';
     campObj.user = creatorName;
     campObj.userName = creatorName;
     campObj.userImage = creatorPhoto;
@@ -838,7 +869,11 @@ const handleDeactivateCampaign = async (req, res) => {
 
     res.json({
       status: true,
-      message: 'Campaign deactivated successfully. It will no longer be visible to other users, but remains in your campaign list.',
+      message: 'Campaign deactivated successfully. It will remain in your campaigns list until reviewed and acknowledged by admin.',
+      reason: deactivationReason,
+      deactivationReason: deactivationReason,
+      isDeactivated: true,
+      deactivationMarkedAsRead: false,
       activate: false,
       active: false,
       isActive: false,

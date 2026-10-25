@@ -131,12 +131,17 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     ? normalizedImages[0]
     : normalizeImageUrl(c.imageUrl, req);
 
+  const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected' || currentStatus === 'Rejected');
+  const isDeactivated = Boolean(c.isDeactivated === true);
   const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || currentStatus === 'Completed');
-  const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive');
+  const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive' && !isDeactivated && !isRejected);
+
+  const finalVerificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+  const finalStatus = isRejected ? 'Rejected' : (isDeactivated ? 'Deactivated' : currentStatus);
 
   return {
     ...c,
-    status: currentStatus,
+    status: finalStatus,
     isCompleted: isExpired || currentStatus === 'Completed',
     isExpired: isExpired,
     activate: isCampaignActive,
@@ -144,13 +149,21 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     isActive: isCampaignActive,
     is_active: isCampaignActive,
     activated: isCampaignActive,
-    verify: isCampaignVerified,
-    verified: isCampaignVerified,
-    isVerified: isCampaignVerified,
-    is_verified: isCampaignVerified,
-    verificationStatus: currentStatus === 'Rejected' 
-      ? 'Rejected' 
-      : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending')),
+    verify: isCampaignVerified && !isRejected,
+    verified: isCampaignVerified && !isRejected,
+    isVerified: isCampaignVerified && !isRejected,
+    is_verified: isCampaignVerified && !isRejected,
+    verificationStatus: finalVerificationStatus,
+    verification_status: finalVerificationStatus,
+    rejectionReason: c.rejectionReason || '',
+    rejection_reason: c.rejectionReason || '',
+    isDeactivated: isDeactivated,
+    deactivationReason: c.deactivationReason || '',
+    deactivation_reason: c.deactivationReason || '',
+    deactivationMarkedAsRead: Boolean(c.deactivationMarkedAsRead),
+    deactivation_marked_as_read: Boolean(c.deactivationMarkedAsRead),
+    deactivatedAt: c.deactivatedAt || null,
+    deactivationReadAt: c.deactivationReadAt || null,
     imageUrl: primaryImage,
     images: normalizedImages,
     user: creatorName,
@@ -515,7 +528,8 @@ const handleAdminReject = async (req, res) => {
     campaign.isVerified = false;
     campaign.verificationStatus = 'Rejected';
     campaign.isActive = false;
-    if (req.body.reason) campaign.rejectionReason = req.body.reason;
+    const rejectReason = req.body.reason || req.body.rejectionReason || 'Does not meet verification criteria';
+    campaign.rejectionReason = rejectReason;
     await campaign.save();
 
     if (campaign.userId) {
@@ -550,6 +564,41 @@ router.put('/:id/approve', handleAdminApprove);
 router.post('/:id/approve', handleAdminApprove);
 router.put('/:id/reject', handleAdminReject);
 router.post('/:id/reject', handleAdminReject);
+
+// Admin Mark Deactivated Campaign as Read / Acknowledged
+// Once marked as read, it is removed from the user's My Campaigns API
+const handleMarkDeactivationAsRead = async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    let campaign = await Campaign.findById(campaignId).catch(() => null);
+    if (!campaign) {
+      campaign = await Campaign.findOne({ campaignId });
+    }
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: 'Campaign not found' });
+    }
+
+    campaign.deactivationMarkedAsRead = true;
+    campaign.deactivationReadAt = new Date();
+    await campaign.save();
+
+    const enriched = await enrichCampaign(campaign, req);
+    res.json({
+      status: true,
+      message: 'Deactivated campaign marked as read. It is now removed from the user My Campaigns list.',
+      data: enriched,
+      ...enriched
+    });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+router.put('/:id/mark-read', handleMarkDeactivationAsRead);
+router.post('/:id/mark-read', handleMarkDeactivationAsRead);
+router.patch('/:id/mark-read', handleMarkDeactivationAsRead);
+router.put('/:id/deactivation-read', handleMarkDeactivationAsRead);
+router.post('/:id/deactivation-read', handleMarkDeactivationAsRead);
 
 // Delete a campaign
 router.delete('/:id', async (req, res) => {

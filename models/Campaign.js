@@ -15,8 +15,13 @@ const campaignSchema = new mongoose.Schema({
   goal: { type: String, required: true }, // e.g. "₹5,00,000"
   raised: { type: String, required: true }, // e.g. "₹2,45,000"
   oneTimeOrMonthly: { type: String, enum: ['One-Time', 'Monthly', 'Both'], default: 'One-Time' },
-  status: { type: String, enum: ['Pending', 'Live', 'Completed', 'Rejected', 'Inactive'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Live', 'Completed', 'Rejected', 'Inactive', 'Deactivated'], default: 'Pending' },
   isActive: { type: Boolean, default: true },
+  isDeactivated: { type: Boolean, default: false },
+  deactivatedAt: { type: Date, default: null },
+  deactivationReason: { type: String, default: '' },
+  deactivationMarkedAsRead: { type: Boolean, default: false },
+  deactivationReadAt: { type: Date, default: null },
   isVerified: { type: Boolean, default: false },
   verificationStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   previousStatus: { type: String, default: '' },

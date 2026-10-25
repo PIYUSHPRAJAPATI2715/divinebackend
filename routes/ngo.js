@@ -301,7 +301,8 @@ router.get('/campaigns', async (req, res) => {
     const userId = req.user ? (req.user._id || req.user.id) : null;
     const query = userId ? { $or: [{ ngoId: ngo._id }, { userId }] } : { ngoId: ngo._id };
     const campaigns = await Campaign.find(query).sort({ createdAt: -1 });
-    const enriched = campaigns.map(c => {
+    const activeCampaigns = campaigns.filter(c => !(c.isDeactivated === true && c.deactivationMarkedAsRead === true));
+    const enriched = activeCampaigns.map(c => {
       const now = new Date();
       const isExpired = isCampaignExpired(c, now);
       const days = calculateDaysLeft(c, now);
@@ -310,8 +311,10 @@ router.get('/campaigns', async (req, res) => {
         currentStatus = 'Completed';
       }
       const obj = c.toObject();
+      const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected' || currentStatus === 'Rejected');
+      const isDeactivated = Boolean(c.isDeactivated === true);
       const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || currentStatus === 'Completed');
-      const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive');
+      const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive' && !isDeactivated && !isRejected);
 
       obj.activate = isCampaignActive;
       obj.active = isCampaignActive;
@@ -319,12 +322,21 @@ router.get('/campaigns', async (req, res) => {
       obj.is_active = isCampaignActive;
       obj.activated = isCampaignActive;
 
-      obj.verify = isCampaignVerified;
-      obj.verified = isCampaignVerified;
-      obj.isVerified = isCampaignVerified;
-      obj.is_verified = isCampaignVerified;
-      obj.verificationStatus = currentStatus === 'Rejected' ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
-      obj.status = currentStatus;
+      obj.verify = isCampaignVerified && !isRejected;
+      obj.verified = isCampaignVerified && !isRejected;
+      obj.isVerified = isCampaignVerified && !isRejected;
+      obj.is_verified = isCampaignVerified && !isRejected;
+      obj.verificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      obj.verification_status = obj.verificationStatus;
+      obj.status = isRejected ? 'Rejected' : (isDeactivated ? 'Deactivated' : currentStatus);
+      obj.rejectionReason = c.rejectionReason || '';
+      obj.rejection_reason = c.rejectionReason || '';
+      obj.isDeactivated = isDeactivated;
+      obj.deactivationReason = c.deactivationReason || '';
+      obj.deactivation_reason = c.deactivationReason || '';
+      obj.deactivationMarkedAsRead = Boolean(c.deactivationMarkedAsRead);
+      obj.deactivation_marked_as_read = Boolean(c.deactivationMarkedAsRead);
+      obj.deactivatedAt = c.deactivatedAt || null;
       obj.isCompleted = isExpired || currentStatus === 'Completed';
       obj.isExpired = isExpired;
       obj.daysLeft = days;
