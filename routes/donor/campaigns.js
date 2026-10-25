@@ -79,7 +79,7 @@ const saveBase64Media = (base64Str, req, defaultPrefix = 'campaign_review') => {
 };
 
 const normalizeImageUrl = (urlStr, req) => {
-  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '' || urlStr.includes('catbox.moe')) {
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
     return 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800';
   }
   let clean = urlStr.trim();
@@ -254,15 +254,15 @@ router.get('/campaigns', async (req, res) => {
 
       const rawImages = (Array.isArray(c.images) && c.images.length > 0)
         ? c.images
-        : [c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
+        : (c.imageUrl ? [c.imageUrl] : []);
 
       const normalizedImages = rawImages
         .filter(img => typeof img === 'string' && img.trim() !== '')
         .map(img => normalizeImageUrl(img, req));
 
-      const finalImage = normalizedImages.length > 0
-        ? normalizedImages[0]
-        : normalizeImageUrl(c.imageUrl, req);
+      const finalImage = (c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '')
+        ? normalizeImageUrl(c.imageUrl, req)
+        : (normalizedImages.length > 0 ? normalizedImages[0] : '');
 
       const { name: creatorName, photo: creatorPhoto, profileObj: creatorProfile } = await resolveCampaignCreator(c);
 
@@ -280,7 +280,7 @@ router.get('/campaigns', async (req, res) => {
       obj.daysLeft = days;
       obj.donorsCount = obj.donorsCount || 0;
       obj.imageUrl = finalImage;
-      obj.images = normalizedImages;
+      obj.images = normalizedImages.length > 0 ? normalizedImages : (finalImage ? [finalImage] : []);
       obj.user = creatorName;
       obj.userName = creatorName;
       obj.user_name = creatorName;
@@ -302,6 +302,7 @@ router.get('/campaigns', async (req, res) => {
       obj.userProfile = creatorProfile;
       obj.creatorProfile = creatorProfile;
       obj.fundraiserProfile = creatorProfile;
+
       return obj;
     }));
 
@@ -396,18 +397,18 @@ router.get('/campaigns/:id', async (req, res) => {
 
     const rawImages = (Array.isArray(campaignObj.images) && campaignObj.images.length > 0)
       ? campaignObj.images
-      : [campaignObj.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
+      : (campaignObj.imageUrl ? [campaignObj.imageUrl] : []);
 
     const normalizedImages = rawImages
       .filter(img => typeof img === 'string' && img.trim() !== '')
       .map(img => normalizeImageUrl(img, req));
 
-    const finalImage = normalizedImages.length > 0
-      ? normalizedImages[0]
-      : normalizeImageUrl(campaignObj.imageUrl, req);
+    const finalImage = (campaignObj.imageUrl && typeof campaignObj.imageUrl === 'string' && campaignObj.imageUrl.trim() !== '')
+      ? normalizeImageUrl(campaignObj.imageUrl, req)
+      : (normalizedImages.length > 0 ? normalizedImages[0] : '');
 
     campaignObj.imageUrl = finalImage;
-    campaignObj.images = normalizedImages;
+    campaignObj.images = normalizedImages.length > 0 ? normalizedImages : (finalImage ? [finalImage] : []);
 
     campaignObj.user = creatorName;
     campaignObj.userName = creatorName;
@@ -623,6 +624,22 @@ const handleMyCampaigns = async (req, res) => {
       obj.userProfile = creatorProfile;
       obj.creatorProfile = creatorProfile;
       obj.fundraiserProfile = creatorProfile;
+
+      const myRawImages = (Array.isArray(c.images) && c.images.length > 0)
+        ? c.images
+        : (c.imageUrl ? [c.imageUrl] : []);
+
+      const myNormalizedImages = myRawImages
+        .filter(img => typeof img === 'string' && img.trim() !== '')
+        .map(img => normalizeImageUrl(img, req));
+
+      const myFinalImage = (c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '')
+        ? normalizeImageUrl(c.imageUrl, req)
+        : (myNormalizedImages.length > 0 ? myNormalizedImages[0] : '');
+
+      obj.imageUrl = myFinalImage;
+      obj.images = myNormalizedImages.length > 0 ? myNormalizedImages : (myFinalImage ? [myFinalImage] : []);
+
       return obj;
     }));
 
@@ -696,8 +713,25 @@ router.post('/campaigns', async (req, res) => {
       });
     }
     
-    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
-    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+    const rawInputImage = (imageUrl && typeof imageUrl === 'string') 
+      ? imageUrl.trim() 
+      : ((req.body.image && typeof req.body.image === 'string') 
+        ? req.body.image.trim() 
+        : ((req.body.coverImage && typeof req.body.coverImage === 'string') 
+          ? req.body.coverImage.trim() 
+          : ''));
+
+    const rawImagesList = Array.isArray(images) 
+      ? images 
+      : (Array.isArray(req.body.photos) ? req.body.photos : (rawInputImage ? [rawInputImage] : []));
+
+    const validImages = rawImagesList
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    const finalCoverImage = rawInputImage 
+      ? normalizeImageUrl(rawInputImage, req) 
+      : (validImages.length > 0 ? validImages[0] : '');
 
     if (!finalCoverImage) {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
@@ -1040,10 +1074,25 @@ const handleUpdateCampaign = async (req, res) => {
       }
     }
 
-    let validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
-    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
-      campaign.imageUrl = imageUrl.trim();
-      if (validImages.length === 0) validImages.push(imageUrl.trim());
+    const rawUpdateCover = (imageUrl && typeof imageUrl === 'string')
+      ? imageUrl.trim()
+      : ((req.body.image && typeof req.body.image === 'string')
+        ? req.body.image.trim()
+        : ((req.body.coverImage && typeof req.body.coverImage === 'string')
+          ? req.body.coverImage.trim()
+          : ''));
+
+    const rawUpdateImages = Array.isArray(images)
+      ? images
+      : (Array.isArray(req.body.photos) ? req.body.photos : (rawUpdateCover ? [rawUpdateCover] : []));
+
+    let validImages = rawUpdateImages
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    if (rawUpdateCover) {
+      campaign.imageUrl = normalizeImageUrl(rawUpdateCover, req);
+      if (validImages.length === 0) validImages.push(campaign.imageUrl);
     }
     if (validImages.length > 0) {
       campaign.images = validImages;

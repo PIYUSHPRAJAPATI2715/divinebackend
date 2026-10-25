@@ -16,7 +16,7 @@ const LEGACY_STATIC_UNSPLASH_URLS = [
   'photo-1469571486292-0ba58a3f068b', // Volunteers
   'photo-1518495973542-4542c06a5843', // Forest sunlight
   'photo-1486406146926-c627a92ad1ab', // Financial building
-  'catbox.moe',
+  'files.catbox.moe/q4i0t0.jpg', // Legacy dummy seeder placeholder only
   'via.placeholder.com'
 ];
 

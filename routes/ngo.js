@@ -396,8 +396,25 @@ router.post('/campaigns', async (req, res) => {
       });
     }
 
-    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
-    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+    const rawInputImage = (imageUrl && typeof imageUrl === 'string') 
+      ? imageUrl.trim() 
+      : ((req.body.image && typeof req.body.image === 'string') 
+        ? req.body.image.trim() 
+        : ((req.body.coverImage && typeof req.body.coverImage === 'string') 
+          ? req.body.coverImage.trim() 
+          : ''));
+
+    const rawImagesList = Array.isArray(images) 
+      ? images 
+      : (Array.isArray(req.body.photos) ? req.body.photos : (rawInputImage ? [rawInputImage] : []));
+
+    const validImages = rawImagesList
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => (img.startsWith('data:image/') ? saveBase64ImageNGO(img, req) || img : img));
+
+    const finalCoverImage = rawInputImage 
+      ? (rawInputImage.startsWith('data:image/') ? saveBase64ImageNGO(rawInputImage, req) || rawInputImage : rawInputImage)
+      : (validImages.length > 0 ? validImages[0] : '');
 
     if (!finalCoverImage) {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });

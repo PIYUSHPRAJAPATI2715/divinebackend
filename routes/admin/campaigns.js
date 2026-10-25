@@ -83,7 +83,7 @@ const resolveCampaignCreator = async (campaign) => {
 };
 
 const normalizeImageUrl = (urlStr, req) => {
-  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '' || urlStr.includes('catbox.moe')) {
+  if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
     return 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800';
   }
   let clean = urlStr.trim();
@@ -121,15 +121,15 @@ const enrichCampaign = async (campaignDoc, req = null) => {
 
   const rawImages = (Array.isArray(c.images) && c.images.length > 0)
     ? c.images
-    : [c.imageUrl || 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=800'];
+    : (c.imageUrl ? [c.imageUrl] : []);
 
   const normalizedImages = rawImages
     .filter(img => typeof img === 'string' && img.trim() !== '')
     .map(img => normalizeImageUrl(img, req));
 
-  const primaryImage = normalizedImages.length > 0
-    ? normalizedImages[0]
-    : normalizeImageUrl(c.imageUrl, req);
+  const primaryImage = (c.imageUrl && typeof c.imageUrl === 'string' && c.imageUrl.trim() !== '')
+    ? normalizeImageUrl(c.imageUrl, req)
+    : (normalizedImages.length > 0 ? normalizedImages[0] : '');
 
   const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected' || currentStatus === 'Rejected');
   const isDeactivated = Boolean(c.isDeactivated === true);
@@ -305,8 +305,25 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const validImages = Array.isArray(images) ? images.filter(img => typeof img === 'string' && img.trim() !== '') : [];
-    const finalCoverImage = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') ? imageUrl.trim() : (validImages.length > 0 ? validImages[0] : '');
+    const rawInputImage = (imageUrl && typeof imageUrl === 'string') 
+      ? imageUrl.trim() 
+      : ((req.body.image && typeof req.body.image === 'string') 
+        ? req.body.image.trim() 
+        : ((req.body.coverImage && typeof req.body.coverImage === 'string') 
+          ? req.body.coverImage.trim() 
+          : ''));
+
+    const rawImagesList = Array.isArray(images) 
+      ? images 
+      : (Array.isArray(req.body.photos) ? req.body.photos : (rawInputImage ? [rawInputImage] : []));
+
+    const validImages = rawImagesList
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    const finalCoverImage = rawInputImage 
+      ? normalizeImageUrl(rawInputImage, req) 
+      : (validImages.length > 0 ? validImages[0] : '');
 
     if (!finalCoverImage) {
       return res.status(400).json({ status: false, message: 'Campaign image is required. Please upload or provide a cover image URL.' });
@@ -421,6 +438,31 @@ router.put('/:id', async (req, res) => {
       } else if (a && campaign.status === 'Inactive') {
         campaign.status = (campaign.isVerified || campaign.previousStatus === 'Live') ? 'Live' : 'Pending';
       }
+    }
+
+    const rawUpdateCover = (req.body.imageUrl && typeof req.body.imageUrl === 'string')
+      ? req.body.imageUrl.trim()
+      : ((req.body.image && typeof req.body.image === 'string')
+        ? req.body.image.trim()
+        : ((req.body.coverImage && typeof req.body.coverImage === 'string')
+          ? req.body.coverImage.trim()
+          : ''));
+
+    const rawUpdateImages = Array.isArray(req.body.images)
+      ? req.body.images
+      : (Array.isArray(req.body.photos) ? req.body.photos : (rawUpdateCover ? [rawUpdateCover] : []));
+
+    let validImages = rawUpdateImages
+      .filter(img => typeof img === 'string' && img.trim() !== '')
+      .map(img => normalizeImageUrl(img, req));
+
+    if (rawUpdateCover) {
+      campaign.imageUrl = normalizeImageUrl(rawUpdateCover, req);
+      if (validImages.length === 0) validImages.push(campaign.imageUrl);
+    }
+    if (validImages.length > 0) {
+      campaign.images = validImages;
+      if (!campaign.imageUrl) campaign.imageUrl = validImages[0];
     }
 
     await campaign.save();
