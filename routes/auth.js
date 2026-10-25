@@ -1357,16 +1357,10 @@ router.get('/me', authMiddleware, async (req, res) => {
       }
 
       if (ngo) {
-        const reviews = await Review.find({
-          targetName: ngo.name,
-          status: 'Approved'
-        }).sort({ createdAt: -1 });
-
-        let computedRating = 0.0;
-        if (reviews.length > 0) {
-          const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
-          computedRating = Math.round(avg * 10) / 10;
-        }
+        const { calculateNgoDynamicRating } = require('../utils/rating');
+        const dynamicRating = await calculateNgoDynamicRating(ngo);
+        const reviews = dynamicRating.reviews || [];
+        const computedRating = dynamicRating.rating;
 
         const rawFollowers = await getAllFollowersForEntity(user);
         const followersList = rawFollowers.map(f => formatFollowerItem(f));

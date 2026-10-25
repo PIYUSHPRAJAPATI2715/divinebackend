@@ -183,11 +183,41 @@ router.get('/target/:targetType/:identifier', async (req, res) => {
       : targetType.toLowerCase() === 'course' ? 'Course'
       : targetType.toLowerCase() === 'teacher' ? 'Teacher' : 'General';
 
-    const reviews = await Review.find({
-      targetName: { $regex: new RegExp(`^${identifier}$`, 'i') },
-      type: normalizedType,
-      status: 'Approved'
-    }).sort({ createdAt: -1 });
+    let reviews = [];
+    let ngo = null;
+    const mongoose = require('mongoose');
+    const NGO = require('../models/NGO');
+    const { calculateNgoDynamicRating } = require('../utils/rating');
+
+    if (normalizedType === 'NGO') {
+      if (mongoose.Types.ObjectId.isValid(identifier)) {
+        ngo = await NGO.findById(identifier);
+      }
+      if (!ngo) {
+        ngo = await NGO.findOne({
+          $or: [
+            { name: { $regex: new RegExp(`^${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+            { organizationName: { $regex: new RegExp(`^${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+          ]
+        });
+      }
+
+      if (ngo) {
+        const dynamicRating = await calculateNgoDynamicRating(ngo);
+        reviews = dynamicRating.reviews || [];
+      }
+    }
+
+    if (!ngo) {
+      reviews = await Review.find({
+        $or: [
+          { targetName: { $regex: new RegExp(`^${identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+          ...(mongoose.Types.ObjectId.isValid(identifier) ? [{ targetId: identifier }, { campaignId: identifier }] : [])
+        ],
+        type: normalizedType,
+        status: 'Approved'
+      }).sort({ createdAt: -1 });
+    }
 
     const total = reviews.length;
     let averageRating = 0;
@@ -207,21 +237,36 @@ router.get('/target/:targetType/:identifier', async (req, res) => {
       const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
       return {
         ...obj,
+        _id: obj._id,
         id: obj._id,
+        reviewId: obj.reviewId || `REV-${obj._id.toString().slice(-4)}`,
+        userName: obj.userName || 'Anonymous Donor',
+        userRole: obj.userRole || 'Donor',
+        rating: obj.rating || 0,
+        comment: obj.comment || '',
         video: vid,
         videoUrl: vid,
         videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
-        hasVideo: Boolean(vid && vid.trim() !== '')
+        hasVideo: Boolean(vid && vid.trim() !== ''),
+        type: obj.type || normalizedType,
+        targetName: obj.targetName || (ngo ? ngo.name : identifier),
+        status: obj.status || 'Approved',
+        createdAt: obj.createdAt
       };
     });
 
     res.json({
       status: true,
       targetType: normalizedType,
-      targetName: identifier,
+      targetName: ngo?.name || identifier,
       averageRating,
+      rating: averageRating,
       totalReviews: total,
+      reviewsCount: total,
+      reviewCount: total,
       ratingDistribution: distribution,
+      distribution,
+      reviews: formattedReviews,
       data: formattedReviews
     });
   } catch (err) {

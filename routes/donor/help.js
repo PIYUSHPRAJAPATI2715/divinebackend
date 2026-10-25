@@ -159,12 +159,32 @@ router.get('/ngos/:id', async (req, res) => {
       return res.status(404).json({ status: false, message: 'NGO details not found' });
     }
 
-    // 1. Fetch Approved Reviews for this NGO
-    const reviews = await Review.find({
-      type: 'NGO',
-      targetName: ngo.name,
-      status: 'Approved'
-    }).sort({ createdAt: -1 });
+    // 1. Fetch Dynamic Rating & Reviews for this NGO and its campaigns
+    const dynamicRating = await calculateNgoDynamicRating(ngo);
+    const reviews = dynamicRating.reviews || [];
+
+    const formattedReviews = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : { ...r };
+      const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+      return {
+        ...obj,
+        _id: obj._id,
+        id: obj._id,
+        reviewId: obj.reviewId || `REV-${obj._id.toString().slice(-4)}`,
+        userName: obj.userName || 'Anonymous Donor',
+        userRole: obj.userRole || 'Donor',
+        rating: obj.rating || 0,
+        comment: obj.comment || '',
+        video: vid,
+        videoUrl: vid,
+        videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
+        hasVideo: Boolean(vid && vid.trim() !== ''),
+        type: obj.type || 'NGO',
+        targetName: obj.targetName || ngo.name,
+        status: obj.status || 'Approved',
+        createdAt: obj.createdAt
+      };
+    });
 
     // 2. Fetch User model associated with NGO to get KYC/Document details
     const user = await User.findOne({
@@ -202,7 +222,7 @@ router.get('/ngos/:id', async (req, res) => {
     ]);
     const totalDaanReceived = totalDaanResult.length > 0 ? totalDaanResult[0].total : 0;
 
-    const totalPayoutsGranted = ngo.payoutHistory
+    const totalPayoutsGranted = (ngo.payoutHistory || [])
       .filter(p => p.status === 'Approved')
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
@@ -217,8 +237,13 @@ router.get('/ngos/:id', async (req, res) => {
 
     // Attach to NGO object safely to prevent frontend breaking changes
     const ngoObj = ngo.toObject();
-    const dynamicRating = await calculateNgoDynamicRating(ngo);
     const photos = enrichEntityPhotos(ngoObj, 'ngo', user);
+
+    const ratingDist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach(r => {
+      const star = Math.min(5, Math.max(1, Math.round(r.rating || 0)));
+      ratingDist[star] = (ratingDist[star] || 0) + 1;
+    });
 
     ngoObj.rating = dynamicRating.rating;
     ngoObj.ratingValue = dynamicRating.rating;
@@ -226,7 +251,9 @@ router.get('/ngos/:id', async (req, res) => {
     ngoObj.reviewsCount = dynamicRating.reviewsCount;
     ngoObj.reviewCount = dynamicRating.reviewsCount;
     ngoObj.totalReviews = dynamicRating.reviewsCount;
-    ngoObj.reviews = reviews;
+    ngoObj.reviews = formattedReviews;
+    ngoObj.ratingDistribution = ratingDist;
+    ngoObj.distribution = ratingDist;
     ngoObj.verification = verification;
     ngoObj.transparency = transparency;
     Object.assign(ngoObj, photos);

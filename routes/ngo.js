@@ -12,6 +12,7 @@ const { buildPhoneFilter } = require('../utils/phone');
 const { resolveEntityPhoto } = require('../utils/avatar');
 const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('../utils/campaignHelper');
 const { getAllFollowersForEntity, formatFollowerItem } = require('../utils/followers');
+const { calculateNgoDynamicRating } = require('../utils/rating');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -67,41 +68,44 @@ router.get('/profile', async (req, res) => {
   try {
     const ngo = await getOrCreateNGOProfile(req);
 
-    // Fetch approved reviews specifically targeting this organization
-    const reviews = await Review.find({
-      targetName: ngo.name,
-      status: 'Approved'
-    }).sort({ createdAt: -1 });
-
-    // Compute dynamic rating from approved reviews (default to 0.0 for new entities with 0 reviews)
-    let computedRating = 0.0;
-    if (reviews.length > 0) {
-      const avg = reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length;
-      computedRating = Math.round(avg * 10) / 10;
+    // Fetch dynamic rating & reviews for this NGO and its campaigns
+    const dynamicRating = await calculateNgoDynamicRating(ngo);
+    const reviews = dynamicRating.reviews || [];
+    const computedRating = dynamicRating.rating;
+    if (ngo) {
+      ngo.rating = computedRating;
+      await ngo.save();
     }
-    ngo.rating = computedRating;
-    await ngo.save();
 
     const user = req.user ? await User.findById(req.user.id || req.user._id) : null;
     const rawFollowersList = await getAllFollowersForEntity(user || req.user);
     const followersList = rawFollowersList.map(f => formatFollowerItem(f));
     const followersCount = followersList.length;
-    const ngoObj = ngo.toObject();
+    const ngoObj = ngo ? ngo.toObject() : {};
     const userObj = user ? user.toObject() : {};
 
-    const formattedReviews = reviews.map(r => ({
-      _id: r._id,
-      reviewId: r.reviewId,
-      userName: r.userName,
-      userRole: r.userRole || 'Donor',
-      type: r.type || 'NGO',
-      targetName: r.targetName || ngo.name,
-      rating: r.rating,
-      comment: r.comment,
-      videoUrl: r.videoUrl || '',
-      status: r.status,
-      createdAt: r.createdAt
-    }));
+    const formattedReviews = reviews.map(r => {
+      const obj = r.toObject ? r.toObject() : { ...r };
+      const vid = obj.video || obj.videoUrl || (Array.isArray(obj.videos) && obj.videos[0]) || '';
+      return {
+        ...obj,
+        _id: obj._id,
+        id: obj._id,
+        reviewId: obj.reviewId || `REV-${obj._id.toString().slice(-4)}`,
+        userName: obj.userName || 'Anonymous Donor',
+        userRole: obj.userRole || 'Donor',
+        type: obj.type || 'NGO',
+        targetName: obj.targetName || (ngo ? ngo.name : ''),
+        rating: obj.rating || 0,
+        comment: obj.comment || '',
+        video: vid,
+        videoUrl: vid,
+        videos: (Array.isArray(obj.videos) && obj.videos.length > 0) ? obj.videos : (vid ? [vid] : []),
+        hasVideo: Boolean(vid && vid.trim() !== ''),
+        status: obj.status || 'Approved',
+        createdAt: obj.createdAt
+      };
+    });
 
     const ngoPhoto = resolveEntityPhoto(ngoObj, 'ngo');
 
