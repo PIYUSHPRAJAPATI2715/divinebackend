@@ -12,6 +12,31 @@ const cleanPhone = (p) => {
   return digits.length >= 10 ? digits.slice(-10) : digits;
 };
 
+// Helper: strictly exclude wallet top-ups, wallet payments, recharges, and non-donation transactions
+const isTopupOrRecharge = (t) => {
+  if (!t) return false;
+  const typeStr = (t.type || '').toLowerCase();
+  const itemStr = (t.item || '').toLowerCase();
+  const fundCategoryStr = (t.fundCategory || '').toLowerCase();
+  const recipientStr = (t.recipient || '').toLowerCase();
+  const notesStr = (t.notes || '').toLowerCase();
+  const combined = `${typeStr} ${itemStr} ${fundCategoryStr} ${recipientStr} ${notesStr}`;
+
+  return (
+    typeStr === 'wallet top-up' ||
+    typeStr === 'wallet payment' ||
+    typeStr === 'course' ||
+    typeStr === 'seminar' ||
+    combined.includes('wallet') ||
+    combined.includes('top-up') ||
+    combined.includes('topup') ||
+    combined.includes('recharge') ||
+    combined.includes('cashback') ||
+    combined.includes('refund') ||
+    combined.includes('admin adjustment')
+  );
+};
+
 // Helper: Enrich a transaction with complete donor and recipient details
 const enrichTransaction = async (tx, userMap, ngoList, campaignList) => {
   const t = tx.toObject ? tx.toObject() : tx;
@@ -34,7 +59,20 @@ const enrichTransaction = async (tx, userMap, ngoList, campaignList) => {
   }
 
   // Determine Recipient & Recipient Type
-  let recipient = t.recipient || t.item || 'Divine Social Welfare Initiative';
+  let recipient = t.recipient;
+  if (!recipient || isTopupOrRecharge({ item: recipient, type: '' })) {
+    if (t.campaignId) {
+      const camp = (campaignList || []).find(c => c._id?.toString() === t.campaignId.toString());
+      if (camp) recipient = camp.title;
+    } else if (t.ngoId) {
+      const ngoItem = (ngoList || []).find(n => n._id?.toString() === t.ngoId.toString());
+      if (ngoItem) recipient = ngoItem.name;
+    }
+    if (!recipient) {
+      recipient = (!isTopupOrRecharge(t) && t.item) ? t.item : 'Divine Social Welfare Initiative';
+    }
+  }
+
   let recipientType = t.recipientType;
   if (!recipientType) {
     if (t.item && t.item.toLowerCase().startsWith('dan:')) {
@@ -96,7 +134,8 @@ const enrichTransaction = async (tx, userMap, ngoList, campaignList) => {
 // Summary & KPI route for Donation Transactions Page (Row 12)
 router.get('/donation-summary', async (req, res) => {
   try {
-    const transactions = await Transaction.find({});
+    const rawAll = await Transaction.find({});
+    const transactions = rawAll.filter(t => !isTopupOrRecharge(t));
     
     let totalTransactions = transactions.length;
     let totalDonationAmount = 0;
@@ -112,18 +151,19 @@ router.get('/donation-summary', async (req, res) => {
 
     for (const t of transactions) {
       const amt = Number(t.amount || 0);
-      totalDonationAmount += amt;
+      const isSuccess = (t.status || 'Success') === 'Success';
+      if (isSuccess) totalDonationAmount += amt;
 
       const dType = t.donorType || 'Individual';
       if (dType === 'Corporate') {
         corporateCount++;
-        corporateAmount += amt;
+        if (isSuccess) corporateAmount += amt;
       } else if (dType === 'NGO') {
         ngoCount++;
-        ngoAmount += amt;
+        if (isSuccess) ngoAmount += amt;
       } else {
         individualCount++;
-        individualAmount += amt;
+        if (isSuccess) individualAmount += amt;
       }
 
       const st = t.status || 'Success';
@@ -171,13 +211,16 @@ router.get('/donations', async (req, res) => {
     } = req.query;
 
     // Load related datasets for fast memory enrichment
-    const [rawTransactions, rawDanDonations, users, ngos, campaigns] = await Promise.all([
+    const [allRawTransactions, rawDanDonations, users, ngos, campaigns] = await Promise.all([
       Transaction.find({}).sort({ date: -1, createdAt: -1 }),
       DanDonation.find({}).sort({ createdAt: -1 }),
       User.find({}, 'name phone email role organizationName profilePhoto panNumber gender city'),
       NGO.find({}, 'name phone email logo status'),
       Campaign.find({}, 'title organizationName category')
     ]);
+
+    // Strictly exclude wallet top-ups, wallet payments, recharges, and non-donation items
+    const rawTransactions = allRawTransactions.filter(tx => !isTopupOrRecharge(tx));
 
     const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
@@ -322,6 +365,8 @@ router.get('/donations', async (req, res) => {
       page: pageNum,
       totalPages,
       limit: limitNum,
+      availableCampaigns: (campaigns || []).map(c => ({ id: c._id, title: c.title })),
+      availableNgos: (ngos || []).map(n => ({ id: n._id, name: n.name })),
       data: paginated
     });
   } catch (err) {
