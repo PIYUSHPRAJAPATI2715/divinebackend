@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const Donor = require('../../models/Donor');
 const User = require('../../models/User');
 const NGO = require('../../models/NGO');
@@ -10,6 +12,45 @@ const cleanPhone = (p) => {
   if (!p) return '';
   const digits = String(p).replace(/[^0-9]/g, '');
   return digits.length >= 10 ? digits.slice(-10) : digits;
+};
+
+// Helper: Save Base64 file upload (PDF or Images)
+const saveBase64Doc = (base64Str, req, defaultPrefix = 'doc') => {
+  if (!base64Str || typeof base64Str !== 'string') return '';
+  if (!base64Str.startsWith('data:') && !base64Str.includes(';base64,')) {
+    return base64Str;
+  }
+  try {
+    let ext = 'pdf';
+    let rawData = base64Str;
+    const matches = base64Str.match(/^data:([A-Za-z0-9-+/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const mime = matches[1].toLowerCase();
+      if (mime.includes('pdf')) ext = 'pdf';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      else if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('webp')) ext = 'webp';
+      else if (mime.includes('gif')) ext = 'gif';
+      rawData = matches[2];
+    }
+    const buffer = Buffer.from(rawData, 'base64');
+    if (buffer.slice(0, 4).toString() === '%PDF') ext = 'pdf';
+    else if (buffer[0] === 0xFF && buffer[1] === 0xD8) ext = 'jpg';
+    else if (buffer[0] === 0x89 && buffer[1] === 0x50) ext = 'png';
+
+    const filename = `${defaultPrefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+    const protocol = (req && (req.secure || req.headers?.['x-forwarded-proto'] === 'https')) ? 'https' : 'http';
+    const host = (req && req.get) ? req.get('host') : '195.35.20.150:8000';
+    return `${protocol}://${host}/uploads/${filename}`;
+  } catch (err) {
+    console.error('Error saving base64 document:', err);
+    return base64Str;
+  }
 };
 
 // Get all Donors & App Users (combines User collection with Donor and NGO collection, filters out deleted)
@@ -69,6 +110,7 @@ router.get('/', async (req, res) => {
         designation: matchedNgo.designation || '',
         websiteUrl: matchedNgo.websiteUrl || '',
         about: matchedNgo.about || '',
+        logo: matchedNgo.logo || null,
         panImage: matchedNgo.panImage || null,
         tanNumber: matchedNgo.tanNumber || '',
         tanImage: matchedNgo.tanImage || null,
@@ -92,6 +134,7 @@ router.get('/', async (req, res) => {
         addressCertificate: matchedNgo.addressCertificate || null,
         moaAoaDocs: matchedNgo.moaAoaDocs || [],
         cancelledChequeDoc: matchedNgo.cancelledChequeDoc || null,
+        authorityLetterDoc: matchedNgo.formFillerDetails?.authorityLetterDoc || null,
         bankAccountHolder: matchedNgo.bankAccountHolder || '',
         bankName: matchedNgo.bankName || '',
         bankBranch: matchedNgo.bankBranch || '',
@@ -229,6 +272,7 @@ router.get('/', async (req, res) => {
         designation: n.designation || '',
         websiteUrl: n.websiteUrl || '',
         about: n.about || '',
+        logo: n.logo || null,
         verificationStatus: n.status === 'Verified' ? 'Verified' : (n.status === 'Rejected' ? 'Rejected' : 'Pending'),
         verified: n.status === 'Verified',
         registrationNumber: n.registrationNumber || '',
@@ -256,6 +300,7 @@ router.get('/', async (req, res) => {
         addressCertificate: n.addressCertificate || null,
         moaAoaDocs: n.moaAoaDocs || [],
         cancelledChequeDoc: n.cancelledChequeDoc || null,
+        authorityLetterDoc: n.formFillerDetails?.authorityLetterDoc || null,
         bankAccountHolder: n.bankAccountHolder || '',
         bankName: n.bankName || '',
         bankBranch: n.bankBranch || '',
@@ -480,9 +525,31 @@ router.post('/', async (req, res) => {
         });
       }
 
+      // Save all Base64 documents to /uploads/ with appropriate extensions
+      const savedLogo = req.body.logo ? saveBase64Doc(req.body.logo, req, 'logo') : null;
+      const savedAddressCert = req.body.addressCertificate ? saveBase64Doc(req.body.addressCertificate, req, 'address_cert') : null;
+      const savedPanImage = req.body.panImage ? saveBase64Doc(req.body.panImage, req, 'pan') : null;
+      const savedTanImage = req.body.tanImage ? saveBase64Doc(req.body.tanImage, req, 'tan') : null;
+      const savedGstDoc = req.body.gstDocument ? saveBase64Doc(req.body.gstDocument, req, 'gst') : null;
+      const savedCert12A = req.body.certificate12A ? saveBase64Doc(req.body.certificate12A, req, '12a') : null;
+      const savedCert80G = req.body.certificate80G ? saveBase64Doc(req.body.certificate80G, req, '80g') : null;
+      const savedDarpan = req.body.darpanCertificate ? saveBase64Doc(req.body.darpanCertificate, req, 'darpan') : null;
+      const savedCsr1 = req.body.csr1Certificate ? saveBase64Doc(req.body.csr1Certificate, req, 'csr1') : null;
+      const savedFcra = req.body.fcraCertificate ? saveBase64Doc(req.body.fcraCertificate, req, 'fcra') : null;
+      const savedCheque = req.body.cancelledChequeDoc ? saveBase64Doc(req.body.cancelledChequeDoc, req, 'cheque') : null;
+      const savedAuthorityLetter = req.body.authorityLetterDoc ? saveBase64Doc(req.body.authorityLetterDoc, req, 'authority_letter') : null;
+
+      let savedMoaAoaDocs = [];
+      if (Array.isArray(req.body.moaAoaDocs)) {
+        savedMoaAoaDocs = req.body.moaAoaDocs.map((doc, idx) => saveBase64Doc(doc, req, `moa_${idx + 1}`)).filter(Boolean);
+      } else if (req.body.moaAoaDocs) {
+        savedMoaAoaDocs = [saveBase64Doc(req.body.moaAoaDocs, req, 'moa_1')].filter(Boolean);
+      }
+
       const ngoData = {
         name: organizationName || name || 'Organization Partner',
         legalName: legalName || organizationName || name || '',
+        logo: savedLogo || null,
         email: finalEmail || 'ngo@example.com',
         phone: finalPhone || '',
         registrationNumber: registrationNumber || 'REG-PENDING',
@@ -491,27 +558,50 @@ router.post('/', async (req, res) => {
         contactPerson: contactPerson || name || '',
         designation: designation || '',
         registeredAddress: registeredAddress || req.body.address || '',
+        addressCertificate: savedAddressCert,
         websiteUrl: websiteUrl || '',
         about: about || '',
         panNumber: panNumber || '',
+        panImage: savedPanImage,
         tanNumber: tanNumber || '',
+        tanImage: savedTanImage,
         gstNumber: gstNumber || '',
-        has12A: has12A || 'No',
+        gstDocument: savedGstDoc,
+        has12A: has12A || (savedCert12A || registration12A ? 'Yes' : 'No'),
         registration12A: registration12A || '',
-        has80G: has80G || 'No',
+        certificate12A: savedCert12A,
+        has80G: has80G || (savedCert80G || registration80G ? 'Yes' : 'No'),
         registration80G: registration80G || '',
-        hasDarpan: hasDarpan || 'No',
+        certificate80G: savedCert80G,
+        hasDarpan: hasDarpan || (savedDarpan || darpanNumber ? 'Yes' : 'No'),
         darpanNumber: darpanNumber || '',
-        hasCSR1: hasCSR1 || 'No',
+        darpanCertificate: savedDarpan,
+        hasCSR1: hasCSR1 || (savedCsr1 || csr1Number ? 'Yes' : 'No'),
         csr1Number: csr1Number || '',
-        hasFCRA: hasFCRA || 'No',
+        csr1Certificate: savedCsr1,
+        hasFCRA: hasFCRA || (savedFcra || fcraNumber ? 'Yes' : 'No'),
         fcraNumber: fcraNumber || '',
+        fcraCertificate: savedFcra,
+        moaAoaDocs: savedMoaAoaDocs,
         bankAccountHolder: bankAccountHolder || '',
         bankName: bankName || '',
         bankBranch: bankBranch || '',
         bankAccountNumber: bankAccountNumber || '',
-        bankIFSC: bankIFSC || ''
+        bankIFSC: bankIFSC || '',
+        cancelledChequeDoc: savedCheque,
+        formFillerDetails: {
+          name: contactPerson || name || '',
+          designationRole: designation || '',
+          phone: finalPhone || '',
+          email: finalEmail || '',
+          authorityLetterDoc: savedAuthorityLetter
+        }
       };
+
+      if (savedLogo && user) {
+        user.profilePhoto = savedLogo;
+        await user.save();
+      }
 
       if (ngo) {
         Object.assign(ngo, ngoData);
@@ -743,6 +833,60 @@ router.put('/:id', async (req, res) => {
         bankAccountNumber: req.body.bankAccountNumber,
         bankIFSC: req.body.bankIFSC
       };
+
+      // Process and save Base64 documents if provided
+      if (req.body.logo !== undefined) {
+        ngoFields.logo = req.body.logo ? saveBase64Doc(req.body.logo, req, 'logo') : null;
+        if (user && ngoFields.logo) {
+          user.profilePhoto = ngoFields.logo;
+          await user.save();
+        }
+      }
+      if (req.body.addressCertificate !== undefined) {
+        ngoFields.addressCertificate = req.body.addressCertificate ? saveBase64Doc(req.body.addressCertificate, req, 'address_cert') : null;
+      }
+      if (req.body.panImage !== undefined) {
+        ngoFields.panImage = req.body.panImage ? saveBase64Doc(req.body.panImage, req, 'pan') : null;
+      }
+      if (req.body.tanImage !== undefined) {
+        ngoFields.tanImage = req.body.tanImage ? saveBase64Doc(req.body.tanImage, req, 'tan') : null;
+      }
+      if (req.body.gstDocument !== undefined) {
+        ngoFields.gstDocument = req.body.gstDocument ? saveBase64Doc(req.body.gstDocument, req, 'gst') : null;
+      }
+      if (req.body.certificate12A !== undefined) {
+        ngoFields.certificate12A = req.body.certificate12A ? saveBase64Doc(req.body.certificate12A, req, '12a') : null;
+      }
+      if (req.body.certificate80G !== undefined) {
+        ngoFields.certificate80G = req.body.certificate80G ? saveBase64Doc(req.body.certificate80G, req, '80g') : null;
+      }
+      if (req.body.darpanCertificate !== undefined) {
+        ngoFields.darpanCertificate = req.body.darpanCertificate ? saveBase64Doc(req.body.darpanCertificate, req, 'darpan') : null;
+      }
+      if (req.body.csr1Certificate !== undefined) {
+        ngoFields.csr1Certificate = req.body.csr1Certificate ? saveBase64Doc(req.body.csr1Certificate, req, 'csr1') : null;
+      }
+      if (req.body.fcraCertificate !== undefined) {
+        ngoFields.fcraCertificate = req.body.fcraCertificate ? saveBase64Doc(req.body.fcraCertificate, req, 'fcra') : null;
+      }
+      if (req.body.cancelledChequeDoc !== undefined) {
+        ngoFields.cancelledChequeDoc = req.body.cancelledChequeDoc ? saveBase64Doc(req.body.cancelledChequeDoc, req, 'cheque') : null;
+      }
+      if (req.body.moaAoaDocs !== undefined) {
+        if (Array.isArray(req.body.moaAoaDocs)) {
+          ngoFields.moaAoaDocs = req.body.moaAoaDocs.map((doc, idx) => saveBase64Doc(doc, req, `moa_${idx + 1}`)).filter(Boolean);
+        } else if (req.body.moaAoaDocs) {
+          ngoFields.moaAoaDocs = [saveBase64Doc(req.body.moaAoaDocs, req, 'moa_1')].filter(Boolean);
+        }
+      }
+      if (req.body.authorityLetterDoc !== undefined) {
+        const savedAuthLetter = req.body.authorityLetterDoc ? saveBase64Doc(req.body.authorityLetterDoc, req, 'authority_letter') : null;
+        ngoFields.formFillerDetails = {
+          ...(ngo?.formFillerDetails || {}),
+          authorityLetterDoc: savedAuthLetter
+        };
+      }
+
       Object.keys(ngoFields).forEach(k => ngoFields[k] === undefined && delete ngoFields[k]);
 
       if (ngo) {
