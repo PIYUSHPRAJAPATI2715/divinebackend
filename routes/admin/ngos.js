@@ -5,6 +5,7 @@ const User = require('../../models/User');
 const Review = require('../../models/Review');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
 const { calculateNgoDynamicRating } = require('../../utils/rating');
+const { buildPhoneFilter } = require('../../utils/phone');
 
 // Helper to enrich NGO object with reviews, impact, followersCount, years, rating
 const enrichNGOData = async (ngo) => {
@@ -236,23 +237,32 @@ router.put('/:id', async (req, res) => {
       const isVerified = req.body.status === 'Verified';
       const userUpdate = {
         verified: isVerified,
-        status: req.body.status === 'Verified' ? 'Active' : (req.body.status === 'Rejected' ? 'Rejected' : 'Pending')
+        verificationStatus: req.body.status || (isVerified ? 'Verified' : 'Pending'),
+        status: isVerified ? 'Active' : (req.body.status === 'Rejected' ? 'Rejected' : 'Pending'),
+        isProfileComplete: true
       };
       if (req.body.status === 'Rejected' && req.body.rejectionReason) {
         userUpdate.rejectionReason = req.body.rejectionReason;
-      } else if (req.body.status === 'Verified') {
+      } else if (isVerified) {
         userUpdate.rejectionReason = '';
       }
 
-      await User.findOneAndUpdate(
-        { $or: [{ phone: ngo.phone }, { email: ngo.email }] },
-        userUpdate
-      );
+      const userOr = [
+        ...(ngo.phone ? [buildPhoneFilter(ngo.phone)] : []),
+        ...(ngo.email ? [{ email: ngo.email.toLowerCase().trim() }] : [])
+      ];
+
+      if (userOr.length > 0) {
+        await User.updateMany(
+          { $or: userOr },
+          userUpdate
+        );
+      }
 
       if (req.body.status === 'Rejected') {
         try {
           const { createAndSendNotification } = require('../../utils/notification');
-          const matchedUser = await User.findOne({ $or: [{ phone: ngo.phone }, { email: ngo.email }] });
+          const matchedUser = userOr.length > 0 ? await User.findOne({ $or: userOr }) : null;
           if (matchedUser) {
             await createAndSendNotification({
               userId: matchedUser._id,

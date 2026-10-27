@@ -176,95 +176,136 @@ router.get('/', async (req, res) => {
 
     // 2. Add remaining Donors from Donor collection that did not match a User record
     for (const d of donors) {
-      if (!matchedDonorIds.has(d._id.toString())) {
-        const dObj = d.toObject();
-        let phone = dObj.phone || dObj.mobileNumber || '';
-        if (!phone) {
-          const numSeed = parseInt((dObj.donorId || '').replace(/[^0-9]/g, '')) || Math.floor(1000 + Math.random() * 9000);
-          phone = `+91 98765${String(numSeed).padStart(5, '0').slice(-5)}`;
-        }
-        result.push({
-          ...dObj,
-          phone,
-          mobileNumber: phone,
-          role: dObj.role || 'donor'
-        });
+      if (matchedDonorIds.has(d._id.toString())) continue;
+      const dPhoneLast10 = cleanPhone(d.phone || d.mobileNumber);
+      const dEmail = (d.email || '').toLowerCase().trim();
+      
+      // Do not add donor if phone was already processed from User record
+      const alreadyHasUser = dPhoneLast10 && result.some(r => cleanPhone(r.phone || r.mobileNumber) === dPhoneLast10);
+      if (alreadyHasUser) continue;
+
+      const dObj = d.toObject();
+      let phone = dObj.phone || dObj.mobileNumber || '';
+      if (!phone) {
+        const numSeed = parseInt((dObj.donorId || '').replace(/[^0-9]/g, '')) || Math.floor(1000 + Math.random() * 9000);
+        phone = `+91 98765${String(numSeed).padStart(5, '0').slice(-5)}`;
       }
+      matchedDonorIds.add(d._id.toString());
+      result.push({
+        ...dObj,
+        phone,
+        mobileNumber: phone,
+        role: dObj.role || 'donor'
+      });
     }
 
     // 3. Add remaining NGOs/Corporates from NGO collection that did not match a User record
     for (const n of ngos) {
-      if (!matchedNgoIds.has(n._id.toString())) {
-        const nEmail = (n.email || '').toLowerCase().trim();
-        const nPhone = n.phone || '';
-        const isCorp = n.organizationType === 'Corporate' || n.organizationType === 'Company';
-        const role = isCorp ? 'corporate' : 'ngo';
-        result.push({
-          _id: n._id,
-          userId: n._id,
-          donorId: `${isCorp ? 'CRP' : 'NGO'}-${n._id.toString().slice(-4).toUpperCase()}`,
-          name: n.name || (isCorp ? 'Corporate Partner' : 'NGO Organization'),
-          email: nEmail,
-          phone: nPhone,
-          mobileNumber: nPhone,
-          status: (n.status === 'Suspended' || n.status === 'Inactive') ? 'Inactive' : 'Active',
-          role: role,
-          organizationType: isCorp ? 'Corporate' : 'Non-Profit',
-          organizationName: n.name,
-          legalName: n.legalName || n.name || '',
-          contactPerson: n.contactPerson || '',
-          designation: n.designation || '',
-          websiteUrl: n.websiteUrl || '',
-          about: n.about || '',
-          verificationStatus: n.status === 'Verified' ? 'Verified' : (n.status === 'Rejected' ? 'Rejected' : 'Pending'),
-          verified: n.status === 'Verified',
-          registrationNumber: n.registrationNumber || '',
-          panNumber: n.panNumber || '',
-          panImage: n.panImage || null,
-          tanNumber: n.tanNumber || '',
-          tanImage: n.tanImage || null,
-          gstNumber: n.gstNumber || '',
-          gstDocument: n.gstDocument || null,
-          has12A: n.has12A || 'No',
-          registration12A: n.registration12A || '',
-          certificate12A: n.certificate12A || null,
-          has80G: n.has80G || 'No',
-          registration80G: n.registration80G || '',
-          certificate80G: n.certificate80G || null,
-          hasDarpan: n.hasDarpan || 'No',
-          darpanNumber: n.darpanNumber || '',
-          darpanCertificate: n.darpanCertificate || null,
-          hasCSR1: n.hasCSR1 || 'No',
-          csr1Number: n.csr1Number || '',
-          csr1Certificate: n.csr1Certificate || null,
-          hasFCRA: n.hasFCRA || 'No',
-          fcraNumber: n.fcraNumber || '',
-          fcraCertificate: n.fcraCertificate || null,
-          addressCertificate: n.addressCertificate || null,
-          moaAoaDocs: n.moaAoaDocs || [],
-          cancelledChequeDoc: n.cancelledChequeDoc || null,
-          bankAccountHolder: n.bankAccountHolder || '',
-          bankName: n.bankName || '',
-          bankBranch: n.bankBranch || '',
-          bankAccountNumber: n.bankAccountNumber || '',
-          bankIFSC: n.bankIFSC || '',
-          directorsKeyManagement: n.directorsKeyManagement || [],
-          formFillerDetails: n.formFillerDetails || null,
-          rejectionReason: n.rejectionReason || '',
-          isRegisteredNonProfit: n.isRegisteredNonProfit || '',
-          isRegisteredCompany: n.isRegisteredCompany || '',
-          address: n.registeredAddress || n.address || '',
-          totalDonated: '₹0',
-          campaignsSupported: 0,
-          donationHistory: [],
-          createdAt: n.createdAt || new Date()
-        });
-      }
+      if (matchedNgoIds.has(n._id.toString())) continue;
+      const nPhoneLast10 = cleanPhone(n.phone);
+      const nEmail = (n.email || '').toLowerCase().trim();
+
+      // Do not add NGO if phone already processed
+      const alreadyHasUser = nPhoneLast10 && result.some(r => cleanPhone(r.phone || r.mobileNumber) === nPhoneLast10);
+      if (alreadyHasUser) continue;
+
+      matchedNgoIds.add(n._id.toString());
+      const isCorp = n.organizationType === 'Corporate' || n.organizationType === 'Company';
+      const role = isCorp ? 'corporate' : 'ngo';
+      result.push({
+        _id: n._id,
+        userId: n._id,
+        donorId: `${isCorp ? 'CRP' : 'NGO'}-${n._id.toString().slice(-4).toUpperCase()}`,
+        name: n.name || (isCorp ? 'Corporate Partner' : 'NGO Organization'),
+        email: nEmail,
+        phone: n.phone || '',
+        mobileNumber: n.phone || '',
+        status: (n.status === 'Suspended' || n.status === 'Inactive') ? 'Inactive' : 'Active',
+        role: role,
+        organizationType: isCorp ? 'Corporate' : 'Non-Profit',
+        organizationName: n.name,
+        legalName: n.legalName || n.name || '',
+        contactPerson: n.contactPerson || '',
+        designation: n.designation || '',
+        websiteUrl: n.websiteUrl || '',
+        about: n.about || '',
+        verificationStatus: n.status === 'Verified' ? 'Verified' : (n.status === 'Rejected' ? 'Rejected' : 'Pending'),
+        verified: n.status === 'Verified',
+        registrationNumber: n.registrationNumber || '',
+        panNumber: n.panNumber || '',
+        panImage: n.panImage || null,
+        tanNumber: n.tanNumber || '',
+        tanImage: n.tanImage || null,
+        gstNumber: n.gstNumber || '',
+        gstDocument: n.gstDocument || null,
+        has12A: n.has12A || 'No',
+        registration12A: n.registration12A || '',
+        certificate12A: n.certificate12A || null,
+        has80G: n.has80G || 'No',
+        registration80G: n.registration80G || '',
+        certificate80G: n.certificate80G || null,
+        hasDarpan: n.hasDarpan || 'No',
+        darpanNumber: n.darpanNumber || '',
+        darpanCertificate: n.darpanCertificate || null,
+        hasCSR1: n.hasCSR1 || 'No',
+        csr1Number: n.csr1Number || '',
+        csr1Certificate: n.csr1Certificate || null,
+        hasFCRA: n.hasFCRA || 'No',
+        fcraNumber: n.fcraNumber || '',
+        fcraCertificate: n.fcraCertificate || null,
+        addressCertificate: n.addressCertificate || null,
+        moaAoaDocs: n.moaAoaDocs || [],
+        cancelledChequeDoc: n.cancelledChequeDoc || null,
+        bankAccountHolder: n.bankAccountHolder || '',
+        bankName: n.bankName || '',
+        bankBranch: n.bankBranch || '',
+        bankAccountNumber: n.bankAccountNumber || '',
+        bankIFSC: n.bankIFSC || '',
+        directorsKeyManagement: n.directorsKeyManagement || [],
+        formFillerDetails: n.formFillerDetails || null,
+        rejectionReason: n.rejectionReason || '',
+        isRegisteredNonProfit: n.isRegisteredNonProfit || '',
+        isRegisteredCompany: n.isRegisteredCompany || '',
+        address: n.registeredAddress || n.address || '',
+        totalDonated: '₹0',
+        campaignsSupported: 0,
+        donationHistory: [],
+        createdAt: n.createdAt || new Date()
+      });
     }
 
-    // Sort combined list newest first
-    result.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    res.json(result);
+    // Deduplicate result array: ensure each unique 10-digit mobile number appears strictly ONCE
+    const seenPhones = new Set();
+    const seenEmails = new Set();
+    const finalResult = [];
+
+    // Prioritize entries that have actual User records (userId that exists in users)
+    const userIdsSet = new Set(users.map(u => u._id.toString()));
+    result.sort((a, b) => {
+      const aHasUser = a.userId && userIdsSet.has(a.userId.toString()) ? 1 : 0;
+      const bHasUser = b.userId && userIdsSet.has(b.userId.toString()) ? 1 : 0;
+      if (bHasUser !== aHasUser) return bHasUser - aHasUser;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    for (const item of result) {
+      const phoneDigits = cleanPhone(item.phone || item.mobileNumber);
+      const emailLower = (item.email || '').toLowerCase().trim();
+
+      if (phoneDigits && phoneDigits.length >= 10) {
+        if (seenPhones.has(phoneDigits)) continue;
+        seenPhones.add(phoneDigits);
+      }
+      if (emailLower && emailLower !== 'user@example.com' && emailLower !== 'ngo@example.com') {
+        if (seenEmails.has(emailLower)) continue;
+        seenEmails.add(emailLower);
+      }
+      finalResult.push(item);
+    }
+
+    // Sort combined deduplicated list newest first
+    finalResult.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    res.json(finalResult);
   } catch (err) {
     console.error('Error fetching donors:', err);
     res.status(500).json({ message: err.message });
@@ -356,11 +397,37 @@ router.post('/', async (req, res) => {
       status = 'Active',
       verificationStatus = 'Pending',
       totalDonated = '₹0',
-      campaignsSupported = 0
+      campaignsSupported = 0,
+      legalName,
+      contactPerson,
+      designation,
+      registeredAddress,
+      websiteUrl,
+      about,
+      tanNumber,
+      gstNumber,
+      has12A,
+      registration12A,
+      has80G,
+      registration80G,
+      hasDarpan,
+      darpanNumber,
+      hasCSR1,
+      csr1Number,
+      hasFCRA,
+      fcraNumber,
+      bankAccountHolder,
+      bankName,
+      bankBranch,
+      bankAccountNumber,
+      bankIFSC
     } = req.body;
 
     const finalPhone = (phone || mobileNumber || '').trim();
     const finalEmail = (email || '').toLowerCase().trim();
+    const assignedRole = (role === 'ngo' || role === 'corporate') ? role : 'donor';
+    const isCorp = assignedRole === 'corporate';
+    const isVerified = verificationStatus === 'Verified';
 
     // 1. Create or update User record
     let user = null;
@@ -373,9 +440,19 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const assignedRole = (role === 'ngo' || role === 'corporate') ? role : 'donor';
-
-    if (!user) {
+    if (user) {
+      user.name = name || organizationName || user.name || 'Divine User';
+      if (finalPhone) user.phone = finalPhone;
+      if (finalEmail) user.email = finalEmail;
+      user.role = assignedRole;
+      if (gender) user.gender = gender;
+      user.status = (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active';
+      user.verified = isVerified;
+      user.verificationStatus = verificationStatus || 'Pending';
+      user.organizationName = organizationName || (assignedRole !== 'donor' ? name : user.organizationName);
+      user.isProfileComplete = true;
+      await user.save();
+    } else {
       user = new User({
         name: name || organizationName || 'Divine User',
         phone: finalPhone || undefined,
@@ -383,53 +460,107 @@ router.post('/', async (req, res) => {
         role: assignedRole,
         gender: gender || null,
         status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active',
-        verified: verificationStatus === 'Verified',
-        organizationName: organizationName || (assignedRole !== 'donor' ? name : '')
+        verified: isVerified,
+        verificationStatus: verificationStatus || 'Pending',
+        organizationName: organizationName || (assignedRole !== 'donor' ? name : ''),
+        isProfileComplete: true
       });
       await user.save().catch(err => console.log('User save warning:', err.message));
     }
 
-    // 2. If NGO or Corporate, create NGO record if not existing
+    // 2. If NGO or Corporate, create or update NGO record with all profile fields (Point 5 / Point 11)
+    let ngo = null;
     if (assignedRole === 'ngo' || assignedRole === 'corporate') {
-      const ngoExists = await NGO.findOne({
+      if (finalPhone || finalEmail) {
+        ngo = await NGO.findOne({
+          $or: [
+            ...(finalPhone ? [buildPhoneFilter(finalPhone)] : []),
+            ...(finalEmail ? [{ email: finalEmail }] : [])
+          ]
+        });
+      }
+
+      const ngoData = {
+        name: organizationName || name || 'Organization Partner',
+        legalName: legalName || organizationName || name || '',
+        email: finalEmail || 'ngo@example.com',
+        phone: finalPhone || '',
+        registrationNumber: registrationNumber || 'REG-PENDING',
+        organizationType: isCorp ? 'Corporate' : 'Non-Profit',
+        status: verificationStatus || 'Pending',
+        contactPerson: contactPerson || name || '',
+        designation: designation || '',
+        registeredAddress: registeredAddress || req.body.address || '',
+        websiteUrl: websiteUrl || '',
+        about: about || '',
+        panNumber: panNumber || '',
+        tanNumber: tanNumber || '',
+        gstNumber: gstNumber || '',
+        has12A: has12A || 'No',
+        registration12A: registration12A || '',
+        has80G: has80G || 'No',
+        registration80G: registration80G || '',
+        hasDarpan: hasDarpan || 'No',
+        darpanNumber: darpanNumber || '',
+        hasCSR1: hasCSR1 || 'No',
+        csr1Number: csr1Number || '',
+        hasFCRA: hasFCRA || 'No',
+        fcraNumber: fcraNumber || '',
+        bankAccountHolder: bankAccountHolder || '',
+        bankName: bankName || '',
+        bankBranch: bankBranch || '',
+        bankAccountNumber: bankAccountNumber || '',
+        bankIFSC: bankIFSC || ''
+      };
+
+      if (ngo) {
+        Object.assign(ngo, ngoData);
+        await ngo.save();
+      } else {
+        ngo = new NGO({
+          ngoId: `${isCorp ? 'CRP' : 'NGO'}-${Date.now().toString().slice(-4)}`,
+          ...ngoData
+        });
+        await ngo.save().catch(err => console.log('NGO save warning:', err.message));
+      }
+    }
+
+    // 3. Create or update Donor record
+    let donor = null;
+    if (finalPhone || finalEmail) {
+      donor = await Donor.findOne({
         $or: [
           ...(finalPhone ? [buildPhoneFilter(finalPhone)] : []),
           ...(finalEmail ? [{ email: finalEmail }] : [])
         ]
       });
-      if (!ngoExists) {
-        const newNgo = new NGO({
-          ngoId: `NGO-${Date.now().toString().slice(-4)}`,
-          name: organizationName || name,
-          email: finalEmail || 'ngo@example.com',
-          phone: finalPhone,
-          registrationNumber: registrationNumber || 'REG-PENDING',
-          organizationType: assignedRole === 'corporate' ? 'Corporate' : 'Non-Profit',
-          status: verificationStatus || 'Pending',
-          contactPerson: name
-        });
-        await newNgo.save().catch(err => console.log('NGO save warning:', err.message));
-      }
     }
 
-    // 3. Create Donor record
-    const donorId = `DNR-${Date.now().toString().slice(-4)}`;
-    const newDonor = new Donor({
-      donorId,
-      name: name || organizationName,
-      email: finalEmail || 'user@example.com',
-      phone: finalPhone,
-      totalDonated: totalDonated || '₹0',
-      campaignsSupported: campaignsSupported || 0,
-      status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active'
-    });
-    const savedDonor = await newDonor.save();
+    if (donor) {
+      donor.name = name || organizationName || donor.name;
+      if (finalEmail) donor.email = finalEmail;
+      if (finalPhone) donor.phone = finalPhone;
+      donor.status = (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active';
+      await donor.save();
+    } else {
+      const donorId = `DNR-${Date.now().toString().slice(-4)}`;
+      donor = new Donor({
+        donorId,
+        name: name || organizationName || 'Divine User',
+        email: finalEmail || 'user@example.com',
+        phone: finalPhone,
+        totalDonated: totalDonated || '₹0',
+        campaignsSupported: campaignsSupported || 0,
+        status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active'
+      });
+      await donor.save();
+    }
 
     res.status(201).json({
       status: true,
       message: 'User created successfully',
       data: {
-        ...savedDonor.toObject(),
+        ...(donor ? donor.toObject() : {}),
         userId: user?._id,
         role: assignedRole,
         gender,
@@ -441,67 +572,222 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update Donor (syncs status and fields to both Donor and User)
+// Update Donor & sync to User & NGO
 router.put('/:id', async (req, res) => {
   try {
     const id = req.params.id;
     let donor = await Donor.findById(id);
     let user = await User.findById(id);
+    let ngo = await NGO.findById(id);
 
-    if (donor) {
-      Object.assign(donor, req.body);
-      await donor.save();
-
-      // Sync with matching User if exists
-      const dEmail = (donor.email || '').toLowerCase().trim();
+    // If id was a Donor id, find user and ngo
+    if (donor && !user) {
       const dPhone = donor.phone || donor.mobileNumber || '';
-      if (dEmail || dPhone) {
-        user = await User.findOne({
+      const dEmail = (donor.email || '').toLowerCase().trim();
+      user = await User.findOne({
+        $or: [
+          ...(dPhone ? [buildPhoneFilter(dPhone)] : []),
+          ...(dEmail ? [{ email: dEmail }, { googleEmail: dEmail }] : [])
+        ]
+      });
+      if (!ngo && (dPhone || dEmail)) {
+        ngo = await NGO.findOne({
           $or: [
-            ...(dEmail ? [{ email: dEmail }, { googleEmail: dEmail }] : []),
-            ...(dPhone ? [buildPhoneFilter(dPhone)] : [])
+            ...(dPhone ? [buildPhoneFilter(dPhone)] : []),
+            ...(dEmail ? [{ email: dEmail }] : [])
           ]
         });
       }
     }
 
+    // If id was a User id, find matching donor and ngo
     if (user) {
+      const uPhone = user.phone || '';
+      const uEmail = (user.email || user.googleEmail || '').toLowerCase().trim();
+      if (!donor && (uPhone || uEmail)) {
+        donor = await Donor.findOne({
+          $or: [
+            ...(uPhone ? [buildPhoneFilter(uPhone)] : []),
+            ...(uEmail ? [{ email: uEmail }] : [])
+          ]
+        });
+      }
+      if (!ngo && (uPhone || uEmail || user.organizationName)) {
+        ngo = await NGO.findOne({
+          $or: [
+            ...(uPhone ? [buildPhoneFilter(uPhone)] : []),
+            ...(uEmail ? [{ email: uEmail }] : []),
+            ...(user.organizationName ? [{ name: user.organizationName }] : [])
+          ]
+        });
+      }
+    }
+
+    // If id was an NGO id, find matching user and donor
+    if (ngo) {
+      const nPhone = ngo.phone || '';
+      const nEmail = (ngo.email || '').toLowerCase().trim();
+      if (!user && (nPhone || nEmail)) {
+        user = await User.findOne({
+          $or: [
+            ...(nPhone ? [buildPhoneFilter(nPhone)] : []),
+            ...(nEmail ? [{ email: nEmail }, { googleEmail: nEmail }] : [])
+          ]
+        });
+      }
+      if (!donor && (nPhone || nEmail)) {
+        donor = await Donor.findOne({
+          $or: [
+            ...(nPhone ? [buildPhoneFilter(nPhone)] : []),
+            ...(nEmail ? [{ email: nEmail }] : [])
+          ]
+        });
+      }
+    }
+
+    const targetRole = req.body.role || user?.role || donor?.role || (ngo?.organizationType === 'Corporate' ? 'corporate' : (ngo ? 'ngo' : 'donor'));
+    const isVerifying = req.body.verificationStatus === 'Verified' || req.body.verified === true;
+    const isRejecting = req.body.verificationStatus === 'Rejected' || req.body.status === 'Rejected';
+    const isSuspending = req.body.status === 'Suspended' || req.body.status === 'Inactive';
+
+    // 1. Sync User
+    if (user) {
+      if (req.body.role) user.role = req.body.role;
+      if (req.body.name) user.name = req.body.name;
+      if (req.body.organizationName) user.organizationName = req.body.organizationName;
+      if (req.body.email) user.email = req.body.email.toLowerCase().trim();
+      if (req.body.phone) user.phone = req.body.phone.trim();
+
+      if (isVerifying) {
+        user.verified = true;
+        user.verificationStatus = 'Verified';
+        user.status = 'Active';
+        user.isProfileComplete = true;
+        user.rejectionReason = '';
+      } else if (isRejecting) {
+        user.verified = false;
+        user.verificationStatus = 'Rejected';
+        user.status = 'Rejected';
+        user.rejectionReason = req.body.rejectionReason || '';
+      } else if (req.body.verificationStatus) {
+        user.verificationStatus = req.body.verificationStatus;
+      }
+
       if (req.body.status) {
-        user.status = req.body.status;
-        if (req.body.status === 'Suspended') {
-          // If suspended, clear push tokens and invalidate session
+        user.status = isSuspending ? 'Suspended' : (isRejecting ? 'Rejected' : 'Active');
+        if (isSuspending) {
           user.fcmToken = null;
           user.deviceToken = null;
         }
       }
-      if (req.body.name && (!user.name || user.name === 'Divine Donor')) {
-        user.name = req.body.name;
+
+      if (targetRole === 'ngo' || targetRole === 'corporate') {
+        user.isProfileComplete = true;
       }
+
       await user.save();
+    } else if (targetRole === 'ngo' || targetRole === 'corporate' || isVerifying) {
+      // Auto-provision user if missing so they can log in seamlessly
+      const finalPhone = req.body.phone || donor?.phone || donor?.mobileNumber || ngo?.phone;
+      const finalEmail = req.body.email || donor?.email || ngo?.email;
+      const finalName = req.body.organizationName || req.body.name || donor?.name || ngo?.name || 'Divine User';
+      if (finalPhone || finalEmail) {
+        user = new User({
+          name: finalName,
+          phone: finalPhone,
+          email: finalEmail,
+          role: targetRole,
+          status: isSuspending ? 'Suspended' : (isRejecting ? 'Rejected' : 'Active'),
+          verified: isVerifying,
+          verificationStatus: isVerifying ? 'Verified' : (isRejecting ? 'Rejected' : 'Pending'),
+          organizationName: req.body.organizationName || finalName,
+          isProfileComplete: true
+        });
+        await user.save().catch(e => console.warn('User auto-provision in put warning:', e.message));
+      }
     }
 
-    let ngo = null;
-    if (!donor && !user) {
-      ngo = await NGO.findById(id);
+    // 2. Sync NGO (for NGO / Corporate roles)
+    if (targetRole === 'ngo' || targetRole === 'corporate') {
+      const isCorp = targetRole === 'corporate' || req.body.organizationType === 'Corporate';
+      const ngoFields = {
+        name: req.body.organizationName || req.body.name || user?.name || donor?.name,
+        legalName: req.body.legalName || req.body.organizationName || req.body.name || user?.name,
+        phone: req.body.phone || user?.phone || donor?.phone || donor?.mobileNumber,
+        email: req.body.email || user?.email || donor?.email,
+        organizationType: isCorp ? 'Corporate' : 'Non-Profit',
+        status: isVerifying ? 'Verified' : (isRejecting ? 'Rejected' : (req.body.verificationStatus || 'Pending')),
+        rejectionReason: isRejecting ? (req.body.rejectionReason || '') : '',
+        registrationNumber: req.body.registrationNumber,
+        contactPerson: req.body.contactPerson,
+        designation: req.body.designation,
+        registeredAddress: req.body.registeredAddress || req.body.address,
+        websiteUrl: req.body.websiteUrl,
+        about: req.body.about,
+        panNumber: req.body.panNumber,
+        tanNumber: req.body.tanNumber,
+        gstNumber: req.body.gstNumber,
+        has12A: req.body.has12A,
+        registration12A: req.body.registration12A,
+        has80G: req.body.has80G,
+        registration80G: req.body.registration80G,
+        hasDarpan: req.body.hasDarpan,
+        darpanNumber: req.body.darpanNumber,
+        hasCSR1: req.body.hasCSR1,
+        csr1Number: req.body.csr1Number,
+        hasFCRA: req.body.hasFCRA,
+        fcraNumber: req.body.fcraNumber,
+        bankAccountHolder: req.body.bankAccountHolder,
+        bankName: req.body.bankName,
+        bankBranch: req.body.bankBranch,
+        bankAccountNumber: req.body.bankAccountNumber,
+        bankIFSC: req.body.bankIFSC
+      };
+      Object.keys(ngoFields).forEach(k => ngoFields[k] === undefined && delete ngoFields[k]);
+
       if (ngo) {
-        if (req.body.status) {
-          ngo.status = (req.body.status === 'Suspended' || req.body.status === 'Inactive') ? 'Suspended' : 'Verified';
-        }
-        if (req.body.verificationStatus) {
-          ngo.status = req.body.verificationStatus;
-        }
-        if (req.body.name) {
-          ngo.name = req.body.name;
-        }
+        Object.assign(ngo, ngoFields);
         await ngo.save();
+      } else if (ngoFields.phone || ngoFields.email) {
+        const newNgo = new NGO({
+          ngoId: `${isCorp ? 'CRP' : 'NGO'}-${Date.now().toString().slice(-4)}`,
+          ...ngoFields
+        });
+        await newNgo.save().catch(e => console.warn('NGO auto-create warning:', e.message));
+        ngo = newNgo;
       }
+    }
+
+    // 3. Sync Donor
+    if (donor) {
+      if (req.body.name) donor.name = req.body.name;
+      if (req.body.email) donor.email = req.body.email;
+      if (req.body.phone) donor.phone = req.body.phone;
+      if (req.body.status) donor.status = isSuspending ? 'Suspended' : 'Active';
+      await donor.save();
+    }
+
+    // Trigger push notification if status changed to Verified or Rejected
+    if (user && (isVerifying || isRejecting)) {
+      try {
+        const { createAndSendNotification } = require('../../utils/notification');
+        await createAndSendNotification({
+          userId: user._id,
+          title: isVerifying ? 'Account Verified ✅' : 'Account Verification Update ⚠️',
+          body: isVerifying 
+            ? 'Congratulations! Your account has been verified by the administrator.' 
+            : `Your verification request was rejected: ${req.body.rejectionReason || 'Please review your details.'}`,
+          type: 'verification',
+          screen: 'profile'
+        });
+      } catch (notifErr) {}
     }
 
     if (!donor && !user && !ngo) {
       return res.status(404).json({ message: 'User record not found' });
     }
 
-    res.json(donor || user || ngo);
+    res.json(user || donor || ngo);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

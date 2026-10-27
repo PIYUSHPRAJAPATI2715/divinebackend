@@ -22,8 +22,8 @@ router.get('/profile', async (req, res) => {
       .populate('followingUsers', 'name phone profilePhoto email role logo')
       .populate('followers', 'name phone profilePhoto email role logo');
     
-    if (!user) {
-      return res.status(401).json({ status: false, message: 'User not found' });
+    if (!user || user.isDeleted === true || user.status === 'Deleted') {
+      return res.status(401).json({ status: false, isUserExist: false, isDeleted: true, message: 'Session expired. Please log in again.' });
     }
     
     if (!user.referralCode) {

@@ -140,17 +140,20 @@ const constructFullUserData = async (user) => {
   if (!isProfileComplete) {
     isVer = false;
   } else if (determinedRole === 'corporate' || user.role === 'ngo' || user.role === 'corporate') {
-    isVer = (user.verified === true) || (extra.verified === true) || (extra.status === 'Verified') || (user.status === 'Verified');
+    isVer = (user.verified === true) || (extra.verified === true) || (extra.status === 'Verified') || (user.status === 'Verified') || (user.verificationStatus === 'Verified');
   } else {
     isVer = user.verified === false ? false : (extra.status === 'Suspended' ? false : true);
   }
+
+  const finalVerStatus = isVer ? 'Verified' : (extra.status === 'Rejected' || user.status === 'Rejected' || user.verificationStatus === 'Rejected' ? 'Rejected' : (extra.status || user.verificationStatus || 'Pending'));
+  const finalStatus = (user.status === 'Suspended' || extra.status === 'Suspended') ? 'Suspended' : (finalVerStatus === 'Rejected' ? 'Rejected' : (user.status === 'Inactive' ? 'Inactive' : 'Active'));
 
   return {
     ...userObj,
     ...extra,
     role: determinedRole,
-    status: extra.status || user.status || 'Active',
-    verificationStatus: extra.status || user.status || (isVer ? 'Verified' : 'Pending'),
+    status: finalStatus,
+    verificationStatus: finalVerStatus,
     rejectionReason: extra.rejectionReason || user.rejectionReason || '',
     rejectedAt: extra.rejectedAt || null,
     resubmittedAt: extra.resubmittedAt || null,
@@ -413,16 +416,30 @@ router.post('/login', async (req, res) => {
         if (matchedNgo) {
           existingUser.role = (matchedNgo.organizationType === 'Corporate' || matchedNgo.organizationType === 'Company') ? 'corporate' : 'ngo';
           existingUser.isProfileComplete = true;
-          if (!existingUser.name || existingUser.name === 'Google User' || existingUser.name === 'Apple User') {
+          if (!existingUser.name || existingUser.name === 'Google User' || existingUser.name === 'Apple User' || existingUser.name === '') {
             existingUser.name = matchedNgo.name;
           }
           existingUser.organizationName = matchedNgo.name;
+          if (matchedNgo.status === 'Verified') {
+            existingUser.verified = true;
+            existingUser.verificationStatus = 'Verified';
+            existingUser.status = 'Active';
+          } else if (matchedNgo.status === 'Rejected') {
+            existingUser.verificationStatus = 'Rejected';
+            existingUser.rejectionReason = matchedNgo.rejectionReason || '';
+          }
+        } else if (existingUser.role === 'ngo' || existingUser.role === 'corporate') {
+          if (existingUser.verified === true || existingUser.verificationStatus === 'Verified') {
+            existingUser.isProfileComplete = true;
+            existingUser.status = 'Active';
+          }
         }
 
         await existingUser.save();
         const fullData = await constructFullUserData(existingUser);
-        const userComplete = !!(existingUser.isProfileComplete && fullData?.isProfileComplete);
-        const verStatus = fullData?.verificationStatus || (existingUser.status === 'Verified' ? 'Verified' : (existingUser.status === 'Rejected' ? 'Rejected' : 'Pending'));
+        const verifiedFlag = !!(fullData?.verified || existingUser.verified || (matchedNgo && (matchedNgo.status === 'Verified' || matchedNgo.verified)) || existingUser.verificationStatus === 'Verified');
+        const userComplete = !!(existingUser.isProfileComplete && (fullData?.isProfileComplete || matchedNgo || verifiedFlag));
+        const verStatus = verifiedFlag ? 'Verified' : (fullData?.verificationStatus || (existingUser.status === 'Verified' ? 'Verified' : (existingUser.status === 'Rejected' ? 'Rejected' : 'Pending')));
         return res.json({
           status: true,
           message: 'OTP sent successfully (Use static code 1234 to verify)',
@@ -649,6 +666,19 @@ router.post('/verify-otp', async (req, res) => {
         user.name = ngo.name;
       }
       user.organizationName = ngo.name;
+      if (ngo.status === 'Verified') {
+        user.verified = true;
+        user.verificationStatus = 'Verified';
+        user.status = 'Active';
+      } else if (ngo.status === 'Rejected') {
+        user.verificationStatus = 'Rejected';
+        user.rejectionReason = ngo.rejectionReason || '';
+      }
+    } else if (user.role === 'ngo' || user.role === 'corporate') {
+      if (user.verified === true || user.verificationStatus === 'Verified') {
+        user.isProfileComplete = true;
+        user.status = 'Active';
+      }
     }
 
     const inputReferral = req.body.referralCode || req.body.referredBy;
@@ -662,10 +692,10 @@ router.post('/verify-otp', async (req, res) => {
     await user.save();
     const token = jwt.sign({ id: user._id, role: user.role, phone: user.phone || phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     const fullData = await constructFullUserData(user);
-    const isComplete = !!(user.isProfileComplete && (fullData?.isProfileComplete || ngo));
-    const verifiedStatus = !!(fullData?.verified || user.verified || (ngo && (ngo.status === 'Verified' || ngo.verified)));
+    const verifiedStatus = !!(fullData?.verified || user.verified || (ngo && (ngo.status === 'Verified' || ngo.verified)) || user.verificationStatus === 'Verified');
+    const isComplete = !!(user.isProfileComplete && (fullData?.isProfileComplete || ngo || verifiedStatus));
 
-    const currentVerStatus = fullData?.verificationStatus || (verifiedStatus ? 'Verified' : (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
+    const currentVerStatus = verifiedStatus ? 'Verified' : (fullData?.verificationStatus || (user.status === 'Rejected' ? 'Rejected' : 'Pending'));
     const currentRejectionReason = fullData?.rejectionReason || user.rejectionReason || (ngo ? ngo.rejectionReason : '') || '';
     const canResubmitFlag = fullData?.canResubmit || (currentVerStatus === 'Rejected');
 
@@ -1326,7 +1356,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user || user.isDeleted === true || user.status === 'Deleted') {
-      return res.status(404).json({ status: false, message: 'User not found' });
+      return res.status(401).json({ status: false, isUserExist: false, isDeleted: true, message: 'Session expired. Please log in again.' });
     }
 
     const userObj = user.toObject();
