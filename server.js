@@ -170,6 +170,8 @@ app.use('/api/admin/wallet-settings', authMiddleware, require('./routes/admin/wa
 app.use('/api/wallet-settings', require('./routes/admin/walletSettings'));
 app.use('/api/admin/master-settings', require('./routes/admin/masterSettings'));
 app.use('/api/master-settings', require('./routes/admin/masterSettings'));
+app.use('/api/admin/mis', authMiddleware, require('./routes/admin/mis'));
+app.use('/api/mis', authMiddleware, require('./routes/admin/mis'));
 
 // Device Push Token & Test Notification Routes (FCM / APNs)
 app.use('/api/device-token', authRoutes);
