@@ -103,7 +103,27 @@ router.get('/', async (req, res) => {
       const organizationType = matchedNgo?.organizationType || (u.role === 'corporate' ? 'Corporate' : (u.role === 'ngo' ? 'Non-Profit' : 'Individual'));
       const address = matchedNgo?.registeredAddress || '';
 
-      // Statutory documents & uploaded fields for NGO & Corporate profiles (Issue 11)
+      // Statutory documents & uploaded fields for NGO & Corporate profiles (Issue 11, Point 6 & 7)
+      const rawNgoAwards = (Array.isArray(matchedNgo?.awardsRecognitions) && matchedNgo.awardsRecognitions.length > 0)
+        ? matchedNgo.awardsRecognitions
+        : (Array.isArray(matchedNgo?.awards) && matchedNgo.awards.length > 0)
+          ? matchedNgo.awards
+          : (Array.isArray(u.awardsRecognitions) && u.awardsRecognitions.length > 0)
+            ? u.awardsRecognitions
+            : (Array.isArray(u.awards) ? u.awards : []);
+
+      const normalizedAwards = rawNgoAwards.map(a => ({
+        ...a,
+        name: a.name || a.title || 'Recognition',
+        title: a.title || a.name || 'Recognition',
+        awardedBy: a.awardedBy || a.issuingOrg || '',
+        issuingOrg: a.issuingOrg || a.awardedBy || '',
+        year: String(a.year || ''),
+        description: a.description || '',
+        document: a.document || a.certificateDoc || '',
+        certificateDoc: a.certificateDoc || a.document || ''
+      }));
+
       const ngoDocs = matchedNgo ? {
         legalName: matchedNgo.legalName || matchedNgo.name || '',
         contactPerson: matchedNgo.contactPerson || '',
@@ -142,10 +162,30 @@ router.get('/', async (req, res) => {
         bankIFSC: matchedNgo.bankIFSC || '',
         directorsKeyManagement: matchedNgo.directorsKeyManagement || [],
         formFillerDetails: matchedNgo.formFillerDetails || null,
+        csrOfficerDetails: matchedNgo.csrOfficerDetails || u.csrOfficerDetails || null,
+        csrObligation: matchedNgo.csrObligation || u.csrObligation || '',
+        csrAmountSpentPreviousYear: matchedNgo.csrAmountSpentPreviousYear || u.csrAmountSpentPreviousYear || '',
+        csrFocusAreas: (Array.isArray(matchedNgo.csrFocusAreas) && matchedNgo.csrFocusAreas.length > 0) ? matchedNgo.csrFocusAreas : (u.csrFocusAreas || []),
+        fundingPreferences: matchedNgo.fundingPreferences || u.fundingPreferences || '',
+        lastFinancialYearBudget: matchedNgo.lastFinancialYearBudget || u.lastFinancialYearBudget || '',
+        donorDatabaseStrength: matchedNgo.donorDatabaseStrength || u.donorDatabaseStrength || '',
+        employeeStrength: matchedNgo.employeeStrength || u.employeeStrength || '',
+        hasCrowdfundedBefore: matchedNgo.hasCrowdfundedBefore || u.hasCrowdfundedBefore || '',
+        crowdfundingPlatformsUsed: matchedNgo.crowdfundingPlatformsUsed || u.crowdfundingPlatformsUsed || '',
+        campaignPlanningTimeframe: matchedNgo.campaignPlanningTimeframe || u.campaignPlanningTimeframe || '',
+        purposeOfFundraising: matchedNgo.purposeOfFundraising || u.purposeOfFundraising || '',
+        declarations: matchedNgo.declarations || u.declarations || null,
+        awards: normalizedAwards,
+        awardsRecognitions: normalizedAwards,
+        awardDetails: normalizedAwards,
         rejectionReason: matchedNgo.rejectionReason || '',
         isRegisteredNonProfit: matchedNgo.isRegisteredNonProfit || '',
         isRegisteredCompany: matchedNgo.isRegisteredCompany || ''
-      } : {};
+      } : {
+        awards: normalizedAwards,
+        awardsRecognitions: normalizedAwards,
+        awardDetails: normalizedAwards
+      };
 
       if (matchedDonor) {
         matchedDonorIds.add(matchedDonor._id.toString());
@@ -159,6 +199,7 @@ router.get('/', async (req, res) => {
           email: matchedDonor.email || uEmail,
           phone: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
           mobileNumber: u.phone || matchedDonor.phone || matchedDonor.mobileNumber || matchedNgo?.phone || '',
+          countryCode: u.countryCode || matchedNgo?.countryCode || '+91',
           status: matchedDonor.status || u.status || 'Active',
           role: u.role || (matchedNgo?.organizationType === 'Corporate' ? 'corporate' : (matchedNgo ? 'ngo' : 'donor')),
           gender: u.gender || null,
@@ -193,6 +234,7 @@ router.get('/', async (req, res) => {
           email: uEmail,
           phone: phone,
           mobileNumber: phone,
+          countryCode: u.countryCode || matchedNgo?.countryCode || '+91',
           status: u.status || 'Active',
           role: u.role || (matchedNgo?.organizationType === 'Corporate' ? 'corporate' : (matchedNgo ? 'ngo' : 'donor')),
           gender: u.gender || null,
@@ -473,6 +515,29 @@ router.post('/', async (req, res) => {
     const assignedRole = (role === 'ngo' || role === 'corporate') ? role : 'donor';
     const isCorp = assignedRole === 'corporate';
     const isVerified = verificationStatus === 'Verified';
+    const finalCountryCode = req.body.countryCode || '+91';
+
+    // Process incoming awards if provided
+    let savedAwards = [];
+    const incomingAwards = req.body.awards || req.body.awardsRecognitions || [];
+    if (Array.isArray(incomingAwards)) {
+      savedAwards = incomingAwards.map((a, idx) => {
+        let cert = a.document || a.certificateDoc || null;
+        if (cert && (cert.startsWith('data:') || cert.includes(';base64,'))) {
+          cert = saveBase64Doc(cert, req, `award_${idx + 1}`);
+        }
+        return {
+          name: a.name || a.title || 'Recognition',
+          title: a.title || a.name || 'Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: cert,
+          certificateDoc: cert
+        };
+      });
+    }
 
     // 1. Create or update User record
     let user = null;
@@ -489,6 +554,7 @@ router.post('/', async (req, res) => {
       user.name = name || organizationName || user.name || 'Divine User';
       if (finalPhone) user.phone = finalPhone;
       if (finalEmail) user.email = finalEmail;
+      user.countryCode = finalCountryCode;
       user.role = assignedRole;
       if (gender) user.gender = gender;
       user.status = (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active';
@@ -496,19 +562,26 @@ router.post('/', async (req, res) => {
       user.verificationStatus = verificationStatus || 'Pending';
       user.organizationName = organizationName || (assignedRole !== 'donor' ? name : user.organizationName);
       user.isProfileComplete = true;
+      if (savedAwards.length > 0) {
+        user.awards = savedAwards;
+        user.awardsRecognitions = savedAwards;
+      }
       await user.save();
     } else {
       user = new User({
         name: name || organizationName || 'Divine User',
         phone: finalPhone || undefined,
         email: finalEmail || undefined,
+        countryCode: finalCountryCode,
         role: assignedRole,
         gender: gender || null,
         status: (status === 'Inactive' || status === 'Suspended') ? 'Suspended' : 'Active',
         verified: isVerified,
         verificationStatus: verificationStatus || 'Pending',
         organizationName: organizationName || (assignedRole !== 'donor' ? name : ''),
-        isProfileComplete: true
+        isProfileComplete: true,
+        awards: savedAwards,
+        awardsRecognitions: savedAwards
       });
       await user.save().catch(err => console.log('User save warning:', err.message));
     }
@@ -552,6 +625,7 @@ router.post('/', async (req, res) => {
         logo: savedLogo || null,
         email: finalEmail || 'ngo@example.com',
         phone: finalPhone || '',
+        countryCode: finalCountryCode,
         registrationNumber: registrationNumber || 'REG-PENDING',
         organizationType: isCorp ? 'Corporate' : 'Non-Profit',
         status: verificationStatus || 'Pending',
@@ -589,6 +663,19 @@ router.post('/', async (req, res) => {
         bankAccountNumber: bankAccountNumber || '',
         bankIFSC: bankIFSC || '',
         cancelledChequeDoc: savedCheque,
+        awards: savedAwards,
+        awardsRecognitions: savedAwards,
+        csrObligation: req.body.csrObligation || '',
+        csrAmountSpentPreviousYear: req.body.csrAmountSpentPreviousYear || '',
+        csrFocusAreas: req.body.csrFocusAreas || [],
+        fundingPreferences: req.body.fundingPreferences || '',
+        lastFinancialYearBudget: req.body.lastFinancialYearBudget || '',
+        donorDatabaseStrength: req.body.donorDatabaseStrength || '',
+        employeeStrength: req.body.employeeStrength || '',
+        hasCrowdfundedBefore: req.body.hasCrowdfundedBefore || '',
+        crowdfundingPlatformsUsed: req.body.crowdfundingPlatformsUsed || '',
+        campaignPlanningTimeframe: req.body.campaignPlanningTimeframe || '',
+        purposeOfFundraising: req.body.purposeOfFundraising || '',
         formFillerDetails: {
           name: contactPerson || name || '',
           designationRole: designation || '',
@@ -747,6 +834,30 @@ router.put('/:id', async (req, res) => {
       if (req.body.organizationName) user.organizationName = req.body.organizationName;
       if (req.body.email) user.email = req.body.email.toLowerCase().trim();
       if (req.body.phone) user.phone = req.body.phone.trim();
+      if (req.body.countryCode) user.countryCode = req.body.countryCode;
+
+      // Handle awards
+      if (req.body.awards !== undefined || req.body.awardsRecognitions !== undefined) {
+        const incoming = req.body.awards || req.body.awardsRecognitions || [];
+        const procAwards = incoming.map((a, idx) => {
+          let cert = a.document || a.certificateDoc || null;
+          if (cert && (cert.startsWith('data:') || cert.includes(';base64,'))) {
+            cert = saveBase64Doc(cert, req, `award_${idx + 1}`);
+          }
+          return {
+            name: a.name || a.title || 'Recognition',
+            title: a.title || a.name || 'Recognition',
+            awardedBy: a.awardedBy || a.issuingOrg || '',
+            issuingOrg: a.issuingOrg || a.awardedBy || '',
+            year: String(a.year || ''),
+            description: a.description || '',
+            document: cert,
+            certificateDoc: cert
+          };
+        });
+        user.awards = procAwards;
+        user.awardsRecognitions = procAwards;
+      }
 
       if (isVerifying) {
         user.verified = true;
@@ -831,7 +942,19 @@ router.put('/:id', async (req, res) => {
         bankName: req.body.bankName,
         bankBranch: req.body.bankBranch,
         bankAccountNumber: req.body.bankAccountNumber,
-        bankIFSC: req.body.bankIFSC
+        bankIFSC: req.body.bankIFSC,
+        countryCode: req.body.countryCode || user?.countryCode,
+        csrObligation: req.body.csrObligation,
+        csrAmountSpentPreviousYear: req.body.csrAmountSpentPreviousYear,
+        csrFocusAreas: req.body.csrFocusAreas,
+        fundingPreferences: req.body.fundingPreferences,
+        lastFinancialYearBudget: req.body.lastFinancialYearBudget,
+        donorDatabaseStrength: req.body.donorDatabaseStrength,
+        employeeStrength: req.body.employeeStrength,
+        hasCrowdfundedBefore: req.body.hasCrowdfundedBefore,
+        crowdfundingPlatformsUsed: req.body.crowdfundingPlatformsUsed,
+        campaignPlanningTimeframe: req.body.campaignPlanningTimeframe,
+        purposeOfFundraising: req.body.purposeOfFundraising
       };
 
       // Process and save Base64 documents if provided
@@ -885,6 +1008,11 @@ router.put('/:id', async (req, res) => {
           ...(ngo?.formFillerDetails || {}),
           authorityLetterDoc: savedAuthLetter
         };
+      }
+
+      if (user && Array.isArray(user.awards) && user.awards.length > 0) {
+        ngoFields.awards = user.awards;
+        ngoFields.awardsRecognitions = user.awards;
       }
 
       Object.keys(ngoFields).forEach(k => ngoFields[k] === undefined && delete ngoFields[k]);

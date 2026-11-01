@@ -173,6 +173,15 @@ app.use('/api/master-settings', require('./routes/admin/masterSettings'));
 app.use('/api/admin/mis', authMiddleware, require('./routes/admin/mis'));
 app.use('/api/mis', authMiddleware, require('./routes/admin/mis'));
 
+// Thank You Mailer & Daan Receipt Templates (Point 12)
+app.use('/api/admin/email-templates', authMiddleware, require('./routes/admin/emailTemplates'));
+app.use('/api/email-templates', authMiddleware, require('./routes/admin/emailTemplates'));
+
+// Content & Support Management (Point 23)
+app.use('/api/admin/content', authMiddleware, require('./routes/admin/content'));
+app.use('/api/content', require('./routes/content'));
+app.use('/api/support', require('./routes/support'));
+
 // Device Push Token & Test Notification Routes (FCM / APNs)
 app.use('/api/device-token', authRoutes);
 app.use('/api/fcm-token', authRoutes);

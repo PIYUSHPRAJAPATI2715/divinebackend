@@ -371,6 +371,143 @@ const mockNGOs = [
     payoutHistory: [],
     kycDocs: ['https://s3.amazonaws.com/divine-docs/fake_ngo_doc.pdf'],
     campaigns: []
+  },
+  {
+    ngoId: 'NGO-006',
+    name: 'Asha Deep Welfare Society',
+    legalName: 'Asha Deep Welfare Society',
+    registrationNumber: 'REG-ND-987800',
+    contactPerson: 'Vikas Mehra',
+    designation: 'General Secretary',
+    email: 'contact@ashadeepngo.org',
+    phone: '+91 9898787800',
+    countryCode: '+91',
+    logo: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?auto=format&fit=crop&q=80&w=300',
+    about: 'Dedicated to grassroots child welfare, free medical camps, and elderly care.',
+    organizationType: 'Non-Profit',
+    status: 'Pending',
+    panNumber: 'AAATA9878N',
+    panImage: 'https://195.35.20.150:8000/uploads/pan_ashadeep.pdf',
+    tanNumber: 'DELA98780A',
+    tanImage: 'https://195.35.20.150:8000/uploads/tan_ashadeep.pdf',
+    gstNumber: '07AAATA9878N1Z5',
+    gstDocument: 'https://195.35.20.150:8000/uploads/gst_ashadeep.pdf',
+    has12A: 'Yes',
+    registration12A: '12A/2021/ND-89',
+    certificate12A: 'https://195.35.20.150:8000/uploads/12a_ashadeep.pdf',
+    has80G: 'Yes',
+    registration80G: '80G/2021/ND-90',
+    certificate80G: 'https://195.35.20.150:8000/uploads/80g_ashadeep.pdf',
+    hasDarpan: 'Yes',
+    darpanNumber: 'DL/2022/0319878',
+    darpanCertificate: 'https://195.35.20.150:8000/uploads/darpan_ashadeep.pdf',
+    hasCSR1: 'Yes',
+    csr1Number: 'CSR0009878',
+    csr1Certificate: 'https://195.35.20.150:8000/uploads/csr1_ashadeep.pdf',
+    hasFCRA: 'No',
+    moaAoaDocs: ['https://195.35.20.150:8000/uploads/moa_ashadeep.pdf', 'https://195.35.20.150:8000/uploads/aoa_ashadeep.pdf'],
+    cancelledChequeDoc: 'https://195.35.20.150:8000/uploads/cheque_ashadeep.pdf',
+    bankAccountHolder: 'Asha Deep Welfare Society',
+    bankName: 'State Bank of India',
+    bankAccountNumber: '382901928374',
+    bankIFSC: 'SBIN0001234',
+    awards: [
+      {
+        name: 'National Community Impact Award',
+        title: 'National Community Impact Award',
+        awardedBy: 'Ministry of Social Justice & Empowerment',
+        issuingOrg: 'Ministry of Social Justice & Empowerment',
+        year: '2024',
+        description: 'Recognized for distinguished grassroots educational outreach and child nutrition programs.',
+        document: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf'
+      }
+    ],
+    awardsRecognitions: [
+      {
+        name: 'National Community Impact Award',
+        title: 'National Community Impact Award',
+        awardedBy: 'Ministry of Social Justice & Empowerment',
+        issuingOrg: 'Ministry of Social Justice & Empowerment',
+        year: '2024',
+        description: 'Recognized for distinguished grassroots educational outreach and child nutrition programs.',
+        document: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf'
+      }
+    ],
+    formFillerDetails: {
+      name: 'Vikas Mehra',
+      designationRole: 'General Secretary',
+      phone: '+91 9898787800',
+      email: 'contact@ashadeepngo.org',
+      pan: 'AAATA9878N',
+      authorityLetterDoc: 'https://195.35.20.150:8000/uploads/authority_letter_ashadeep.pdf'
+    }
+  },
+  {
+    ngoId: 'CRP-001',
+    name: 'Zenith Global Technologies Pvt Ltd',
+    legalName: 'Zenith Global Technologies Private Limited',
+    registrationNumber: 'U72200DL2018PTC339878',
+    contactPerson: 'Rajesh Singhania',
+    designation: 'Head - Corporate Sustainability',
+    email: 'csr@zenithglobal.com',
+    phone: '+91 7878787878',
+    countryCode: '+91',
+    logo: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=300',
+    about: 'Global enterprise delivering cutting-edge software and leading CSR interventions in education and clean water.',
+    organizationType: 'Corporate',
+    status: 'Pending',
+    panNumber: 'AAACZ7878P',
+    panImage: 'https://195.35.20.150:8000/uploads/pan_zenith.pdf',
+    tanNumber: 'DELZ78780B',
+    tanImage: 'https://195.35.20.150:8000/uploads/tan_zenith.pdf',
+    gstNumber: '07AAACZ7878P1Z8',
+    gstDocument: 'https://195.35.20.150:8000/uploads/gst_zenith.pdf',
+    hasCSR1: 'Yes',
+    csr1Number: 'CSR0007878',
+    csr1Certificate: 'https://195.35.20.150:8000/uploads/csr1_zenith.pdf',
+    cancelledChequeDoc: 'https://195.35.20.150:8000/uploads/cheque_zenith.pdf',
+    bankAccountHolder: 'Zenith Global Technologies Pvt Ltd',
+    bankName: 'HDFC Bank',
+    bankAccountNumber: '50200087878787',
+    bankIFSC: 'HDFC0000456',
+    csrObligation: '₹45,00,000',
+    csrAmountSpentPreviousYear: '₹38,50,000',
+    csrFocusAreas: ['Education & Digital Literacy', 'Healthcare & Sanitation', 'Environmental Sustainability'],
+    fundingPreferences: 'Direct Project Grants & Matched Giving Campaigns',
+    awards: [
+      {
+        name: 'Golden Peacock Award for Corporate Social Responsibility',
+        title: 'Golden Peacock Award for Corporate Social Responsibility',
+        awardedBy: 'Institute of Directors (IOD)',
+        issuingOrg: 'Institute of Directors (IOD)',
+        year: '2025',
+        description: 'Excellence in rural sustainable infrastructure and tribal computer literacy projects.',
+        document: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf'
+      }
+    ],
+    awardsRecognitions: [
+      {
+        name: 'Golden Peacock Award for Corporate Social Responsibility',
+        title: 'Golden Peacock Award for Corporate Social Responsibility',
+        awardedBy: 'Institute of Directors (IOD)',
+        issuingOrg: 'Institute of Directors (IOD)',
+        year: '2025',
+        description: 'Excellence in rural sustainable infrastructure and tribal computer literacy projects.',
+        document: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf'
+      }
+    ],
+    csrOfficerDetails: {
+      name: 'Rajesh Singhania',
+      designation: 'Head - Corporate Sustainability',
+      department: 'Corporate Affairs & CSR',
+      email: 'csr@zenithglobal.com',
+      phone: '+91 7878787878',
+      linkedInUrl: 'https://linkedin.com/in/rajeshsinghania-csr'
+    }
   }
 ];
 
@@ -668,6 +805,102 @@ const mockUsers = [
     email: 'seva@gaushala.org',
     isProfileComplete: true,
     verified: true
+  },
+  {
+    phone: '+91 9898787800',
+    countryCode: '+91',
+    role: 'ngo',
+    name: 'Asha Deep Welfare Society',
+    organizationName: 'Asha Deep Welfare Society',
+    email: 'contact@ashadeepngo.org',
+    status: 'Active',
+    verificationStatus: 'Pending',
+    isProfileComplete: true,
+    verified: false,
+    panNumber: 'AAATA9878N',
+    panImage: 'https://195.35.20.150:8000/uploads/pan_ashadeep.pdf',
+    tanNumber: 'DELA98780A',
+    tanImage: 'https://195.35.20.150:8000/uploads/tan_ashadeep.pdf',
+    gstNumber: '07AAATA9878N1Z5',
+    gstDocument: 'https://195.35.20.150:8000/uploads/gst_ashadeep.pdf',
+    certificate12A: 'https://195.35.20.150:8000/uploads/12a_ashadeep.pdf',
+    certificate80G: 'https://195.35.20.150:8000/uploads/80g_ashadeep.pdf',
+    darpanCertificate: 'https://195.35.20.150:8000/uploads/darpan_ashadeep.pdf',
+    csr1Certificate: 'https://195.35.20.150:8000/uploads/csr1_ashadeep.pdf',
+    moaAoaDocs: ['https://195.35.20.150:8000/uploads/moa_ashadeep.pdf', 'https://195.35.20.150:8000/uploads/aoa_ashadeep.pdf'],
+    cancelledChequeDoc: 'https://195.35.20.150:8000/uploads/cheque_ashadeep.pdf',
+    awards: [
+      {
+        name: 'National Community Impact Award',
+        title: 'National Community Impact Award',
+        awardedBy: 'Ministry of Social Justice & Empowerment',
+        issuingOrg: 'Ministry of Social Justice & Empowerment',
+        year: '2024',
+        description: 'Recognized for distinguished grassroots educational outreach and child nutrition programs.',
+        document: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf'
+      }
+    ],
+    awardsRecognitions: [
+      {
+        name: 'National Community Impact Award',
+        title: 'National Community Impact Award',
+        awardedBy: 'Ministry of Social Justice & Empowerment',
+        issuingOrg: 'Ministry of Social Justice & Empowerment',
+        year: '2024',
+        description: 'Recognized for distinguished grassroots educational outreach and child nutrition programs.',
+        document: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_national_impact_2024.pdf'
+      }
+    ]
+  },
+  {
+    phone: '+91 7878787878',
+    countryCode: '+91',
+    role: 'corporate',
+    name: 'Zenith Global Technologies Pvt Ltd',
+    organizationName: 'Zenith Global Technologies Pvt Ltd',
+    email: 'csr@zenithglobal.com',
+    status: 'Active',
+    verificationStatus: 'Pending',
+    isProfileComplete: true,
+    verified: false,
+    panNumber: 'AAACZ7878P',
+    panImage: 'https://195.35.20.150:8000/uploads/pan_zenith.pdf',
+    tanNumber: 'DELZ78780B',
+    tanImage: 'https://195.35.20.150:8000/uploads/tan_zenith.pdf',
+    gstNumber: '07AAACZ7878P1Z8',
+    gstDocument: 'https://195.35.20.150:8000/uploads/gst_zenith.pdf',
+    csr1Certificate: 'https://195.35.20.150:8000/uploads/csr1_zenith.pdf',
+    cancelledChequeDoc: 'https://195.35.20.150:8000/uploads/cheque_zenith.pdf',
+    csrObligation: '₹45,00,000',
+    csrAmountSpentPreviousYear: '₹38,50,000',
+    csrFocusAreas: ['Education & Digital Literacy', 'Healthcare & Sanitation', 'Environmental Sustainability'],
+    fundingPreferences: 'Direct Project Grants & Matched Giving Campaigns',
+    awards: [
+      {
+        name: 'Golden Peacock Award for Corporate Social Responsibility',
+        title: 'Golden Peacock Award for Corporate Social Responsibility',
+        awardedBy: 'Institute of Directors (IOD)',
+        issuingOrg: 'Institute of Directors (IOD)',
+        year: '2025',
+        description: 'Excellence in rural sustainable infrastructure and tribal computer literacy projects.',
+        document: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf'
+      }
+    ],
+    awardsRecognitions: [
+      {
+        name: 'Golden Peacock Award for Corporate Social Responsibility',
+        title: 'Golden Peacock Award for Corporate Social Responsibility',
+        awardedBy: 'Institute of Directors (IOD)',
+        issuingOrg: 'Institute of Directors (IOD)',
+        year: '2025',
+        description: 'Excellence in rural sustainable infrastructure and tribal computer literacy projects.',
+        document: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf',
+        certificateDoc: 'https://195.35.20.150:8000/uploads/award_golden_peacock_2025.pdf'
+      }
+    ]
   },
   {
     phone: '+91 9812345678',

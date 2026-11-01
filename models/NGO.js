@@ -14,6 +14,7 @@ const ngoSchema = new mongoose.Schema({
   designation: { type: String, default: "" },
   email: { type: String, required: true },
   phone: { type: String, default: '' },
+  countryCode: { type: String, default: '+91' },
   about: { type: String, default: '' },
   briefProfile: { type: String, default: '' },
   years: { type: String, default: '' },
@@ -83,6 +84,7 @@ const ngoSchema = new mongoose.Schema({
     name: { type: String, default: '' },
     designationRole: { type: String, default: '' },
     phone: { type: String, default: '' },
+  countryCode: { type: String, default: '+91' },
     email: { type: String, default: '' },
     pan: { type: String, default: '' },
     aadharId: { type: String, default: '' },
@@ -109,17 +111,33 @@ const ngoSchema = new mongoose.Schema({
     department: { type: String, default: '' },
     email: { type: String, default: '' },
     phone: { type: String, default: '' },
+  countryCode: { type: String, default: '+91' },
     linkedInUrl: { type: String, default: '' }
   },
 
   // Awards & Recognitions
   awardsRecognitions: [
     {
-      name: { type: String },
-      awardedBy: { type: String },
-      year: { type: String },
-      description: { type: String },
-      document: { type: String }
+      name: { type: String, default: '' },
+      title: { type: String, default: '' },
+      awardedBy: { type: String, default: '' },
+      issuingOrg: { type: String, default: '' },
+      year: { type: String, default: '' },
+      description: { type: String, default: '' },
+      document: { type: String, default: null },
+      certificateDoc: { type: String, default: null }
+    }
+  ],
+  awards: [
+    {
+      name: { type: String, default: '' },
+      title: { type: String, default: '' },
+      awardedBy: { type: String, default: '' },
+      issuingOrg: { type: String, default: '' },
+      year: { type: String, default: '' },
+      description: { type: String, default: '' },
+      document: { type: String, default: null },
+      certificateDoc: { type: String, default: null }
     }
   ],
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../../models/User');
+const NGO = require('../../models/NGO');
 const Notification = require('../../models/Notification');
 const { buildPhoneFilter } = require('../../utils/phone');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
@@ -60,6 +61,39 @@ router.get('/profile', async (req, res) => {
 
     const userObj = user.toObject();
 
+    // Fetch corresponding NGO/Corporate profile data if applicable
+    let ngo = null;
+    if (user.role === 'ngo' || user.role === 'corporate' || user.organizationName) {
+      const orConds = [];
+      if (user.phone) orConds.push(buildPhoneFilter(user.phone));
+      if (user.email) orConds.push({ email: user.email });
+      if (user.organizationName) orConds.push({ name: user.organizationName });
+      if (orConds.length > 0) {
+        ngo = await NGO.findOne({ $or: orConds });
+      }
+    }
+    const ngoObj = ngo ? ngo.toObject() : {};
+
+    const rawAwards = (Array.isArray(ngoObj.awardsRecognitions) && ngoObj.awardsRecognitions.length > 0)
+      ? ngoObj.awardsRecognitions
+      : (Array.isArray(ngoObj.awards) && ngoObj.awards.length > 0)
+        ? ngoObj.awards
+        : (Array.isArray(userObj.awardsRecognitions) && userObj.awardsRecognitions.length > 0)
+          ? userObj.awardsRecognitions
+          : (Array.isArray(userObj.awards) ? userObj.awards : []);
+
+    const normalizedAwards = rawAwards.map(a => ({
+      ...a,
+      name: a.name || a.title || 'Excellence Recognition',
+      title: a.title || a.name || 'Excellence Recognition',
+      awardedBy: a.awardedBy || a.issuingOrg || '',
+      issuingOrg: a.issuingOrg || a.awardedBy || '',
+      year: a.year || '',
+      description: a.description || '',
+      document: a.document || a.certificateDoc || '',
+      certificateDoc: a.certificateDoc || a.document || ''
+    }));
+
     const name = user.name || 'Donor';
     const email = user.email || '';
     const phone = user.phone || '';
@@ -91,12 +125,14 @@ router.get('/profile', async (req, res) => {
     const formattedFollowers = rawFollowers.map(f => formatFollowerItem(f));
 
     const enrichedData = {
+      ...ngoObj,
       ...userObj,
       _id: user._id,
       id: user._id,
       name,
       email,
       phone,
+      countryCode: user.countryCode || '+91',
       role: user.role || 'donor',
       profilePhoto: userPhoto,
       logo: userPhoto,
@@ -111,14 +147,74 @@ router.get('/profile', async (req, res) => {
       followingNgos: formattedFollowingNgos,
       followingUsers: formattedFollowingUsers,
       following: [...formattedFollowingNgos, ...formattedFollowingUsers],
-      impact: userObj.impactStats || 'Active community contributor & donor.',
-      impactStats: userObj.impactStats || 'Active community contributor & donor.',
-      years: userObj.years || '3 Years',
+      impact: userObj.impactStats || ngoObj.impactStats || 'Active community contributor & donor.',
+      impactStats: userObj.impactStats || ngoObj.impactStats || 'Active community contributor & donor.',
+      years: userObj.years || ngoObj.years || '3 Years',
       pushNotification: user.pushNotification !== false,
       emailNotification: user.emailNotification !== false,
       smsNotification: user.smsNotification !== false,
+      // Statutory documents & uploaded certificates (Point 6 & 7)
+      panNumber: ngoObj.panNumber || userObj.panNumber || '',
+      panImage: ngoObj.panImage || userObj.panImage || null,
+      tanNumber: ngoObj.tanNumber || userObj.tanNumber || '',
+      tanImage: ngoObj.tanImage || userObj.tanImage || null,
+      gstNumber: ngoObj.gstNumber || userObj.gstNumber || '',
+      gstDocument: ngoObj.gstDocument || userObj.gstDocument || null,
+      has12A: ngoObj.has12A || userObj.has12A || 'No',
+      registration12A: ngoObj.registration12A || userObj.registration12A || '',
+      certificate12A: ngoObj.certificate12A || userObj.certificate12A || null,
+      has80G: ngoObj.has80G || userObj.has80G || 'No',
+      registration80G: ngoObj.registration80G || userObj.registration80G || '',
+      certificate80G: ngoObj.certificate80G || userObj.certificate80G || null,
+      hasDarpan: ngoObj.hasDarpan || userObj.hasDarpan || 'No',
+      darpanNumber: ngoObj.darpanNumber || userObj.darpanNumber || '',
+      darpanCertificate: ngoObj.darpanCertificate || userObj.darpanCertificate || null,
+      hasCSR1: ngoObj.hasCSR1 || userObj.hasCSR1 || 'No',
+      csr1Number: ngoObj.csr1Number || userObj.csr1Number || '',
+      csr1Certificate: ngoObj.csr1Certificate || userObj.csr1Certificate || null,
+      hasFCRA: ngoObj.hasFCRA || userObj.hasFCRA || 'No',
+      fcraNumber: ngoObj.fcraNumber || userObj.fcraNumber || '',
+      fcraCertificate: ngoObj.fcraCertificate || userObj.fcraCertificate || null,
+      addressCertificate: ngoObj.addressCertificate || userObj.addressCertificate || null,
+      cancelledChequeDoc: ngoObj.cancelledChequeDoc || userObj.cancelledChequeDoc || null,
+      moaAoaDocs: (Array.isArray(ngoObj.moaAoaDocs) && ngoObj.moaAoaDocs.length > 0) ? ngoObj.moaAoaDocs : (userObj.moaAoaDocs || []),
+      directorsKeyManagement: ngoObj.directorsKeyManagement || userObj.directorsKeyManagement || [],
+      formFillerDetails: ngoObj.formFillerDetails || userObj.formFillerDetails || null,
+      csrOfficerDetails: ngoObj.csrOfficerDetails || userObj.csrOfficerDetails || null,
+      csrObligation: ngoObj.csrObligation || userObj.csrObligation || '',
+      csrAmountSpentPreviousYear: ngoObj.csrAmountSpentPreviousYear || userObj.csrAmountSpentPreviousYear || '',
+      csrFocusAreas: ngoObj.csrFocusAreas || userObj.csrFocusAreas || [],
+      fundingPreferences: ngoObj.fundingPreferences || userObj.fundingPreferences || '',
+      lastFinancialYearBudget: ngoObj.lastFinancialYearBudget || userObj.lastFinancialYearBudget || '',
+      donorDatabaseStrength: ngoObj.donorDatabaseStrength || userObj.donorDatabaseStrength || '',
+      employeeStrength: ngoObj.employeeStrength || userObj.employeeStrength || '',
+      hasCrowdfundedBefore: ngoObj.hasCrowdfundedBefore || userObj.hasCrowdfundedBefore || 'No',
+      crowdfundingPlatformsUsed: ngoObj.crowdfundingPlatformsUsed || userObj.crowdfundingPlatformsUsed || '',
+      campaignPlanningTimeframe: ngoObj.campaignPlanningTimeframe || userObj.campaignPlanningTimeframe || '',
+      purposeOfFundraising: ngoObj.purposeOfFundraising || userObj.purposeOfFundraising || '',
+      declarations: ngoObj.declarations || userObj.declarations || null,
+      // Awards (Point 6 & 7)
+      awards: normalizedAwards,
+      awardsRecognitions: normalizedAwards,
+      awardDetails: normalizedAwards,
       user: {
+        ...ngoObj,
         ...userObj,
+        countryCode: user.countryCode || '+91',
+        awards: normalizedAwards,
+        awardsRecognitions: normalizedAwards,
+        awardDetails: normalizedAwards,
+        panImage: ngoObj.panImage || userObj.panImage || null,
+        tanImage: ngoObj.tanImage || userObj.tanImage || null,
+        gstDocument: ngoObj.gstDocument || userObj.gstDocument || null,
+        certificate12A: ngoObj.certificate12A || userObj.certificate12A || null,
+        certificate80G: ngoObj.certificate80G || userObj.certificate80G || null,
+        darpanCertificate: ngoObj.darpanCertificate || userObj.darpanCertificate || null,
+        csr1Certificate: ngoObj.csr1Certificate || userObj.csr1Certificate || null,
+        fcraCertificate: ngoObj.fcraCertificate || userObj.fcraCertificate || null,
+        addressCertificate: ngoObj.addressCertificate || userObj.addressCertificate || null,
+        cancelledChequeDoc: ngoObj.cancelledChequeDoc || userObj.cancelledChequeDoc || null,
+        moaAoaDocs: (Array.isArray(ngoObj.moaAoaDocs) && ngoObj.moaAoaDocs.length > 0) ? ngoObj.moaAoaDocs : (userObj.moaAoaDocs || []),
         profilePhoto: userPhoto,
         logo: userPhoto,
         avatar: userPhoto,
@@ -239,6 +335,59 @@ const handleUpdateDonorProfile = async (req, res) => {
     const resolvedAbout = about || aboutOrganization || ourMission || description;
     if (resolvedAbout !== undefined) user.about = resolvedAbout;
 
+    if (req.body.countryCode !== undefined) user.countryCode = req.body.countryCode;
+
+    // Handle awards update
+    const rawAwardsUpdate = req.body.awardsRecognitions || req.body.awards || req.body.awardDetails;
+    if (Array.isArray(rawAwardsUpdate)) {
+      const processedAwards = rawAwardsUpdate.map(a => {
+        let doc = a.document || a.certificateDoc || null;
+        if (doc && (doc.startsWith('data:') || doc.includes(';base64,'))) {
+          doc = saveBase64Image(doc, req);
+        }
+        return {
+          name: a.name || a.title || 'Recognition',
+          title: a.title || a.name || 'Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: doc,
+          certificateDoc: doc
+        };
+      });
+      user.awards = processedAwards;
+      user.awardsRecognitions = processedAwards;
+    }
+
+    // Handle statutory documents upload
+    const docFields = [
+      'panImage', 'tanImage', 'gstDocument', 'certificate12A', 'certificate80G',
+      'darpanCertificate', 'csr1Certificate', 'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc'
+    ];
+    docFields.forEach(df => {
+      if (req.body[df] !== undefined) {
+        user[df] = saveBase64Image(req.body[df], req);
+      }
+    });
+
+    if (Array.isArray(req.body.moaAoaDocs)) {
+      user.moaAoaDocs = req.body.moaAoaDocs.map(doc => saveBase64Image(doc, req)).filter(Boolean);
+    }
+
+    const simpleFields = [
+      'panNumber', 'tanNumber', 'gstNumber', 'has12A', 'registration12A', 'has80G', 'registration80G',
+      'hasDarpan', 'darpanNumber', 'hasCSR1', 'csr1Number', 'hasFCRA', 'fcraNumber', 'legalName',
+      'csrObligation', 'csrAmountSpentPreviousYear', 'csrFocusAreas', 'fundingPreferences',
+      'lastFinancialYearBudget', 'donorDatabaseStrength', 'employeeStrength', 'hasCrowdfundedBefore',
+      'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe', 'purposeOfFundraising',
+      'directorsKeyManagement', 'formFillerDetails', 'csrOfficerDetails', 'declarations',
+      'bankAccountHolder', 'bankName', 'bankBranch', 'bankAccountNumber', 'bankIFSC'
+    ];
+    simpleFields.forEach(sf => {
+      if (req.body[sf] !== undefined) user[sf] = req.body[sf];
+    });
+
     if (user.name && user.email) {
       user.isProfileComplete = true;
     }
@@ -250,17 +399,28 @@ const handleUpdateDonorProfile = async (req, res) => {
     await user.save();
 
     // If linked NGO user, update NGO collection item as well
-    const NGO = require('../../models/NGO');
     let ngo = await NGO.findOne({ $or: [{ email: user.email }, { phone: user.phone }] });
     if (ngo) {
       if (resolvedName !== undefined) ngo.name = resolvedName;
       if (resolvedName !== undefined) ngo.organizationName = resolvedName;
       if (user.email) ngo.email = user.email;
       if (user.phone) ngo.phone = user.phone;
+      if (user.countryCode) ngo.countryCode = user.countryCode;
       if (user.profilePhoto) ngo.logo = user.profilePhoto;
       if (resolvedAddress !== undefined) ngo.registeredAddress = resolvedAddress;
       if (resolvedYears !== undefined) ngo.years = resolvedYears;
       if (resolvedAbout !== undefined) ngo.about = resolvedAbout;
+      if (user.awards && user.awards.length > 0) {
+        ngo.awards = user.awards;
+        ngo.awardsRecognitions = user.awards;
+      }
+      docFields.forEach(df => {
+        if (user[df] !== undefined) ngo[df] = user[df];
+      });
+      if (user.moaAoaDocs) ngo.moaAoaDocs = user.moaAoaDocs;
+      simpleFields.forEach(sf => {
+        if (user[sf] !== undefined) ngo[sf] = user[sf];
+      });
       await ngo.save();
     }
 

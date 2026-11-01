@@ -112,11 +112,35 @@ router.get('/profile', async (req, res) => {
     const isVerified = (ngoObj.status === 'Verified' || userObj.verified === true);
     const isRejected = (ngoObj.status === 'Rejected' || userObj.status === 'Rejected');
 
+    const rawAwards = (Array.isArray(ngoObj.awardsRecognitions) && ngoObj.awardsRecognitions.length > 0)
+      ? ngoObj.awardsRecognitions
+      : (Array.isArray(ngoObj.awards) && ngoObj.awards.length > 0)
+        ? ngoObj.awards
+        : (Array.isArray(userObj.awardsRecognitions) && userObj.awardsRecognitions.length > 0)
+          ? userObj.awardsRecognitions
+          : (Array.isArray(userObj.awards) ? userObj.awards : []);
+
+    const normalizedAwards = rawAwards.map(a => ({
+      ...a,
+      name: a.name || a.title || 'Excellence Recognition',
+      title: a.title || a.name || 'Excellence Recognition',
+      awardedBy: a.awardedBy || a.issuingOrg || '',
+      issuingOrg: a.issuingOrg || a.awardedBy || '',
+      year: String(a.year || ''),
+      description: a.description || '',
+      document: a.document || a.certificateDoc || '',
+      certificateDoc: a.certificateDoc || a.document || ''
+    }));
+
     const enrichedProfile = {
       ...userObj,
       ...ngoObj,
       _id: ngoObj._id,
       name: ngoObj.name || userObj.name || 'NGO',
+      countryCode: ngoObj.countryCode || userObj.countryCode || '+91',
+      awards: normalizedAwards,
+      awardsRecognitions: normalizedAwards,
+      awardDetails: normalizedAwards,
       organizationName: ngoObj.name || userObj.organizationName || userObj.name || '',
       registeredAddress: ngoObj.registeredAddress || userObj.registeredAddress || '',
       status: ngoObj.status || (isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending')),
@@ -149,6 +173,10 @@ router.get('/profile', async (req, res) => {
       smsNotification: user ? user.smsNotification !== false : true,
       user: {
         ...userObj,
+        countryCode: ngoObj.countryCode || userObj.countryCode || '+91',
+        awards: normalizedAwards,
+        awardsRecognitions: normalizedAwards,
+        awardDetails: normalizedAwards,
         status: ngoObj.status || (isVerified ? 'Verified' : (isRejected ? 'Rejected' : 'Pending')),
         rejectionReason: ngoObj.rejectionReason || userObj.rejectionReason || '',
         pushNotification: user ? user.pushNotification !== false : true,
