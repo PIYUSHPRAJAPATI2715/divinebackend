@@ -65,16 +65,47 @@ router.get('/executive-dashboard', async (req, res) => {
       Donor.find().lean()
     ]);
 
-    // Grouping by periods (Daily / Monthly or filtered range)
-    const filteredTx = transactions.filter(t => matchDateRange(t.date || t.createdAt, startDate, endDate));
+    // Filter users by city if supplied
+    let filteredUsers = users;
+    if (city && city !== 'All') {
+      filteredUsers = users.filter(u => {
+        const addr = JSON.stringify(u.registeredAddress || '').toLowerCase();
+        return addr.includes(city.toLowerCase());
+      });
+    }
+
+    // Filter campaigns by category if supplied
+    let filteredCampaigns = campaigns;
+    if (category && category !== 'All') {
+      filteredCampaigns = campaigns.filter(c => (c.category || '').toLowerCase().includes(category.toLowerCase()));
+    }
+
+    // Filter transactions by date, category and city-linked users
+    const userCityIdSet = new Set(filteredUsers.map(u => u._id.toString()));
+    const filteredTx = transactions.filter(t => {
+      const matchDate = matchDateRange(t.date || t.createdAt, startDate, endDate);
+      if (!matchDate) return false;
+
+      if (category && category !== 'All') {
+        const tCat = (t.fundCategory || t.item || '').toLowerCase();
+        if (!tCat.includes(category.toLowerCase())) return false;
+      }
+
+      if (city && city !== 'All') {
+        if (t.userId && !userCityIdSet.has(t.userId.toString())) return false;
+      }
+
+      return true;
+    });
+
     const successfulTx = filteredTx.filter(t => t.status === 'Success');
     const failedTx = filteredTx.filter(t => t.status === 'Failed');
     const walletTx = filteredTx.filter(t => (t.type || '').includes('Wallet') || (t.paymentMethod || '').includes('Wallet'));
 
-    const totalUsers = users.length;
-    const activeUsers = users.filter(u => u.status === 'Active').length;
+    const totalUsers = filteredUsers.length;
+    const activeUsers = filteredUsers.filter(u => u.status === 'Active').length;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const newUsers = users.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
+    const newUsers = filteredUsers.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
 
     // Donor counting
     const donorPhoneMap = {};
@@ -89,10 +120,6 @@ router.get('/executive-dashboard', async (req, res) => {
     const totalDonationValue = successfulTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const averageDonationValue = totalDonations > 0 ? Math.round(totalDonationValue / totalDonations) : 0;
 
-    // Campaign metrics
-    const filteredCampaigns = category 
-      ? campaigns.filter(c => (c.category || '').toLowerCase() === category.toLowerCase())
-      : campaigns;
     const totalCampaigns = filteredCampaigns.length;
     const activeCampaigns = filteredCampaigns.filter(c => c.status === 'Live' || c.status === 'Active' || c.isActive).length;
     const completedCampaigns = filteredCampaigns.filter(c => c.status === 'Completed').length;
@@ -1240,6 +1267,106 @@ router.get('/support-tickets', async (req, res) => {
     }
 
     res.json({ status: true, count: result.length, data: result });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// Dynamic Filter Options endpoint
+// Returns real-time distinct cities, categories, campaigns, creators, gateways, statuses
+// -------------------------------------------------------------
+router.get('/filter-options', async (req, res) => {
+  try {
+    const [users, campaigns, ngos, transactions, danCats, campCats] = await Promise.all([
+      User.find({ isDeleted: { $ne: true } }).select('registeredAddress role name status').lean(),
+      Campaign.find().select('title category user campaignId status').lean(),
+      NGO.find().select('name registeredAddress status').lean(),
+      Transaction.find().select('fundCategory paymentMethod gatewayRefId status type').lean(),
+      DanCategory.find().select('name').lean(),
+      CampaignCategory.find().select('name').lean()
+    ]);
+
+    // 1. Dynamic Cities
+    const citySet = new Set();
+    const extractCity = (addr) => {
+      if (!addr) return '';
+      if (typeof addr === 'object' && addr.city) return addr.city.trim();
+      const str = String(addr);
+      const parts = str.split(',').map(s => s.trim()).filter(Boolean);
+      return parts.length >= 2 ? parts[parts.length - 2] : parts[0] || '';
+    };
+
+    users.forEach(u => {
+      const c = extractCity(u.registeredAddress);
+      if (c && c.length > 2 && !c.match(/^\d+$/)) citySet.add(c);
+    });
+    ngos.forEach(n => {
+      const c = extractCity(n.registeredAddress);
+      if (c && c.length > 2 && !c.match(/^\d+$/)) citySet.add(c);
+    });
+    // Add standard major hubs if empty
+    ['Delhi NCR', 'Mumbai', 'Bengaluru', 'Varanasi', 'Kolkata', 'Pune', 'Hyderabad', 'Jaipur'].forEach(c => citySet.add(c));
+    const cities = Array.from(citySet).sort();
+
+    // 2. Dynamic Categories
+    const catSet = new Set();
+    danCats.forEach(c => c.name && catSet.add(c.name.trim()));
+    campCats.forEach(c => c.name && catSet.add(c.name.trim()));
+    campaigns.forEach(c => c.category && catSet.add(c.category.trim()));
+    transactions.forEach(t => t.fundCategory && catSet.add(t.fundCategory.trim()));
+    ['Food & Annadanam', 'Clothes & Vastradaan', 'Books & Education', 'Gau Seva & Animal Care', 'Medical Relief', 'Temple Construction & Sanatan', 'Disaster Relief', 'Elderly Care'].forEach(c => catSet.add(c));
+    const categories = Array.from(catSet).sort();
+
+    // 3. Dynamic Campaigns
+    const campaignList = campaigns.map(c => ({
+      id: c.campaignId || c._id.toString(),
+      name: c.title
+    }));
+
+    // 4. Dynamic Creators
+    const creatorSet = new Set();
+    campaigns.forEach(c => c.user && creatorSet.add(c.user.trim()));
+    users.filter(u => u.role === 'ngo' || u.role === 'corporate').forEach(u => u.name && creatorSet.add(u.name.trim()));
+    const creators = Array.from(creatorSet).sort();
+
+    // 5. Dynamic Gateways
+    const gatewaySet = new Set(['Razorpay', 'Cashfree', 'Divine In-App Wallet', 'UPI Intent']);
+    transactions.forEach(t => {
+      if (t.paymentMethod) gatewaySet.add(t.paymentMethod.trim());
+      if (t.gatewayRefId) {
+        if (t.gatewayRefId.includes('RZP')) gatewaySet.add('Razorpay');
+        if (t.gatewayRefId.includes('CF')) gatewaySet.add('Cashfree');
+      }
+    });
+    const gateways = Array.from(gatewaySet);
+
+    // 6. Dynamic Statuses
+    const statuses = ['All', 'Active', 'Success', 'Pending', 'Approved', 'Completed', 'Live', 'Rejected', 'Suspended'];
+
+    // 7. Dynamic User Types
+    const userTypes = ['Individual Donor', 'NGO', 'Corporate'];
+
+    // 8. Dynamic Transaction Types
+    const transactionTypes = ['Donation', 'Wallet Top-up', 'Cashback Credit', 'Donation Debit', 'Refund Credit'];
+
+    // 9. Dynamic Daan Types
+    const daanTypes = ['Campaign', 'NGO'];
+
+    res.json({
+      status: true,
+      data: {
+        cities,
+        categories,
+        campaigns: campaignList,
+        creators,
+        gateways,
+        statuses,
+        userTypes,
+        transactionTypes,
+        daanTypes
+      }
+    });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
   }
