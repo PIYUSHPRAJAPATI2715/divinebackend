@@ -521,27 +521,22 @@ const handleMyCampaigns = async (req, res) => {
 
     await syncExpiredCampaigns();
 
-    if (req.query.status && req.query.status.trim() !== '' && req.query.status !== 'All') {
-      const targetStatus = req.query.status.trim();
-      query = { $and: [query, { status: { $regex: new RegExp(`^${targetStatus}$`, 'i') } }] };
-    }
-
     const myCampaigns = await Campaign.find(query).sort({ createdAt: -1 });
-
-    // Filter out deactivated campaigns that have already been marked as read/acknowledged by admin
-    // If not marked as read by admin, it remains visible in the user's My Campaigns list
-    const activeMyCampaigns = myCampaigns.filter(c => !(c.isDeactivated === true && c.deactivationMarkedAsRead === true));
 
     let totalRaisedNum = 0;
     let totalGoalNum = 0;
     let totalDonors = 0;
 
-    const enriched = await Promise.all(activeMyCampaigns.map(async c => {
+    const enriched = await Promise.all(myCampaigns.map(async c => {
       const now = new Date();
       const isExpired = isCampaignExpired(c, now);
       const days = calculateDaysLeft(c, now);
+      const isMarkedReadCompleted = Boolean(c.deactivationMarkedAsRead === true);
       let currentStatus = c.status;
       if (isExpired && currentStatus === 'Live') {
+        currentStatus = 'Completed';
+      }
+      if (isMarkedReadCompleted) {
         currentStatus = 'Completed';
       }
 
@@ -559,18 +554,26 @@ const handleMyCampaigns = async (req, res) => {
 
       const obj = c.toObject();
       obj.daysLeft = days;
-      obj.isCompleted = isExpired || currentStatus === 'Completed';
-      obj.isExpired = isExpired;
       obj.donorsCount = donorsCountNum;
 
       const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected');
-      const isDeactivated = Boolean(c.isDeactivated === true);
-      const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || c.status === 'Completed');
-      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive' && !isDeactivated && !isRejected);
+      const isCompleted = Boolean(isExpired || currentStatus === 'Completed' || isMarkedReadCompleted);
+      const isDeactivated = Boolean(c.isDeactivated === true && !isMarkedReadCompleted && !isCompleted);
+      const isCampaignVerified = Boolean(c.isVerified === true || c.status === 'Live' || isCompleted);
+      const isCampaignActive = Boolean(c.isActive !== false && c.status !== 'Inactive' && !isDeactivated && !isRejected && !isCompleted);
 
-      const finalVerificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
-      const finalStatus = isRejected ? 'Rejected' : (isDeactivated ? 'Deactivated' : currentStatus);
+      let finalStatus = currentStatus;
+      if (isRejected) {
+        finalStatus = 'Rejected';
+      } else if (isCompleted) {
+        finalStatus = 'Completed';
+      } else if (isDeactivated) {
+        finalStatus = 'Deactivated';
+      }
 
+      obj.status = finalStatus;
+      obj.isCompleted = isCompleted;
+      obj.isExpired = isExpired;
       obj.activate = isCampaignActive;
       obj.active = isCampaignActive;
       obj.isActive = isCampaignActive;
@@ -581,9 +584,8 @@ const handleMyCampaigns = async (req, res) => {
       obj.verified = isCampaignVerified && !isRejected;
       obj.isVerified = isCampaignVerified && !isRejected;
       obj.is_verified = isCampaignVerified && !isRejected;
-      obj.verificationStatus = finalVerificationStatus;
-      obj.verification_status = finalVerificationStatus;
-      obj.status = finalStatus;
+      obj.verificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
+      obj.verification_status = obj.verificationStatus;
       obj.rejectionReason = c.rejectionReason || '';
       obj.rejection_reason = c.rejectionReason || '';
       obj.isDeactivated = isDeactivated;
@@ -592,6 +594,7 @@ const handleMyCampaigns = async (req, res) => {
       obj.deactivationMarkedAsRead = Boolean(c.deactivationMarkedAsRead);
       obj.deactivation_marked_as_read = Boolean(c.deactivationMarkedAsRead);
       obj.deactivatedAt = c.deactivatedAt || null;
+      obj.deactivationReadAt = c.deactivationReadAt || null;
 
       obj.raised = c.raised || `₹${raisedNum.toLocaleString('en-IN')}`;
       obj.raisedAmount = raisedNum;
@@ -643,9 +646,28 @@ const handleMyCampaigns = async (req, res) => {
       return obj;
     }));
 
+    // Status tab filtering (Active vs Completed vs Stopped)
+    let finalEnrichedList = enriched;
+    if (req.query.status && req.query.status.trim() !== '' && req.query.status.toLowerCase() !== 'all') {
+      const targetStatus = req.query.status.trim().toLowerCase();
+      if (targetStatus === 'active' || targetStatus === 'live') {
+        finalEnrichedList = enriched.filter(item => item.status === 'Live' && item.isActive === true && !item.isDeactivated && !item.isCompleted);
+      } else if (targetStatus === 'completed') {
+        finalEnrichedList = enriched.filter(item => item.status === 'Completed' || item.isCompleted === true || item.deactivationMarkedAsRead === true);
+      } else if (targetStatus === 'stopped' || targetStatus === 'deactivated' || targetStatus === 'inactive') {
+        finalEnrichedList = enriched.filter(item => item.isDeactivated === true && !item.deactivationMarkedAsRead);
+      } else if (targetStatus === 'rejected') {
+        finalEnrichedList = enriched.filter(item => item.status === 'Rejected');
+      } else if (targetStatus === 'pending') {
+        finalEnrichedList = enriched.filter(item => item.status === 'Pending');
+      } else {
+        finalEnrichedList = enriched.filter(item => (item.status || '').toLowerCase() === targetStatus);
+      }
+    }
+
     res.json({
       status: true,
-      count: enriched.length,
+      count: finalEnrichedList.length,
       totalRaised: `₹${totalRaisedNum.toLocaleString('en-IN')}`,
       totalRaisedAmount: totalRaisedNum,
       totalGetAmount: totalRaisedNum,
@@ -654,9 +676,9 @@ const handleMyCampaigns = async (req, res) => {
       totalGoalAmount: totalGoalNum,
       totalTargetAmount: totalGoalNum,
       totalDonorsCount: totalDonors,
-      myCampaigns: enriched,
-      campaigns: enriched,
-      data: enriched
+      myCampaigns: finalEnrichedList,
+      campaigns: finalEnrichedList,
+      data: finalEnrichedList
     });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });

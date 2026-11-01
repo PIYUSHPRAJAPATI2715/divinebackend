@@ -132,17 +132,18 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     : (normalizedImages.length > 0 ? normalizedImages[0] : '');
 
   const isRejected = Boolean(c.status === 'Rejected' || c.verificationStatus === 'Rejected' || currentStatus === 'Rejected');
-  const isDeactivated = Boolean(c.isDeactivated === true);
-  const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || currentStatus === 'Completed');
-  const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive' && !isDeactivated && !isRejected);
+  const isMarkedCompleted = Boolean(c.deactivationMarkedAsRead === true || currentStatus === 'Completed' || c.status === 'Completed' || isExpired);
+  const isDeactivated = Boolean(c.isDeactivated === true && !c.deactivationMarkedAsRead && !isMarkedCompleted);
+  const isCampaignVerified = Boolean(c.isVerified === true || currentStatus === 'Live' || isMarkedCompleted);
+  const isCampaignActive = Boolean(c.isActive !== false && currentStatus !== 'Inactive' && !isDeactivated && !isRejected && !isMarkedCompleted);
 
   const finalVerificationStatus = isRejected ? 'Rejected' : (isCampaignVerified ? 'Approved' : (c.verificationStatus || 'Pending'));
-  const finalStatus = isRejected ? 'Rejected' : (isDeactivated ? 'Deactivated' : currentStatus);
+  const finalStatus = isRejected ? 'Rejected' : (isMarkedCompleted ? 'Completed' : (isDeactivated ? 'Deactivated' : currentStatus));
 
   return {
     ...c,
     status: finalStatus,
-    isCompleted: isExpired || currentStatus === 'Completed',
+    isCompleted: isMarkedCompleted,
     isExpired: isExpired,
     activate: isCampaignActive,
     active: isCampaignActive,
@@ -607,8 +608,8 @@ router.post('/:id/approve', handleAdminApprove);
 router.put('/:id/reject', handleAdminReject);
 router.post('/:id/reject', handleAdminReject);
 
-// Admin Mark Deactivated Campaign as Read / Acknowledged
-// Once marked as read, it is removed from the user's My Campaigns API
+// Admin Mark Deactivated Campaign as Read & Completed (Point 10 from Sheet)
+// Once marked as completed by admin, it moves from Active / Stopped to the Completed tab in My Campaigns
 const handleMarkDeactivationAsRead = async (req, res) => {
   try {
     const campaignId = req.params.id;
@@ -622,12 +623,15 @@ const handleMarkDeactivationAsRead = async (req, res) => {
 
     campaign.deactivationMarkedAsRead = true;
     campaign.deactivationReadAt = new Date();
+    campaign.status = 'Completed'; // Moved to Completed!
+    campaign.isActive = false;
+    campaign.isDeactivated = false;
     await campaign.save();
 
     const enriched = await enrichCampaign(campaign, req);
     res.json({
       status: true,
-      message: 'Deactivated campaign marked as read. It is now removed from the user My Campaigns list.',
+      message: 'Stopped campaign marked as completed. It is now moved to the Completed tab on the My Campaigns page.',
       data: enriched,
       ...enriched
     });
@@ -641,6 +645,9 @@ router.post('/:id/mark-read', handleMarkDeactivationAsRead);
 router.patch('/:id/mark-read', handleMarkDeactivationAsRead);
 router.put('/:id/deactivation-read', handleMarkDeactivationAsRead);
 router.post('/:id/deactivation-read', handleMarkDeactivationAsRead);
+router.put('/:id/mark-completed', handleMarkDeactivationAsRead);
+router.post('/:id/mark-completed', handleMarkDeactivationAsRead);
+router.patch('/:id/mark-completed', handleMarkDeactivationAsRead);
 
 // Delete a campaign
 router.delete('/:id', async (req, res) => {
