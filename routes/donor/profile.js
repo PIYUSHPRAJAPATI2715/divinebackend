@@ -124,9 +124,37 @@ router.get('/profile', async (req, res) => {
 
     const formattedFollowers = rawFollowers.map(f => formatFollowerItem(f));
 
+    const resolvedAuthDoc = ngoObj.authorityLetterDoc
+      || ngoObj.formFillerDetails?.authorityLetterDoc
+      || userObj.authorityLetterDoc
+      || userObj.formFillerDetails?.authorityLetterDoc
+      || null;
+
+    let resolvedMoaAoaDocs = [];
+    if (Array.isArray(ngoObj.moaAoaDocs) && ngoObj.moaAoaDocs.length > 0) {
+      resolvedMoaAoaDocs = ngoObj.moaAoaDocs;
+    } else if (Array.isArray(userObj.moaAoaDocs) && userObj.moaAoaDocs.length > 0) {
+      resolvedMoaAoaDocs = userObj.moaAoaDocs;
+    } else if (ngoObj.moaAoaDocs && typeof ngoObj.moaAoaDocs === 'string') {
+      resolvedMoaAoaDocs = [ngoObj.moaAoaDocs];
+    } else if (userObj.moaAoaDocs && typeof userObj.moaAoaDocs === 'string') {
+      resolvedMoaAoaDocs = [userObj.moaAoaDocs];
+    }
+
+    const mergedFormFiller = {
+      ...(userObj.formFillerDetails || {}),
+      ...(ngoObj.formFillerDetails || {})
+    };
+    if (resolvedAuthDoc) {
+      mergedFormFiller.authorityLetterDoc = resolvedAuthDoc;
+    }
+
     const enrichedData = {
       ...ngoObj,
       ...userObj,
+      authorityLetterDoc: resolvedAuthDoc,
+      moaAoaDocs: resolvedMoaAoaDocs,
+      formFillerDetails: mergedFormFiller,
       _id: user._id,
       id: user._id,
       name,
@@ -214,7 +242,9 @@ router.get('/profile', async (req, res) => {
         fcraCertificate: ngoObj.fcraCertificate || userObj.fcraCertificate || null,
         addressCertificate: ngoObj.addressCertificate || userObj.addressCertificate || null,
         cancelledChequeDoc: ngoObj.cancelledChequeDoc || userObj.cancelledChequeDoc || null,
-        moaAoaDocs: (Array.isArray(ngoObj.moaAoaDocs) && ngoObj.moaAoaDocs.length > 0) ? ngoObj.moaAoaDocs : (userObj.moaAoaDocs || []),
+        authorityLetterDoc: resolvedAuthDoc,
+        moaAoaDocs: resolvedMoaAoaDocs,
+        formFillerDetails: mergedFormFiller,
         profilePhoto: userPhoto,
         logo: userPhoto,
         avatar: userPhoto,
@@ -363,7 +393,8 @@ const handleUpdateDonorProfile = async (req, res) => {
     // Handle statutory documents upload
     const docFields = [
       'panImage', 'tanImage', 'gstDocument', 'certificate12A', 'certificate80G',
-      'darpanCertificate', 'csr1Certificate', 'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc'
+      'darpanCertificate', 'csr1Certificate', 'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc',
+      'authorityLetterDoc'
     ];
     docFields.forEach(df => {
       if (req.body[df] !== undefined) {
@@ -371,8 +402,28 @@ const handleUpdateDonorProfile = async (req, res) => {
       }
     });
 
-    if (Array.isArray(req.body.moaAoaDocs)) {
-      user.moaAoaDocs = req.body.moaAoaDocs.map(doc => saveBase64Image(doc, req)).filter(Boolean);
+    const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
+    if (rawMoa !== undefined) {
+      let moaList = [];
+      if (Array.isArray(rawMoa)) {
+        moaList = rawMoa.map(doc => saveBase64Image(doc, req)).filter(Boolean);
+      } else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+        try {
+          const parsed = JSON.parse(rawMoa);
+          moaList = Array.isArray(parsed) ? parsed.map(doc => saveBase64Image(doc, req)).filter(Boolean) : [saveBase64Image(rawMoa.trim(), req)].filter(Boolean);
+        } catch(e) {
+          moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => saveBase64Image(s.trim(), req)).filter(Boolean) : [saveBase64Image(rawMoa.trim(), req)].filter(Boolean);
+        }
+      }
+      user.moaAoaDocs = moaList;
+    }
+
+    const rawAuth = req.body.authorityLetterDoc || req.body.formFillerDetails?.authorityLetterDoc || req.body.authorityLetter;
+    if (rawAuth !== undefined) {
+      const savedAuth = saveBase64Image(rawAuth, req);
+      user.authorityLetterDoc = savedAuth;
+      if (!user.formFillerDetails) user.formFillerDetails = {};
+      user.formFillerDetails.authorityLetterDoc = savedAuth;
     }
 
     const simpleFields = [
@@ -417,6 +468,11 @@ const handleUpdateDonorProfile = async (req, res) => {
       docFields.forEach(df => {
         if (user[df] !== undefined) ngo[df] = user[df];
       });
+      if (user.authorityLetterDoc !== undefined) {
+        ngo.authorityLetterDoc = user.authorityLetterDoc;
+        if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+        ngo.formFillerDetails.authorityLetterDoc = user.authorityLetterDoc;
+      }
       if (user.moaAoaDocs) ngo.moaAoaDocs = user.moaAoaDocs;
       simpleFields.forEach(sf => {
         if (user[sf] !== undefined) ngo[sf] = user[sf];

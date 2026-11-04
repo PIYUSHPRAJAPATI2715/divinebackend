@@ -132,10 +132,38 @@ router.get('/profile', async (req, res) => {
       certificateDoc: a.certificateDoc || a.document || ''
     }));
 
+    const resolvedAuthDoc = ngoObj.authorityLetterDoc
+      || ngoObj.formFillerDetails?.authorityLetterDoc
+      || userObj.authorityLetterDoc
+      || userObj.formFillerDetails?.authorityLetterDoc
+      || null;
+
+    let resolvedMoaAoaDocs = [];
+    if (Array.isArray(ngoObj.moaAoaDocs) && ngoObj.moaAoaDocs.length > 0) {
+      resolvedMoaAoaDocs = ngoObj.moaAoaDocs;
+    } else if (Array.isArray(userObj.moaAoaDocs) && userObj.moaAoaDocs.length > 0) {
+      resolvedMoaAoaDocs = userObj.moaAoaDocs;
+    } else if (ngoObj.moaAoaDocs && typeof ngoObj.moaAoaDocs === 'string') {
+      resolvedMoaAoaDocs = [ngoObj.moaAoaDocs];
+    } else if (userObj.moaAoaDocs && typeof userObj.moaAoaDocs === 'string') {
+      resolvedMoaAoaDocs = [userObj.moaAoaDocs];
+    }
+
+    const mergedFormFillerDetails = {
+      ...(userObj.formFillerDetails || {}),
+      ...(ngoObj.formFillerDetails || {})
+    };
+    if (resolvedAuthDoc) {
+      mergedFormFillerDetails.authorityLetterDoc = resolvedAuthDoc;
+    }
+
     const enrichedProfile = {
       ...userObj,
       ...ngoObj,
       _id: ngoObj._id,
+      authorityLetterDoc: resolvedAuthDoc,
+      moaAoaDocs: resolvedMoaAoaDocs,
+      formFillerDetails: mergedFormFillerDetails,
       name: ngoObj.name || userObj.name || 'NGO',
       countryCode: ngoObj.countryCode || userObj.countryCode || '+91',
       awards: normalizedAwards,
@@ -173,6 +201,9 @@ router.get('/profile', async (req, res) => {
       smsNotification: user ? user.smsNotification !== false : true,
       user: {
         ...userObj,
+        authorityLetterDoc: resolvedAuthDoc,
+        moaAoaDocs: resolvedMoaAoaDocs,
+        formFillerDetails: mergedFormFillerDetails,
         countryCode: ngoObj.countryCode || userObj.countryCode || '+91',
         awards: normalizedAwards,
         awardsRecognitions: normalizedAwards,
@@ -207,7 +238,7 @@ router.put('/profile', async (req, res) => {
       'addressCertificate', 'designation', 'email', 'phone', 'about', 'briefProfile', 'years', 'ourMission',
       'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany', 'ngoType', 'status',
       'rejectionReason', 'rejectedAt', 'resubmittedAt',
-      'moaAoaDocs', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
+      'moaAoaDocs', 'authorityLetterDoc', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
       'has12A', 'registration12A', 'certificate12A', 'has80G', 'registration80G', 'certificate80G',
       'hasDarpan', 'darpanNumber', 'darpanCertificate', 'hasCSR1', 'csr1Number', 'csr1Certificate',
       'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl',
@@ -223,6 +254,47 @@ router.put('/profile', async (req, res) => {
         ngo[field] = req.body[field];
       }
     });
+
+    const rawMoa = req.body.moaAoaDocs !== undefined 
+      ? req.body.moaAoaDocs 
+      : (req.body.moaDocs !== undefined 
+        ? req.body.moaDocs 
+        : (req.body.moaAoaDoc !== undefined ? req.body.moaAoaDoc : req.body.moaDoc));
+
+    if (rawMoa !== undefined) {
+      let moaList = [];
+      if (Array.isArray(rawMoa)) {
+        moaList = rawMoa.filter(doc => typeof doc === 'string' && doc.trim() !== '');
+      } else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+        try {
+          const parsed = JSON.parse(rawMoa);
+          moaList = Array.isArray(parsed) ? parsed.filter(doc => typeof doc === 'string' && doc.trim() !== '') : [rawMoa.trim()];
+        } catch (e) {
+          moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
+        }
+      }
+      ngo.moaAoaDocs = moaList;
+      if (user) {
+        user.moaAoaDocs = moaList;
+      }
+    }
+
+    const rawAuthDoc = req.body.authorityLetterDoc !== undefined 
+      ? req.body.authorityLetterDoc 
+      : (req.body.formFillerDetails && req.body.formFillerDetails.authorityLetterDoc !== undefined 
+        ? req.body.formFillerDetails.authorityLetterDoc 
+        : req.body.authorityLetter);
+
+    if (rawAuthDoc !== undefined) {
+      ngo.authorityLetterDoc = rawAuthDoc;
+      if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+      ngo.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      if (user) {
+        user.authorityLetterDoc = rawAuthDoc;
+        if (!user.formFillerDetails) user.formFillerDetails = {};
+        user.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      }
+    }
 
     if (req.body.resubmit === true || ngo.status === 'Rejected') {
       ngo.status = 'Pending';
@@ -279,7 +351,7 @@ router.post('/resubmit', async (req, res) => {
       'name', 'legalName', 'logo', 'registrationNumber', 'contactPerson', 'registeredAddress',
       'addressCertificate', 'designation', 'email', 'phone', 'about', 'briefProfile', 'years', 'ourMission',
       'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany', 'ngoType',
-      'moaAoaDocs', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
+      'moaAoaDocs', 'authorityLetterDoc', 'panNumber', 'panImage', 'tanNumber', 'tanImage', 'gstNumber', 'gstDocument',
       'has12A', 'registration12A', 'certificate12A', 'has80G', 'registration80G', 'certificate80G',
       'hasDarpan', 'darpanNumber', 'darpanCertificate', 'hasCSR1', 'csr1Number', 'csr1Certificate',
       'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl',
@@ -295,6 +367,47 @@ router.post('/resubmit', async (req, res) => {
         ngo[field] = req.body[field];
       }
     });
+
+    const rawMoa = req.body.moaAoaDocs !== undefined 
+      ? req.body.moaAoaDocs 
+      : (req.body.moaDocs !== undefined 
+        ? req.body.moaDocs 
+        : (req.body.moaAoaDoc !== undefined ? req.body.moaAoaDoc : req.body.moaDoc));
+
+    if (rawMoa !== undefined) {
+      let moaList = [];
+      if (Array.isArray(rawMoa)) {
+        moaList = rawMoa.filter(doc => typeof doc === 'string' && doc.trim() !== '');
+      } else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+        try {
+          const parsed = JSON.parse(rawMoa);
+          moaList = Array.isArray(parsed) ? parsed.filter(doc => typeof doc === 'string' && doc.trim() !== '') : [rawMoa.trim()];
+        } catch (e) {
+          moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
+        }
+      }
+      ngo.moaAoaDocs = moaList;
+      if (user) {
+        user.moaAoaDocs = moaList;
+      }
+    }
+
+    const rawAuthDoc = req.body.authorityLetterDoc !== undefined 
+      ? req.body.authorityLetterDoc 
+      : (req.body.formFillerDetails && req.body.formFillerDetails.authorityLetterDoc !== undefined 
+        ? req.body.formFillerDetails.authorityLetterDoc 
+        : req.body.authorityLetter);
+
+    if (rawAuthDoc !== undefined) {
+      ngo.authorityLetterDoc = rawAuthDoc;
+      if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+      ngo.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      if (user) {
+        user.authorityLetterDoc = rawAuthDoc;
+        if (!user.formFillerDetails) user.formFillerDetails = {};
+        user.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      }
+    }
 
     ngo.status = 'Pending';
     ngo.resubmittedAt = new Date();

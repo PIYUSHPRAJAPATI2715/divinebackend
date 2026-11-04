@@ -189,7 +189,14 @@ const enrichCampaign = async (campaignDoc, req = null) => {
     creatorProfile: creatorProfile,
     fundraiserProfile: creatorProfile,
     daysLeft: days,
-    donorsCount: c.donorsCount || 0
+    donorsCount: c.donorsCount || 0,
+    mobile: c.mobile || c.beneficiaryMobile || '',
+    email: c.email || c.beneficiaryEmail || '',
+    beneficiaryMobile: c.beneficiaryMobile || c.mobile || '',
+    beneficiaryEmail: c.beneficiaryEmail || c.email || '',
+    identityDocs: c.identityDocs || [],
+    medicalDocs: c.medicalDocs || [],
+    verificationDocs: c.verificationDocs || []
   };
 };
 

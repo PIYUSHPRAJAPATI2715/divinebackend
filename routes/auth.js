@@ -1531,7 +1531,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
       // Copy all 25 Non-Profit & 21 Corporate fields dynamically
       const extraFields = [
         'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
-        'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+        'addressCertificate', 'moaAoaDocs', 'authorityLetterDoc', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
         'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
         'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
         'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
@@ -1541,6 +1541,32 @@ router.put('/profile', authMiddleware, async (req, res) => {
       extraFields.forEach(f => {
         if (req.body[f] !== undefined) ngo[f] = req.body[f];
       });
+
+      const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
+      if (rawMoa !== undefined) {
+        let moaList = [];
+        if (Array.isArray(rawMoa)) moaList = rawMoa.filter(d => typeof d === 'string' && d.trim());
+        else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+          try {
+            const parsed = JSON.parse(rawMoa);
+            moaList = Array.isArray(parsed) ? parsed.filter(d => typeof d === 'string' && d.trim()) : [rawMoa.trim()];
+          } catch(e) {
+            moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
+          }
+        }
+        ngo.moaAoaDocs = moaList;
+        user.moaAoaDocs = moaList;
+      }
+
+      const rawAuth = req.body.authorityLetterDoc || req.body.formFillerDetails?.authorityLetterDoc || req.body.authorityLetter;
+      if (rawAuth !== undefined) {
+        ngo.authorityLetterDoc = rawAuth;
+        if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+        ngo.formFillerDetails.authorityLetterDoc = rawAuth;
+        user.authorityLetterDoc = rawAuth;
+        if (!user.formFillerDetails) user.formFillerDetails = {};
+        user.formFillerDetails.authorityLetterDoc = rawAuth;
+      }
 
       await ngo.save();
 
@@ -1975,7 +2001,7 @@ const registerHandler = async (req, res) => {
         // Copy all 25 Non-Profit & 21 Corporate registration fields
         const extraFields = [
           'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
-          'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+          'addressCertificate', 'moaAoaDocs', 'authorityLetterDoc', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
           'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
           'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
           'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
@@ -1985,6 +2011,32 @@ const registerHandler = async (req, res) => {
         extraFields.forEach(f => {
           if (req.body[f] !== undefined) ngo[f] = req.body[f];
         });
+
+        const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
+        if (rawMoa !== undefined) {
+          let moaList = [];
+          if (Array.isArray(rawMoa)) moaList = rawMoa.filter(d => typeof d === 'string' && d.trim());
+          else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+            try {
+              const parsed = JSON.parse(rawMoa);
+              moaList = Array.isArray(parsed) ? parsed.filter(d => typeof d === 'string' && d.trim()) : [rawMoa.trim()];
+            } catch(e) {
+              moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
+            }
+          }
+          ngo.moaAoaDocs = moaList;
+          user.moaAoaDocs = moaList;
+        }
+
+        const rawAuth = req.body.authorityLetterDoc || req.body.formFillerDetails?.authorityLetterDoc || req.body.authorityLetter;
+        if (rawAuth !== undefined) {
+          ngo.authorityLetterDoc = rawAuth;
+          if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+          ngo.formFillerDetails.authorityLetterDoc = rawAuth;
+          user.authorityLetterDoc = rawAuth;
+          if (!user.formFillerDetails) user.formFillerDetails = {};
+          user.formFillerDetails.authorityLetterDoc = rawAuth;
+        }
 
         await ngo.save();
       } else {
@@ -2019,7 +2071,7 @@ const registerHandler = async (req, res) => {
 
         const extraFields = [
           'legalName', 'briefProfile', 'organizationType', 'isRegisteredNonProfit', 'isRegisteredCompany',
-          'addressCertificate', 'moaAoaDocs', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
+          'addressCertificate', 'moaAoaDocs', 'authorityLetterDoc', 'has12A', 'has80G', 'hasDarpan', 'hasCSR1', 'csr1Number', 'csr1Certificate',
           'hasFCRA', 'fcraNumber', 'fcraCertificate', 'websiteUrl', 'cancelledChequeDoc',
           'directorsKeyManagement', 'formFillerDetails', 'lastFinancialYearBudget', 'donorDatabaseStrength',
           'employeeStrength', 'hasCrowdfundedBefore', 'crowdfundingPlatformsUsed', 'campaignPlanningTimeframe',
@@ -2029,6 +2081,32 @@ const registerHandler = async (req, res) => {
         extraFields.forEach(f => {
           if (req.body[f] !== undefined) ngo[f] = req.body[f];
         });
+
+        const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
+        if (rawMoa !== undefined) {
+          let moaList = [];
+          if (Array.isArray(rawMoa)) moaList = rawMoa.filter(d => typeof d === 'string' && d.trim());
+          else if (typeof rawMoa === 'string' && rawMoa.trim()) {
+            try {
+              const parsed = JSON.parse(rawMoa);
+              moaList = Array.isArray(parsed) ? parsed.filter(d => typeof d === 'string' && d.trim()) : [rawMoa.trim()];
+            } catch(e) {
+              moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
+            }
+          }
+          ngo.moaAoaDocs = moaList;
+          user.moaAoaDocs = moaList;
+        }
+
+        const rawAuth = req.body.authorityLetterDoc || req.body.formFillerDetails?.authorityLetterDoc || req.body.authorityLetter;
+        if (rawAuth !== undefined) {
+          ngo.authorityLetterDoc = rawAuth;
+          if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
+          ngo.formFillerDetails.authorityLetterDoc = rawAuth;
+          user.authorityLetterDoc = rawAuth;
+          if (!user.formFillerDetails) user.formFillerDetails = {};
+          user.formFillerDetails.authorityLetterDoc = rawAuth;
+        }
 
         await ngo.save();
       }

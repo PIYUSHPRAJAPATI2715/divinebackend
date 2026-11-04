@@ -33,6 +33,7 @@ const ngoSchema = new mongoose.Schema({
 
   // Document Uploads
   moaAoaDocs: [{ type: String }],
+  authorityLetterDoc: { type: String, default: null },
   panNumber: { type: String, default: "" },
   panImage: { type: String, default: null },
   tanNumber: { type: String, default: "" },

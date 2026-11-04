@@ -189,6 +189,7 @@ const userSchema = new mongoose.Schema({
   addressCertificate: { type: String, default: null },
   cancelledChequeDoc: { type: String, default: null },
   moaAoaDocs: [{ type: String }],
+  authorityLetterDoc: { type: String, default: null },
   websiteUrl: { type: String, default: '' },
   bankAccountHolder: { type: String, default: '' },
   bankName: { type: String, default: '' },

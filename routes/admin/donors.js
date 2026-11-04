@@ -154,7 +154,7 @@ router.get('/', async (req, res) => {
         addressCertificate: matchedNgo.addressCertificate || null,
         moaAoaDocs: matchedNgo.moaAoaDocs || [],
         cancelledChequeDoc: matchedNgo.cancelledChequeDoc || null,
-        authorityLetterDoc: matchedNgo.formFillerDetails?.authorityLetterDoc || null,
+        authorityLetterDoc: matchedNgo.authorityLetterDoc || matchedNgo.formFillerDetails?.authorityLetterDoc || null,
         bankAccountHolder: matchedNgo.bankAccountHolder || '',
         bankName: matchedNgo.bankName || '',
         bankBranch: matchedNgo.bankBranch || '',
@@ -342,7 +342,7 @@ router.get('/', async (req, res) => {
         addressCertificate: n.addressCertificate || null,
         moaAoaDocs: n.moaAoaDocs || [],
         cancelledChequeDoc: n.cancelledChequeDoc || null,
-        authorityLetterDoc: n.formFillerDetails?.authorityLetterDoc || null,
+        authorityLetterDoc: n.authorityLetterDoc || n.formFillerDetails?.authorityLetterDoc || null,
         bankAccountHolder: n.bankAccountHolder || '',
         bankName: n.bankName || '',
         bankBranch: n.bankBranch || '',
@@ -657,6 +657,7 @@ router.post('/', async (req, res) => {
         fcraNumber: fcraNumber || '',
         fcraCertificate: savedFcra,
         moaAoaDocs: savedMoaAoaDocs,
+        authorityLetterDoc: savedAuthorityLetter,
         bankAccountHolder: bankAccountHolder || '',
         bankName: bankName || '',
         bankBranch: bankBranch || '',
@@ -1004,6 +1005,7 @@ router.put('/:id', async (req, res) => {
       }
       if (req.body.authorityLetterDoc !== undefined) {
         const savedAuthLetter = req.body.authorityLetterDoc ? saveBase64Doc(req.body.authorityLetterDoc, req, 'authority_letter') : null;
+        ngoFields.authorityLetterDoc = savedAuthLetter;
         ngoFields.formFillerDetails = {
           ...(ngo?.formFillerDetails || {}),
           authorityLetterDoc: savedAuthLetter

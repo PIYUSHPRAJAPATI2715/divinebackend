@@ -26,6 +26,12 @@ const campaignSchema = new mongoose.Schema({
   verificationStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   previousStatus: { type: String, default: '' },
   rejectionReason: { type: String, default: '' },
+  mobile: { type: String, default: '' },
+  email: { type: String, default: '' },
+  beneficiaryMobile: { type: String, default: '' },
+  beneficiaryEmail: { type: String, default: '' },
+  identityDocs: [{ type: String }],
+  medicalDocs: [{ type: String }],
   verificationDocs: [{ type: String }], // URLs to documents like medical reports or registrations
   endDate: { type: Date, default: null },
   images: [{ type: String }],

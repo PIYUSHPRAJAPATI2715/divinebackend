@@ -434,6 +434,14 @@ router.get('/campaigns/:id', async (req, res) => {
     campaignObj.daysLeft = days;
     campaignObj.donorsCount = campaignObj.donorsCount || 0;
     campaignObj.imageUrl = finalImage;
+
+    campaignObj.mobile = campaign.mobile || campaign.beneficiaryMobile || '';
+    campaignObj.email = campaign.email || campaign.beneficiaryEmail || '';
+    campaignObj.beneficiaryMobile = campaignObj.mobile;
+    campaignObj.beneficiaryEmail = campaignObj.email;
+    campaignObj.identityDocs = campaign.identityDocs || [];
+    campaignObj.medicalDocs = campaign.medicalDocs || [];
+    campaignObj.verificationDocs = campaign.verificationDocs || [];
     campaignObj.recentDonors = recentDonors;
     campaignObj.recent_donors = recentDonors;
     campaignObj.donorsList = recentDonors;
@@ -643,6 +651,14 @@ const handleMyCampaigns = async (req, res) => {
       obj.imageUrl = myFinalImage;
       obj.images = myNormalizedImages.length > 0 ? myNormalizedImages : (myFinalImage ? [myFinalImage] : []);
 
+      obj.mobile = c.mobile || c.beneficiaryMobile || '';
+      obj.email = c.email || c.beneficiaryEmail || '';
+      obj.beneficiaryMobile = obj.mobile;
+      obj.beneficiaryEmail = obj.email;
+      obj.identityDocs = c.identityDocs || [];
+      obj.medicalDocs = c.medicalDocs || [];
+      obj.verificationDocs = c.verificationDocs || [];
+
       return obj;
     }));
 
@@ -767,6 +783,19 @@ router.post('/campaigns', async (req, res) => {
 
     const ngo = await NGO.findOne({ $or: [{ phone: dbUser?.phone }, { email: dbUser?.email }] });
 
+    const beneficiaryMobile = req.body.mobile || req.body.beneficiaryMobile || req.body.phone || '';
+    const beneficiaryEmail = req.body.email || req.body.beneficiaryEmail || '';
+
+    const rawIdentityDocs = req.body.identityDocs || [];
+    const rawMedicalDocs = req.body.medicalDocs || [];
+    const rawVerificationDocs = req.body.verificationDocs || [];
+
+    const identityDocs = Array.isArray(rawIdentityDocs) ? rawIdentityDocs : (rawIdentityDocs ? [rawIdentityDocs] : []);
+    const medicalDocs = Array.isArray(rawMedicalDocs) ? rawMedicalDocs : (rawMedicalDocs ? [rawMedicalDocs] : []);
+    const verificationDocs = Array.isArray(rawVerificationDocs) 
+      ? rawVerificationDocs 
+      : (Array.isArray(documents) ? documents : (identityDocs.length > 0 || medicalDocs.length > 0 ? [...identityDocs, ...medicalDocs] : []));
+
     const newCampaign = new Campaign({
       campaignId: `CMP-${Date.now().toString().slice(-4)}`,
       title: cleanTitle,
@@ -774,6 +803,10 @@ router.post('/campaigns', async (req, res) => {
       userId: dbUser ? dbUser._id : null,
       ngoId: ngo ? ngo._id : null,
       userPhone: dbUser ? dbUser.phone : '',
+      mobile: beneficiaryMobile,
+      email: beneficiaryEmail,
+      beneficiaryMobile: beneficiaryMobile,
+      beneficiaryEmail: beneficiaryEmail,
       category: category || 'General Support',
       description: description || '',
       imageUrl: finalCoverImage,
@@ -789,6 +822,9 @@ router.post('/campaigns', async (req, res) => {
       images: validImages.length > 0 ? validImages : [finalCoverImage],
       video: video || null,
       documents: documents || [],
+      identityDocs: identityDocs,
+      medicalDocs: medicalDocs,
+      verificationDocs: verificationDocs,
       bankDetails: bankDetails || null
     });
     
@@ -809,6 +845,13 @@ router.post('/campaigns', async (req, res) => {
     }
     
     const campObj = newCampaign.toObject();
+    campObj.mobile = beneficiaryMobile;
+    campObj.email = beneficiaryEmail;
+    campObj.beneficiaryMobile = beneficiaryMobile;
+    campObj.beneficiaryEmail = beneficiaryEmail;
+    campObj.identityDocs = identityDocs;
+    campObj.medicalDocs = medicalDocs;
+    campObj.verificationDocs = verificationDocs;
     campObj.activate = false;
     campObj.active = false;
     campObj.isActive = false;
@@ -1078,6 +1121,26 @@ const handleUpdateCampaign = async (req, res) => {
     if (documents !== undefined) campaign.documents = documents;
     if (bankDetails !== undefined) campaign.bankDetails = bankDetails;
 
+    if (req.body.mobile !== undefined || req.body.beneficiaryMobile !== undefined || req.body.phone !== undefined) {
+      const bMobile = req.body.mobile || req.body.beneficiaryMobile || req.body.phone || '';
+      campaign.mobile = bMobile;
+      campaign.beneficiaryMobile = bMobile;
+    }
+    if (req.body.email !== undefined || req.body.beneficiaryEmail !== undefined) {
+      const bEmail = req.body.email || req.body.beneficiaryEmail || '';
+      campaign.email = bEmail;
+      campaign.beneficiaryEmail = bEmail;
+    }
+    if (req.body.identityDocs !== undefined) {
+      campaign.identityDocs = Array.isArray(req.body.identityDocs) ? req.body.identityDocs : (req.body.identityDocs ? [req.body.identityDocs] : []);
+    }
+    if (req.body.medicalDocs !== undefined) {
+      campaign.medicalDocs = Array.isArray(req.body.medicalDocs) ? req.body.medicalDocs : (req.body.medicalDocs ? [req.body.medicalDocs] : []);
+    }
+    if (req.body.verificationDocs !== undefined) {
+      campaign.verificationDocs = Array.isArray(req.body.verificationDocs) ? req.body.verificationDocs : (req.body.verificationDocs ? [req.body.verificationDocs] : []);
+    }
+
     if (req.body.activate !== undefined || req.body.isActive !== undefined || req.body.active !== undefined) {
       const activeVal = Boolean(req.body.activate ?? req.body.isActive ?? req.body.active);
       campaign.isActive = activeVal;
@@ -1170,6 +1233,14 @@ const handleUpdateCampaign = async (req, res) => {
     campaignObj.userImage = creatorPhoto;
     campaignObj.userProfile = creatorProfile;
     campaignObj.daysLeft = days;
+
+    campaignObj.mobile = campaign.mobile || campaign.beneficiaryMobile || '';
+    campaignObj.email = campaign.email || campaign.beneficiaryEmail || '';
+    campaignObj.beneficiaryMobile = campaignObj.mobile;
+    campaignObj.beneficiaryEmail = campaignObj.email;
+    campaignObj.identityDocs = campaign.identityDocs || [];
+    campaignObj.medicalDocs = campaign.medicalDocs || [];
+    campaignObj.verificationDocs = campaign.verificationDocs || [];
 
     res.json({
       status: true,
