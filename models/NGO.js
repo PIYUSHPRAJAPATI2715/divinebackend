@@ -126,7 +126,9 @@ const ngoSchema = new mongoose.Schema({
       year: { type: String, default: '' },
       description: { type: String, default: '' },
       document: { type: String, default: null },
-      certificateDoc: { type: String, default: null }
+      certificateDoc: { type: String, default: null },
+      supportingDocument: { type: String, default: null },
+      supportingDoc: { type: String, default: null }
     }
   ],
   awards: [
@@ -138,7 +140,9 @@ const ngoSchema = new mongoose.Schema({
       year: { type: String, default: '' },
       description: { type: String, default: '' },
       document: { type: String, default: null },
-      certificateDoc: { type: String, default: null }
+      certificateDoc: { type: String, default: null },
+      supportingDocument: { type: String, default: null },
+      supportingDoc: { type: String, default: null }
     }
   ],
 

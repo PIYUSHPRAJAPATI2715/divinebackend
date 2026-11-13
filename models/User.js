@@ -148,7 +148,9 @@ const userSchema = new mongoose.Schema({
       year: { type: String, default: '' },
       description: { type: String, default: '' },
       document: { type: String, default: null },
-      certificateDoc: { type: String, default: null }
+      certificateDoc: { type: String, default: null },
+      supportingDocument: { type: String, default: null },
+      supportingDoc: { type: String, default: null }
     }
   ],
   awardsRecognitions: [
@@ -160,7 +162,9 @@ const userSchema = new mongoose.Schema({
       year: { type: String, default: '' },
       description: { type: String, default: '' },
       document: { type: String, default: null },
-      certificateDoc: { type: String, default: null }
+      certificateDoc: { type: String, default: null },
+      supportingDocument: { type: String, default: null },
+      supportingDoc: { type: String, default: null }
     }
   ],
   // Statutory Documents & Fields for NGO & Corporate profiles

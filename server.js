@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const fs = require('fs');
 const { connectDB } = require('./db');
 const authMiddleware = require('./middleware/auth');
 
@@ -22,59 +23,155 @@ app.get('/api/postman_collection.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'postman_collection.json'));
 });
 
-// Public File Upload endpoint (decodes base64 for images & videos, saves as physical file, returns public URL)
-app.post('/api/upload', (req, res) => {
-  try {
-    const { image, video, file, media } = req.body;
-    const rawMedia = image || video || file || media;
-    if (!rawMedia) {
-      return res.status(400).json({ status: false, message: 'Base64 image or video data is required' });
+// Configure Multer for Multipart File Uploads (Supports PDF, Docs, Images, Videos)
+const multer = require('multer');
+const { getBaseUrl, saveBase64Media, ensurePermanentDocUrl } = require('./utils/uploadHelper');
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    let ext = path.extname(file.originalname || '');
+    if (!ext) {
+      const mime = (file.mimetype || '').toLowerCase();
+      if (mime.includes('pdf')) ext = '.pdf';
+      else if (mime.includes('png')) ext = '.png';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = '.jpg';
+      else if (mime.includes('webp')) ext = '.webp';
+      else if (mime.includes('mp4')) ext = '.mp4';
+      else if (mime.includes('quicktime') || mime.includes('mov')) ext = '.mov';
+      else if (mime.includes('word') || mime.includes('doc')) ext = '.docx';
+      else ext = '.pdf';
     }
+    const isDoc = (file.mimetype || '').toLowerCase().includes('pdf') || ext.toLowerCase() === '.pdf';
+    const isVid = (file.mimetype || '').toLowerCase().includes('video') || ['.mp4', '.mov', '.webm'].includes(ext.toLowerCase());
+    const prefix = isDoc ? 'doc' : (isVid ? 'vid' : 'file');
+    cb(null, `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}${ext}`);
+  }
+});
 
-    let base64Data = rawMedia;
-    let ext = video ? 'mp4' : 'png';
-    const isVideo = Boolean(video) || (typeof rawMedia === 'string' && (rawMedia.startsWith('data:video/') || rawMedia.includes('video/')));
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB file limit
+});
 
-    if (typeof rawMedia === 'string' && rawMedia.startsWith('data:')) {
-      const matches = rawMedia.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mime = matches[1].toLowerCase();
-        if (mime.includes('mp4')) ext = 'mp4';
-        else if (mime.includes('webm')) ext = 'webm';
-        else if (mime.includes('quicktime') || mime.includes('mov')) ext = 'mov';
-        else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
-        else if (mime.includes('png')) ext = 'png';
-        else if (mime.includes('webp')) ext = 'webp';
-        base64Data = matches[2];
+// Universal File Upload Handler: Handles Multipart/form-data, Base64 JSON, and Remote URLs (tmpfiles.org)
+const handleUnifiedUpload = async (req, res) => {
+  try {
+    const baseUrl = getBaseUrl(req);
+
+    // 1. Check if multipart file is uploaded (req.file or req.files)
+    let uploadedFile = req.file;
+    if (!uploadedFile && req.files) {
+      if (Array.isArray(req.files) && req.files.length > 0) {
+        uploadedFile = req.files[0];
+      } else if (typeof req.files === 'object') {
+        const firstKey = Object.keys(req.files)[0];
+        if (firstKey && Array.isArray(req.files[firstKey]) && req.files[firstKey].length > 0) {
+          uploadedFile = req.files[firstKey][0];
+        }
       }
     }
 
-    const buffer = Buffer.from(base64Data, 'base64');
-    const prefix = isVideo ? 'vid' : 'img';
-    const filename = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-    
-    const fs = require('fs');
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    if (uploadedFile) {
+      const fileUrl = `${baseUrl}/uploads/${uploadedFile.filename}`;
+      return res.json({
+        status: true,
+        url: fileUrl,
+        fileUrl,
+        documentUrl: fileUrl,
+        imageUrl: fileUrl,
+        videoUrl: fileUrl,
+        filename: uploadedFile.filename,
+        originalName: uploadedFile.originalname,
+        size: uploadedFile.size,
+        mimetype: uploadedFile.mimetype
+      });
     }
 
-    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+    // 2. Check if a remote URL (like tmpfiles.org) or Base64 is sent in JSON body
+    const { image, video, file, media, document, pdf, url } = req.body || {};
+    const rawInput = url || file || document || pdf || image || video || media;
 
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const host = req.get('host');
-    const fileUrl = `${protocol}://${host}/uploads/${filename}`;
+    if (!rawInput) {
+      return res.status(400).json({
+        status: false,
+        message: 'No file uploaded or data provided. Send a multipart file (file/document/pdf/image) or JSON base64 string/url.'
+      });
+    }
 
-    res.json({
+    // If it's a URL
+    if (typeof rawInput === 'string' && (rawInput.startsWith('http://') || rawInput.startsWith('https://'))) {
+      const permanentUrl = await ensurePermanentDocUrl(rawInput, req);
+      const filename = path.basename(permanentUrl.split('?')[0]);
+      return res.json({
+        status: true,
+        url: permanentUrl,
+        fileUrl: permanentUrl,
+        documentUrl: permanentUrl,
+        imageUrl: permanentUrl,
+        videoUrl: permanentUrl,
+        filename
+      });
+    }
+
+    // If it's Base64
+    const isDoc = (typeof rawInput === 'string' && (rawInput.includes('application/pdf') || rawInput.startsWith('JVBERi'))) || Boolean(pdf) || Boolean(document);
+    const isVid = Boolean(video) || (typeof rawInput === 'string' && (rawInput.includes('video/') || rawInput.startsWith('data:video/')));
+    const prefix = isDoc ? 'doc' : (isVid ? 'vid' : 'img');
+
+    const permanentUrl = saveBase64Media(rawInput, req, prefix);
+    if (!permanentUrl) {
+      return res.status(400).json({ status: false, message: 'Invalid file or media payload' });
+    }
+
+    const filename = path.basename(permanentUrl.split('?')[0]);
+    return res.json({
       status: true,
-      url: fileUrl,
-      video: fileUrl,
-      videoUrl: fileUrl,
-      imageUrl: fileUrl,
+      url: permanentUrl,
+      fileUrl: permanentUrl,
+      documentUrl: permanentUrl,
+      imageUrl: permanentUrl,
+      videoUrl: permanentUrl,
       filename
     });
   } catch (err) {
+    console.error('handleUnifiedUpload error:', err.message);
     res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+// Universal Upload Routes (Supports Multipart & JSON, alias endpoints for Flutter)
+app.post('/api/upload', upload.any(), handleUnifiedUpload);
+app.post('/api/upload/file', upload.any(), handleUnifiedUpload);
+app.post('/api/upload/pdf', upload.any(), handleUnifiedUpload);
+app.post('/api/upload/doc', upload.any(), handleUnifiedUpload);
+app.post('/api/upload/document', upload.any(), handleUnifiedUpload);
+app.post('/api/donor/upload', upload.any(), handleUnifiedUpload);
+app.post('/api/ngo/upload', upload.any(), handleUnifiedUpload);
+
+// Proxy & Resiliency Endpoint for viewing/downloading documents
+app.get('/api/proxy-doc', async (req, res) => {
+  try {
+    const rawUrl = req.query.url;
+    if (!rawUrl) return res.status(400).send('Missing url parameter');
+    const permanent = await ensurePermanentDocUrl(rawUrl, req);
+    if (permanent && permanent.includes('/uploads/')) {
+      const relPath = permanent.split('/uploads/')[1];
+      const localFile = path.join(uploadsDir, relPath);
+      if (fs.existsSync(localFile)) {
+        return res.sendFile(localFile);
+      }
+    }
+    res.redirect(permanent || rawUrl);
+  } catch (e) {
+    res.status(500).send(e.message);
   }
 });
 

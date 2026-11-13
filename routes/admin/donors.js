@@ -112,17 +112,22 @@ router.get('/', async (req, res) => {
             ? u.awardsRecognitions
             : (Array.isArray(u.awards) ? u.awards : []);
 
-      const normalizedAwards = rawNgoAwards.map(a => ({
-        ...a,
-        name: a.name || a.title || 'Recognition',
-        title: a.title || a.name || 'Recognition',
-        awardedBy: a.awardedBy || a.issuingOrg || '',
-        issuingOrg: a.issuingOrg || a.awardedBy || '',
-        year: String(a.year || ''),
-        description: a.description || '',
-        document: a.document || a.certificateDoc || '',
-        certificateDoc: a.certificateDoc || a.document || ''
-      }));
+      const normalizedAwards = rawNgoAwards.map(a => {
+        const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+        return {
+          ...a,
+          name: a.name || a.title || 'Recognition',
+          title: a.title || a.name || 'Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: docUrl,
+          certificateDoc: docUrl,
+          supportingDocument: docUrl,
+          supportingDoc: docUrl
+        };
+      });
 
       const ngoDocs = matchedNgo ? {
         legalName: matchedNgo.legalName || matchedNgo.name || '',
@@ -522,7 +527,7 @@ router.post('/', async (req, res) => {
     const incomingAwards = req.body.awards || req.body.awardsRecognitions || [];
     if (Array.isArray(incomingAwards)) {
       savedAwards = incomingAwards.map((a, idx) => {
-        let cert = a.document || a.certificateDoc || null;
+        let cert = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || null;
         if (cert && (cert.startsWith('data:') || cert.includes(';base64,'))) {
           cert = saveBase64Doc(cert, req, `award_${idx + 1}`);
         }
@@ -533,8 +538,10 @@ router.post('/', async (req, res) => {
           issuingOrg: a.issuingOrg || a.awardedBy || '',
           year: String(a.year || ''),
           description: a.description || '',
-          document: cert,
-          certificateDoc: cert
+          document: cert || '',
+          certificateDoc: cert || '',
+          supportingDocument: cert || '',
+          supportingDoc: cert || ''
         };
       });
     }
@@ -841,7 +848,7 @@ router.put('/:id', async (req, res) => {
       if (req.body.awards !== undefined || req.body.awardsRecognitions !== undefined) {
         const incoming = req.body.awards || req.body.awardsRecognitions || [];
         const procAwards = incoming.map((a, idx) => {
-          let cert = a.document || a.certificateDoc || null;
+          let cert = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || null;
           if (cert && (cert.startsWith('data:') || cert.includes(';base64,'))) {
             cert = saveBase64Doc(cert, req, `award_${idx + 1}`);
           }
@@ -852,8 +859,10 @@ router.put('/:id', async (req, res) => {
             issuingOrg: a.issuingOrg || a.awardedBy || '',
             year: String(a.year || ''),
             description: a.description || '',
-            document: cert,
-            certificateDoc: cert
+            document: cert || '',
+            certificateDoc: cert || '',
+            supportingDocument: cert || '',
+            supportingDoc: cert || ''
           };
         });
         user.awards = procAwards;

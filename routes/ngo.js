@@ -13,6 +13,7 @@ const { resolveEntityPhoto } = require('../utils/avatar');
 const { syncExpiredCampaigns, calculateDaysLeft, isCampaignExpired } = require('../utils/campaignHelper');
 const { getAllFollowersForEntity, formatFollowerItem } = require('../utils/followers');
 const { calculateNgoDynamicRating } = require('../utils/rating');
+const { ensurePermanentDocUrl, normalizeDocSync, getBaseUrl } = require('../utils/uploadHelper');
 
 // Helper to get or create NGO profile connected to logged-in User
 const getOrCreateNGOProfile = async (req) => {
@@ -120,17 +121,22 @@ router.get('/profile', async (req, res) => {
           ? userObj.awardsRecognitions
           : (Array.isArray(userObj.awards) ? userObj.awards : []);
 
-    const normalizedAwards = rawAwards.map(a => ({
-      ...a,
-      name: a.name || a.title || 'Excellence Recognition',
-      title: a.title || a.name || 'Excellence Recognition',
-      awardedBy: a.awardedBy || a.issuingOrg || '',
-      issuingOrg: a.issuingOrg || a.awardedBy || '',
-      year: String(a.year || ''),
-      description: a.description || '',
-      document: a.document || a.certificateDoc || '',
-      certificateDoc: a.certificateDoc || a.document || ''
-    }));
+    const normalizedAwards = rawAwards.map(a => {
+      const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+      return {
+        ...a,
+        name: a.name || a.title || 'Excellence Recognition',
+        title: a.title || a.name || 'Excellence Recognition',
+        awardedBy: a.awardedBy || a.issuingOrg || '',
+        issuingOrg: a.issuingOrg || a.awardedBy || '',
+        year: String(a.year || ''),
+        description: a.description || '',
+        document: docUrl,
+        certificateDoc: docUrl,
+        supportingDocument: docUrl,
+        supportingDoc: docUrl
+      };
+    });
 
     const resolvedAuthDoc = ngoObj.authorityLetterDoc
       || ngoObj.formFillerDetails?.authorityLetterDoc
@@ -255,6 +261,49 @@ router.put('/profile', async (req, res) => {
       }
     });
 
+    // Ensure all uploaded statutory documents are permanently saved
+    const docFields = [
+      'certificate12A', 'certificate80G', 'darpanCertificate', 'csr1Certificate',
+      'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc', 'panImage',
+      'tanImage', 'gstDocument', 'logo'
+    ];
+    for (const df of docFields) {
+      if (req.body[df] !== undefined && typeof req.body[df] === 'string' && req.body[df].trim()) {
+        const permanentVal = await ensurePermanentDocUrl(req.body[df], req, df);
+        ngo[df] = permanentVal;
+        if (user) user[df] = permanentVal;
+      }
+    }
+
+    // Process Awards & Recognitions (Supporting document, certificateDoc, document)
+    const rawAwards = req.body.awardsRecognitions !== undefined ? req.body.awardsRecognitions : req.body.awards;
+    if (Array.isArray(rawAwards)) {
+      const processedAwards = await Promise.all(rawAwards.map(async (a, idx) => {
+        let docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+        if (docUrl && typeof docUrl === 'string' && docUrl.trim()) {
+          docUrl = await ensurePermanentDocUrl(docUrl, req, `award_${idx + 1}`);
+        }
+        return {
+          name: a.name || a.title || 'Excellence Recognition',
+          title: a.title || a.name || 'Excellence Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: docUrl || '',
+          certificateDoc: docUrl || '',
+          supportingDocument: docUrl || '',
+          supportingDoc: docUrl || ''
+        };
+      }));
+      ngo.awards = processedAwards;
+      ngo.awardsRecognitions = processedAwards;
+      if (user) {
+        user.awards = processedAwards;
+        user.awardsRecognitions = processedAwards;
+      }
+    }
+
     const rawMoa = req.body.moaAoaDocs !== undefined 
       ? req.body.moaAoaDocs 
       : (req.body.moaDocs !== undefined 
@@ -273,6 +322,7 @@ router.put('/profile', async (req, res) => {
           moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
         }
       }
+      moaList = await Promise.all(moaList.map(doc => ensurePermanentDocUrl(doc, req, 'moa')));
       ngo.moaAoaDocs = moaList;
       if (user) {
         user.moaAoaDocs = moaList;
@@ -285,14 +335,15 @@ router.put('/profile', async (req, res) => {
         ? req.body.formFillerDetails.authorityLetterDoc 
         : req.body.authorityLetter);
 
-    if (rawAuthDoc !== undefined) {
-      ngo.authorityLetterDoc = rawAuthDoc;
+    if (rawAuthDoc !== undefined && typeof rawAuthDoc === 'string' && rawAuthDoc.trim()) {
+      const permanentAuthDoc = await ensurePermanentDocUrl(rawAuthDoc, req, 'authority_letter');
+      ngo.authorityLetterDoc = permanentAuthDoc;
       if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
-      ngo.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      ngo.formFillerDetails.authorityLetterDoc = permanentAuthDoc;
       if (user) {
-        user.authorityLetterDoc = rawAuthDoc;
+        user.authorityLetterDoc = permanentAuthDoc;
         if (!user.formFillerDetails) user.formFillerDetails = {};
-        user.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+        user.formFillerDetails.authorityLetterDoc = permanentAuthDoc;
       }
     }
 
@@ -368,6 +419,49 @@ router.post('/resubmit', async (req, res) => {
       }
     });
 
+    // Ensure all uploaded statutory documents are permanently saved
+    const docFields = [
+      'certificate12A', 'certificate80G', 'darpanCertificate', 'csr1Certificate',
+      'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc', 'panImage',
+      'tanImage', 'gstDocument', 'logo'
+    ];
+    for (const df of docFields) {
+      if (req.body[df] !== undefined && typeof req.body[df] === 'string' && req.body[df].trim()) {
+        const permanentVal = await ensurePermanentDocUrl(req.body[df], req, df);
+        ngo[df] = permanentVal;
+        if (user) user[df] = permanentVal;
+      }
+    }
+
+    // Process Awards & Recognitions (Supporting document, certificateDoc, document)
+    const rawAwards = req.body.awardsRecognitions !== undefined ? req.body.awardsRecognitions : req.body.awards;
+    if (Array.isArray(rawAwards)) {
+      const processedAwards = await Promise.all(rawAwards.map(async (a, idx) => {
+        let docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+        if (docUrl && typeof docUrl === 'string' && docUrl.trim()) {
+          docUrl = await ensurePermanentDocUrl(docUrl, req, `award_${idx + 1}`);
+        }
+        return {
+          name: a.name || a.title || 'Excellence Recognition',
+          title: a.title || a.name || 'Excellence Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: docUrl || '',
+          certificateDoc: docUrl || '',
+          supportingDocument: docUrl || '',
+          supportingDoc: docUrl || ''
+        };
+      }));
+      ngo.awards = processedAwards;
+      ngo.awardsRecognitions = processedAwards;
+      if (user) {
+        user.awards = processedAwards;
+        user.awardsRecognitions = processedAwards;
+      }
+    }
+
     const rawMoa = req.body.moaAoaDocs !== undefined 
       ? req.body.moaAoaDocs 
       : (req.body.moaDocs !== undefined 
@@ -386,6 +480,7 @@ router.post('/resubmit', async (req, res) => {
           moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
         }
       }
+      moaList = await Promise.all(moaList.map(doc => ensurePermanentDocUrl(doc, req, 'moa')));
       ngo.moaAoaDocs = moaList;
       if (user) {
         user.moaAoaDocs = moaList;
@@ -398,14 +493,15 @@ router.post('/resubmit', async (req, res) => {
         ? req.body.formFillerDetails.authorityLetterDoc 
         : req.body.authorityLetter);
 
-    if (rawAuthDoc !== undefined) {
-      ngo.authorityLetterDoc = rawAuthDoc;
+    if (rawAuthDoc !== undefined && typeof rawAuthDoc === 'string' && rawAuthDoc.trim()) {
+      const permanentAuthDoc = await ensurePermanentDocUrl(rawAuthDoc, req, 'authority_letter');
+      ngo.authorityLetterDoc = permanentAuthDoc;
       if (!ngo.formFillerDetails) ngo.formFillerDetails = {};
-      ngo.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+      ngo.formFillerDetails.authorityLetterDoc = permanentAuthDoc;
       if (user) {
-        user.authorityLetterDoc = rawAuthDoc;
+        user.authorityLetterDoc = permanentAuthDoc;
         if (!user.formFillerDetails) user.formFillerDetails = {};
-        user.formFillerDetails.authorityLetterDoc = rawAuthDoc;
+        user.formFillerDetails.authorityLetterDoc = permanentAuthDoc;
       }
     }
 

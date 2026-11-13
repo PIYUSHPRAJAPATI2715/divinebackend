@@ -7,6 +7,7 @@ const { buildPhoneFilter } = require('../../utils/phone');
 const { resolveEntityPhoto, enrichEntityPhotos } = require('../../utils/avatar');
 const { calculateNgoDynamicRating } = require('../../utils/rating');
 const { getAllFollowersForEntity, formatFollowerItem } = require('../../utils/followers');
+const { ensurePermanentDocUrl, saveBase64Media, getBaseUrl } = require('../../utils/uploadHelper');
 
 // Utility to generate unique referral code
 const generateReferralCode = (name) => {
@@ -82,17 +83,22 @@ router.get('/profile', async (req, res) => {
           ? userObj.awardsRecognitions
           : (Array.isArray(userObj.awards) ? userObj.awards : []);
 
-    const normalizedAwards = rawAwards.map(a => ({
-      ...a,
-      name: a.name || a.title || 'Excellence Recognition',
-      title: a.title || a.name || 'Excellence Recognition',
-      awardedBy: a.awardedBy || a.issuingOrg || '',
-      issuingOrg: a.issuingOrg || a.awardedBy || '',
-      year: a.year || '',
-      description: a.description || '',
-      document: a.document || a.certificateDoc || '',
-      certificateDoc: a.certificateDoc || a.document || ''
-    }));
+    const normalizedAwards = rawAwards.map(a => {
+      const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+      return {
+        ...a,
+        name: a.name || a.title || 'Excellence Recognition',
+        title: a.title || a.name || 'Excellence Recognition',
+        awardedBy: a.awardedBy || a.issuingOrg || '',
+        issuingOrg: a.issuingOrg || a.awardedBy || '',
+        year: String(a.year || ''),
+        description: a.description || '',
+        document: docUrl,
+        certificateDoc: docUrl,
+        supportingDocument: docUrl,
+        supportingDoc: docUrl
+      };
+    });
 
     const name = user.name || 'Donor';
     const email = user.email || '';
@@ -370,10 +376,10 @@ const handleUpdateDonorProfile = async (req, res) => {
     // Handle awards update
     const rawAwardsUpdate = req.body.awardsRecognitions || req.body.awards || req.body.awardDetails;
     if (Array.isArray(rawAwardsUpdate)) {
-      const processedAwards = rawAwardsUpdate.map(a => {
-        let doc = a.document || a.certificateDoc || null;
-        if (doc && (doc.startsWith('data:') || doc.includes(';base64,'))) {
-          doc = saveBase64Image(doc, req);
+      const processedAwards = await Promise.all(rawAwardsUpdate.map(async (a, idx) => {
+        let doc = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || null;
+        if (doc && typeof doc === 'string' && doc.trim()) {
+          doc = await ensurePermanentDocUrl(doc, req, `award_${idx + 1}`);
         }
         return {
           name: a.name || a.title || 'Recognition',
@@ -382,10 +388,12 @@ const handleUpdateDonorProfile = async (req, res) => {
           issuingOrg: a.issuingOrg || a.awardedBy || '',
           year: String(a.year || ''),
           description: a.description || '',
-          document: doc,
-          certificateDoc: doc
+          document: doc || '',
+          certificateDoc: doc || '',
+          supportingDocument: doc || '',
+          supportingDoc: doc || ''
         };
-      });
+      }));
       user.awards = processedAwards;
       user.awardsRecognitions = processedAwards;
     }
@@ -396,31 +404,32 @@ const handleUpdateDonorProfile = async (req, res) => {
       'darpanCertificate', 'csr1Certificate', 'fcraCertificate', 'addressCertificate', 'cancelledChequeDoc',
       'authorityLetterDoc'
     ];
-    docFields.forEach(df => {
-      if (req.body[df] !== undefined) {
-        user[df] = saveBase64Image(req.body[df], req);
+    for (const df of docFields) {
+      if (req.body[df] !== undefined && typeof req.body[df] === 'string' && req.body[df].trim()) {
+        user[df] = await ensurePermanentDocUrl(req.body[df], req, df);
       }
-    });
+    }
 
     const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
     if (rawMoa !== undefined) {
       let moaList = [];
       if (Array.isArray(rawMoa)) {
-        moaList = rawMoa.map(doc => saveBase64Image(doc, req)).filter(Boolean);
+        moaList = rawMoa.filter(doc => typeof doc === 'string' && doc.trim() !== '');
       } else if (typeof rawMoa === 'string' && rawMoa.trim()) {
         try {
           const parsed = JSON.parse(rawMoa);
-          moaList = Array.isArray(parsed) ? parsed.map(doc => saveBase64Image(doc, req)).filter(Boolean) : [saveBase64Image(rawMoa.trim(), req)].filter(Boolean);
+          moaList = Array.isArray(parsed) ? parsed.filter(doc => typeof doc === 'string' && doc.trim() !== '') : [rawMoa.trim()];
         } catch(e) {
-          moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => saveBase64Image(s.trim(), req)).filter(Boolean) : [saveBase64Image(rawMoa.trim(), req)].filter(Boolean);
+          moaList = rawMoa.includes(',') ? rawMoa.split(',').map(s => s.trim()).filter(Boolean) : [rawMoa.trim()];
         }
       }
+      moaList = await Promise.all(moaList.map(doc => ensurePermanentDocUrl(doc, req, 'moa')));
       user.moaAoaDocs = moaList;
     }
 
     const rawAuth = req.body.authorityLetterDoc || req.body.formFillerDetails?.authorityLetterDoc || req.body.authorityLetter;
-    if (rawAuth !== undefined) {
-      const savedAuth = saveBase64Image(rawAuth, req);
+    if (rawAuth !== undefined && typeof rawAuth === 'string' && rawAuth.trim()) {
+      const savedAuth = await ensurePermanentDocUrl(rawAuth, req, 'authority_letter');
       user.authorityLetterDoc = savedAuth;
       if (!user.formFillerDetails) user.formFillerDetails = {};
       user.formFillerDetails.authorityLetterDoc = savedAuth;
