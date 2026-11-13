@@ -12,6 +12,37 @@ const Referral = require('../models/Referral');
 const authMiddleware = require('../middleware/auth');
 const { normalizePhone, getPhoneVariants, buildPhoneFilter, findUserByPhone } = require('../utils/phone');
 const { getAllFollowersForEntity, formatFollowerItem } = require('../utils/followers');
+const { ensurePermanentDocUrl, saveBase64Media } = require('../utils/uploadHelper');
+
+const processAwardsHelper = async (rawAwardsInput, req) => {
+  let list = rawAwardsInput;
+  if (typeof list === 'string' && list.trim()) {
+    try {
+      list = JSON.parse(list);
+    } catch (e) {
+      list = [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return Promise.all(list.map(async (a, idx) => {
+    let docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+    if (docUrl && typeof docUrl === 'string' && docUrl.trim()) {
+      docUrl = await ensurePermanentDocUrl(docUrl, req, `award_${idx + 1}`);
+    }
+    return {
+      name: a.name || a.title || 'Excellence Recognition',
+      title: a.title || a.name || 'Excellence Recognition',
+      awardedBy: a.awardedBy || a.issuingOrg || '',
+      issuingOrg: a.issuingOrg || a.awardedBy || '',
+      year: String(a.year || ''),
+      description: a.description || '',
+      document: docUrl || '',
+      certificateDoc: docUrl || '',
+      supportingDocument: docUrl || '',
+      supportingDoc: docUrl || ''
+    };
+  }));
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || 'divine_nakshatra_secret_key_2026';
 
@@ -148,9 +179,37 @@ const constructFullUserData = async (user) => {
   const finalVerStatus = isVer ? 'Verified' : (extra.status === 'Rejected' || user.status === 'Rejected' || user.verificationStatus === 'Rejected' ? 'Rejected' : (extra.status || user.verificationStatus || 'Pending'));
   const finalStatus = (user.status === 'Suspended' || extra.status === 'Suspended') ? 'Suspended' : (finalVerStatus === 'Rejected' ? 'Rejected' : (user.status === 'Inactive' ? 'Inactive' : 'Active'));
 
+  const rawAwards = (Array.isArray(extra.awardsRecognitions) && extra.awardsRecognitions.length > 0)
+    ? extra.awardsRecognitions
+    : (Array.isArray(extra.awards) && extra.awards.length > 0)
+      ? extra.awards
+      : (Array.isArray(userObj.awardsRecognitions) && userObj.awardsRecognitions.length > 0)
+        ? userObj.awardsRecognitions
+        : (Array.isArray(userObj.awards) ? userObj.awards : []);
+
+  const normalizedAwards = rawAwards.map(a => {
+    const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+    return {
+      ...a,
+      name: a.name || a.title || 'Excellence Recognition',
+      title: a.title || a.name || 'Excellence Recognition',
+      awardedBy: a.awardedBy || a.issuingOrg || '',
+      issuingOrg: a.issuingOrg || a.awardedBy || '',
+      year: String(a.year || ''),
+      description: a.description || '',
+      document: docUrl,
+      certificateDoc: docUrl,
+      supportingDocument: docUrl,
+      supportingDoc: docUrl
+    };
+  });
+
   return {
     ...userObj,
     ...extra,
+    awards: normalizedAwards,
+    awardsRecognitions: normalizedAwards,
+    awardDetails: normalizedAwards,
     role: determinedRole,
     status: finalStatus,
     verificationStatus: finalVerStatus,
@@ -1542,6 +1601,18 @@ router.put('/profile', authMiddleware, async (req, res) => {
         if (req.body[f] !== undefined) ngo[f] = req.body[f];
       });
 
+      // Process Awards & Recognitions
+      const rawAwardsInput = req.body.awardsRecognitions !== undefined ? req.body.awardsRecognitions : req.body.awards;
+      if (rawAwardsInput !== undefined) {
+        const procAwards = await processAwardsHelper(rawAwardsInput, req);
+        ngo.awards = procAwards;
+        ngo.awardsRecognitions = procAwards;
+        if (user) {
+          user.awards = procAwards;
+          user.awardsRecognitions = procAwards;
+        }
+      }
+
       const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
       if (rawMoa !== undefined) {
         let moaList = [];
@@ -2012,6 +2083,18 @@ const registerHandler = async (req, res) => {
           if (req.body[f] !== undefined) ngo[f] = req.body[f];
         });
 
+        // Process Awards & Recognitions
+        const rawAwardsInput = req.body.awardsRecognitions !== undefined ? req.body.awardsRecognitions : req.body.awards;
+        if (rawAwardsInput !== undefined) {
+          const procAwards = await processAwardsHelper(rawAwardsInput, req);
+          ngo.awards = procAwards;
+          ngo.awardsRecognitions = procAwards;
+          if (user) {
+            user.awards = procAwards;
+            user.awardsRecognitions = procAwards;
+          }
+        }
+
         const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
         if (rawMoa !== undefined) {
           let moaList = [];
@@ -2081,6 +2164,18 @@ const registerHandler = async (req, res) => {
         extraFields.forEach(f => {
           if (req.body[f] !== undefined) ngo[f] = req.body[f];
         });
+
+        // Process Awards & Recognitions
+        const rawAwardsInput = req.body.awardsRecognitions !== undefined ? req.body.awardsRecognitions : req.body.awards;
+        if (rawAwardsInput !== undefined) {
+          const procAwards = await processAwardsHelper(rawAwardsInput, req);
+          ngo.awards = procAwards;
+          ngo.awardsRecognitions = procAwards;
+          if (user) {
+            user.awards = procAwards;
+            user.awardsRecognitions = procAwards;
+          }
+        }
 
         const rawMoa = req.body.moaAoaDocs !== undefined ? req.body.moaAoaDocs : req.body.moaDocs;
         if (rawMoa !== undefined) {

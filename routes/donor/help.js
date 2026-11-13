@@ -258,6 +258,36 @@ router.get('/ngos/:id', async (req, res) => {
     ngoObj.transparency = transparency;
     Object.assign(ngoObj, photos);
 
+    // Resolve and normalize awards & recognitions (with supportingDocument, supportingDoc, document, certificateDoc)
+    const rawAwards = (Array.isArray(ngo.awardsRecognitions) && ngo.awardsRecognitions.length > 0)
+      ? ngo.awardsRecognitions
+      : (Array.isArray(ngo.awards) && ngo.awards.length > 0)
+        ? ngo.awards
+        : (user && Array.isArray(user.awardsRecognitions) && user.awardsRecognitions.length > 0)
+          ? user.awardsRecognitions
+          : (user && Array.isArray(user.awards) ? user.awards : []);
+
+    const normalizedAwards = rawAwards.map(a => {
+      const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+      return {
+        ...a,
+        name: a.name || a.title || 'Excellence Recognition',
+        title: a.title || a.name || 'Excellence Recognition',
+        awardedBy: a.awardedBy || a.issuingOrg || '',
+        issuingOrg: a.issuingOrg || a.awardedBy || '',
+        year: String(a.year || ''),
+        description: a.description || '',
+        document: docUrl,
+        certificateDoc: docUrl,
+        supportingDocument: docUrl,
+        supportingDoc: docUrl
+      };
+    });
+
+    ngoObj.awards = normalizedAwards;
+    ngoObj.awardsRecognitions = normalizedAwards;
+    ngoObj.awardDetails = normalizedAwards;
+
     res.json({ status: true, data: ngoObj });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });

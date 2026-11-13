@@ -93,6 +93,42 @@ const enrichNGOData = async (ngo) => {
     rejectionReason: ngoObj.rejectionReason || '',
     rejectedAt: ngoObj.rejectedAt || null,
     resubmittedAt: ngoObj.resubmittedAt || null,
+    awards: ((Array.isArray(ngoObj.awardsRecognitions) && ngoObj.awardsRecognitions.length > 0)
+      ? ngoObj.awardsRecognitions
+      : (Array.isArray(ngoObj.awards) ? ngoObj.awards : [])).map(a => {
+        const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+        return {
+          ...a,
+          name: a.name || a.title || 'Excellence Recognition',
+          title: a.title || a.name || 'Excellence Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: docUrl,
+          certificateDoc: docUrl,
+          supportingDocument: docUrl,
+          supportingDoc: docUrl
+        };
+      }),
+    awardsRecognitions: ((Array.isArray(ngoObj.awardsRecognitions) && ngoObj.awardsRecognitions.length > 0)
+      ? ngoObj.awardsRecognitions
+      : (Array.isArray(ngoObj.awards) ? ngoObj.awards : [])).map(a => {
+        const docUrl = a.supportingDocument || a.supportingDoc || a.document || a.certificateDoc || '';
+        return {
+          ...a,
+          name: a.name || a.title || 'Excellence Recognition',
+          title: a.title || a.name || 'Excellence Recognition',
+          awardedBy: a.awardedBy || a.issuingOrg || '',
+          issuingOrg: a.issuingOrg || a.awardedBy || '',
+          year: String(a.year || ''),
+          description: a.description || '',
+          document: docUrl,
+          certificateDoc: docUrl,
+          supportingDocument: docUrl,
+          supportingDoc: docUrl
+        };
+      }),
     ...photos
   };
 };

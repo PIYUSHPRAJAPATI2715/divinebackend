@@ -392,6 +392,21 @@ router.put('/profile', async (req, res) => {
   }
 });
 
+// Alias for POST /profile and PUT/POST /update-profile
+router.post('/profile', (req, res, next) => {
+  req.method = 'PUT';
+  router.handle(req, res, next);
+});
+router.put('/update-profile', (req, res, next) => {
+  req.url = '/profile';
+  router.handle(req, res, next);
+});
+router.post('/update-profile', (req, res, next) => {
+  req.method = 'PUT';
+  req.url = '/profile';
+  router.handle(req, res, next);
+});
+
 // Explicit Resubmit Endpoint
 router.post('/resubmit', async (req, res) => {
   try {
